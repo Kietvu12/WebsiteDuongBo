@@ -1,0 +1,316 @@
+/* Main container styles */
+.map-app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.map-controls {
+  padding: 10px 20px;
+  background-color: #2c3e50;
+  color: white;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.map-type-selector, .project-type-selector {
+  display: flex;
+  align-items: center;
+}
+
+.map-type-selector label, .project-type-selector label {
+  margin-right: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.map-type-selector select, .project-type-selector select {
+  padding: 5px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.map-content {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Map container styles */
+.map-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.map-container.with-side-panel {
+  width: 60%;
+}
+
+.leaflet-map {
+  height: 100%;
+  width: 100%;
+  background-color: #f5f5f5;
+}
+
+/* Side panel styles */
+.side-panel {
+  width: 25%; /* Giảm từ 30% xuống 25% */
+  min-width: 280px; /* Đặt min-width để đảm bảo nội dung không bị chật */
+  height: 100%;
+  background-color: white;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+  overflow-y: auto;
+  padding: 12px;
+  position: relative;
+}
+.map-container.with-side-panel {
+  width: 75%; /* Tăng từ 60% lên 70% */
+}
+.info-grid {
+  grid-template-columns: 1fr; /* Chuyển thành 1 cột */
+  gap: 8px;
+}
+.close-panel-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #7f8c8d;
+  padding: 5px 10px;
+}
+
+.close-panel-btn:hover {
+  color: #e74c3c;
+}
+
+.panel-section {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ecf0f1;
+}
+
+.panel-section h2, .panel-section h3 {
+  color: #2c3e50;
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.panel-section h2 {
+  font-size: 1.1rem;
+  color: #3498db;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+}
+
+.panel-section h3 {
+  font-size: 1.2rem;
+  color: #16a085;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.info-row.full-width {
+  flex-direction: column;
+}
+
+.info-label {
+  font-size: 0.8rem;
+  min-width: 100px;
+  color: #7f8c8d;
+}
+
+.info-value {
+  font-size: 0.85rem;
+  flex: 1;
+  color: #34495e;
+}
+
+.project-description {
+  background-color: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}
+
+.marker-popup {
+  min-width: 200px;
+}
+
+.marker-popup h3 {
+  margin: 0 0 10px 0;
+  color: #3498db;
+  font-size: 1.1rem;
+}
+
+.popup-section {
+  margin-bottom: 8px;
+}
+
+.popup-section strong {
+  display: block;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.popup-section p, .popup-section span {
+  margin: 5px 0 0 0;
+  color: #34495e;
+}
+
+.map-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255,255,255,0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 4px solid #3498db;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.route-errors {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background-color: #e74c3c;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  z-index: 1000;
+  max-width: 300px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.route-errors h4 {
+  margin: 0 0 5px 0;
+}
+
+.route-errors ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.route-errors li {
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+/* MapComponent.css */
+.view-detail-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 15px;
+  margin: 15px 0;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  transition: background-color 0.3s;
+}
+
+.view-detail-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Đảm bảo nút không bị ảnh hưởng bởi grid layout */
+.panel-section {
+  position: relative;
+}
+/* Responsive styles */
+@media (max-width: 768px) {
+  .map-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .map-type-selector, .project-type-selector {
+    width: 100%;
+  }
+  
+  .map-type-selector select, .project-type-selector select {
+    width: 100%;
+  }
+  
+  .map-container.with-side-panel {
+    width: 0;
+  }
+  
+  .side-panel {
+    width: 100%;
+  }
+  
+  .info-row {
+    flex-direction: column;
+  }
+  
+  .info-label {
+    margin-bottom: 5px;
+  }
+}
+@media (max-width: 1200px) {
+  .side-panel {
+    width: 35%;
+  }
+  .map-container.with-side-panel {
+    width: 65%;
+  }
+}
+/* Responsive điều chỉnh */
+
+@media (max-width: 992px) {
+  .side-panel {
+    width: 35%;
+  }
+  .map-container.with-side-panel {
+    width: 65%;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-container.with-side-panel {
+    width: 0;
+  }
+  .side-panel {
+    width: 100%;
+    min-width: auto;
+  }
+}

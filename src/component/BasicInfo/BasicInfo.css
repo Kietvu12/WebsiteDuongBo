@@ -1,0 +1,53 @@
+.general-info-card {
+    width: 100%;
+    height: auto; /* Hoặc có thể set min-height nếu cần */
+    min-height: 200px; /* Tăng chiều cao tối thiểu */
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+  }
+
+  
+  .general-info-header {
+    background-color: white;
+    color: black;
+    padding: 15px 20px; 
+    font-size: 18px; 
+    font-weight: bold;
+  }
+  
+  .general-info-content {
+    padding: 20px; 
+    flex-grow: 1; 
+  }
+  
+  .info-item {
+    display: flex;
+    margin-bottom: 15px; 
+    align-items: center; 
+  }
+  
+  .info-label {
+    font-weight: bold;
+    min-width: 140px; 
+    color: #333;
+    font-size: 15px; 
+  }
+  
+  .info-value {
+    color: #555;
+    flex-grow: 1;
+    font-size: 15px; 
+  }
+@media (max-width: 768px) {
+    .info-item {
+        flex-direction: column;
+    }
+
+    .info-label {
+        margin-bottom: 5px;
+    }
+}

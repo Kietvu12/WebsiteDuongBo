@@ -1,0 +1,88 @@
+.contractor-card {
+    width: 100%;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    margin-top: 10px;
+    background-color: #fff;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .contractor-header {
+    background-color: #006591;
+    color: white;
+    padding: 12px 15px;
+    font-size: 16px;
+    font-weight: bold;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .contractor-content {
+    padding: 15px;
+  }
+  
+  .contractor-names {
+    margin-bottom: 15px;
+    line-height: 1.5;
+    color: #333;
+    font-size: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .contractor-dates {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .date-column, .status-column {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  
+  .date-header, .status-header {
+    font-weight: bold;
+    color: #333;
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+  
+  .date-value {
+    color: #555;
+    font-size: 14px;
+  }
+  
+  .status-value {
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-block;
+    text-align: center;
+  }
+  
+  .status-value.risk {
+    background-color: #FFEBEE;
+    color: #D32F2F;
+    border: 1px solid #EF9A9A;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .contractor-dates {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .date-column, .status-column {
+      width: 100%;
+    }
+    
+    .status-value {
+      width: fit-content;
+    }
+  }

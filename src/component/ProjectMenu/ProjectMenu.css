@@ -1,0 +1,197 @@
+/* Giữ nguyên các style cơ bản từ file List.css */
+.content-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.column {
+  flex: 1;
+  padding: 10px;
+}
+
+.bid-package-card {
+  height: 100%;
+  min-height: 300px;
+  max-height: 840px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.bid-package-header {
+  background-color: #006591;
+  color: white;
+  padding: 12px 15px;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-icon {
+  margin-right: 12px;
+  font-size: clamp(14px, 1.5vw, 18px);
+}
+
+.bid-list {
+  padding: 10px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+/* Style mới cho menu phân cấp */
+.hierarchy-list {
+  padding-left: 0;
+}
+
+.bid-item {
+  padding: 12px 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.bid-item:hover {
+  background-color: #f0f0f0;
+}
+
+.bid-item.selected {
+  background-color: #e7f1ff;
+  border-left: 3px solid #006591;
+  margin-left: -3px;
+}
+
+.bid-code {
+  font-weight: bold;
+  color: #006591;
+  display: flex;
+  align-items: center;
+  font-size: clamp(14px, 1.5vw, 16px);
+  min-width: 80px;
+}
+
+.bid-icon {
+  margin-right: 8px;
+  font-size: clamp(12px, 1.2vw, 14px);
+}
+
+.bid-content {
+  color: #333;
+  line-height: 1.4;
+  font-size: clamp(13px, 1.3vw, 15px);
+  flex: 1;
+}
+
+.project-status {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 4px;
+}
+
+.progress-status {
+  font-size: 0.8rem;
+  color: #28a745;
+  margin-top: 4px;
+}
+
+.toggle-icon {
+  color: #6c757d;
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+/* Indentation for hierarchy levels */
+.packages-container {
+  padding-left: 30px;
+  background-color: #f8f9fa;
+}
+
+.work-items-container {
+  padding-left: 30px;
+  background-color: #f1f3f5;
+}
+
+.main-project {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.sub-project {
+  padding-left: 20px;
+}
+
+.package {
+  padding-left: 40px;
+}
+
+.work-item {
+  padding-left: 60px;
+}
+
+.loading-message, .error-message, .no-data {
+  padding: 15px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.error-message {
+  color: #dc3545;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+  }
+  
+  .bid-package-header {
+    padding: 10px 12px;
+  }
+  
+  .bid-item {
+    padding: 10px 12px;
+  }
+  
+  .packages-container {
+    padding-left: 20px;
+  }
+  
+  .work-items-container {
+    padding-left: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bid-package-header {
+    font-size: 16px;
+    padding: 8px 10px;
+  }
+  
+  .bid-code {
+    min-width: 60px;
+    font-size: 12px;
+  }
+  
+  .bid-content {
+    font-size: 13px;
+  }
+  
+  .sub-project {
+    padding-left: 15px;
+  }
+  
+  .package {
+    padding-left: 30px;
+  }
+  
+  .work-item {
+    padding-left: 45px;
+  }
+}

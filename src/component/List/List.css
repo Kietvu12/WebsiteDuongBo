@@ -1,0 +1,156 @@
+
+.content-wrapper {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .column {
+    flex: 1;
+    padding: 10px;
+  }
+  
+  .bid-package-card {
+    height: 100%;
+    min-height: 300px;
+    max-height: 840px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  
+
+  .bid-package-header {
+    background-color: #006591;
+    color: white;
+    padding: 12px 15px;
+    font-size: clamp(16px, 2vw, 20px);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  
+  .header-icon {
+    margin-right: 12px;
+    font-size: clamp(14px, 1.5vw, 18px);
+  }
+  
+
+  .bid-list {
+    padding: 10px;
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+  
+  .bid-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;               
+    align-items: center;        
+    gap: 15px;                  
+  }
+  .bid-item:hover {
+    background-color: gray;
+  }
+  
+  .bid-code {
+    font-weight: bold;
+    color: #006591;
+    display: flex;
+    align-items: center;
+    font-size: clamp(14px, 1.5vw, 16px);
+    min-width: 80px;             
+  }
+  
+  .bid-icon {
+    margin-right: 8px;
+    font-size: clamp(12px, 1.2vw, 14px);
+  }
+  
+  .bid-content {
+    color: #333;
+    line-height: 1.4;
+    font-size: clamp(13px, 1.3vw, 15px);
+    flex: 1;                    
+  }
+  
+
+  .bid-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+  
+  .bid-actions .action-btn {
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .bid-actions .action-btn:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .bid-actions .action-icon {
+    color: #555;
+    font-size: 14px;
+  }
+  
+  .bid-actions .action-btn:first-child:hover .action-icon {
+    color: #1a73e8; 
+  }
+  
+  .bid-actions .action-btn:last-child:hover .action-icon {
+    color: #d32f2f; 
+  }
+  @media (max-width: 768px) {
+    .content-wrapper {
+      flex-direction: column;
+    }
+    
+    .bid-package-header {
+      padding: 10px 12px;
+    }
+    
+    .bid-item {
+      padding: 10px 12px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .bid-package-header {
+      font-size: 16px;
+      padding: 8px 10px;
+    }
+    
+    .bid-item {
+      flex-wrap: wrap;
+    }
+    
+    .bid-actions {
+      margin-left: 0;            
+      width: 100%;               
+      justify-content: flex-end; 
+      margin-top: 8px;           
+    }
+    
+    .bid-code, .bid-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .bid-icon {
+      margin-right: 5px;
+    }
+  }

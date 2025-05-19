@@ -1,0 +1,58 @@
+.volume-card {
+  width: 100%;
+  height: 250px; 
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  background-color: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.volume-header {
+  background-color: #fff;
+  color: black;
+  padding: 12px 15px;
+  font-size: 16px;
+  font-weight: bold;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.volume-content {
+  padding: 15px;
+  overflow-y: auto;
+  flex: 1; 
+}
+
+.volume-list {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.volume-item {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  color: #333;
+  font-size: 14px;
+}
+
+.volume-item span {
+  font-weight: bold;
+  color: #006591;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .volume-header {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  .volume-content {
+    padding: 12px;
+  }
+
+  .volume-item {
+    font-size: 13px;
+  }
+}

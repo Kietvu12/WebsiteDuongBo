@@ -1,0 +1,46 @@
+.progress-chart-container {
+  display: flex;
+  flex-direction: column; /* xếp dọc để có thể đưa tiêu đề lên trên */
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  background-color: #fff;
+  padding: 15px;
+}
+
+.chart-and-legend {
+  display: flex;
+  align-items: center;
+}
+
+.chart {
+  width: 130px;
+  height: 130px;
+  padding: 15px;
+}
+
+.legend {
+  margin-left: 60px;
+  padding: 15px 0;
+}
+
+.legend-title {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+}
+
+.legend-label {
+  flex: 1;
+}

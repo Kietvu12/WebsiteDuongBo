@@ -1,0 +1,87 @@
+
+.project-header {
+    background-color: #e6f7ff;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .package-header {
+    background-color: #f0f0f0;
+    cursor: pointer;
+  }
+  
+  .package-header.hidden,
+  .work-item.hidden {
+    display: none;
+  }
+  
+  .work-item {
+    background-color: #ffffff;
+  }
+  
+  /* Indentation for hierarchy levels */
+  .package-header td:nth-child(3) {
+    padding-left: 20px;
+  }
+  
+  .work-item td:nth-child(3) {
+    padding-left: 40px;
+  }
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .header {
+        padding: 15px 20px;
+    }
+    
+    .filter-form {
+        gap: 10px;
+    }
+    
+    .filter-box {
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .header {
+        padding: 12px 15px;
+    }
+    
+    .search-box-sub {
+        gap: 8px;
+    }
+    
+    .add-btn, .search-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .header-row h1 {
+        font-size: 18px;
+    }
+    
+    .header-row h1 > span {
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .user-profile {
+        gap: 10px;
+    }
+    
+    .search-box-sub input {
+        min-width: 100%;
+        order: 1;
+    }
+    
+    .add-btn {
+        order: 0;
+    }
+    
+    .search-btn {
+        order: 2;
+        flex: 1;
+    }
+}
