@@ -2,9 +2,9 @@ const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
   host: "localhost",
-  user: "root",
+  user: "mcp",
   password: "123456",
-  database: "dulieuduongbo",
+  database: "dadb",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

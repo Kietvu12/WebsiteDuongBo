@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './DashBoard.css';
 import menuIcon from '../../assets/img/menu-icon.png';
 import helpIcon from '../../assets/img/help-icon.png';
@@ -15,6 +16,8 @@ import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
 
 const DashBoard = () => {
+  const location = useLocation();
+  const selectedDuAnId = location.state?.selectedDuAnId;
   const { setSelectedProjectId } = useProject();
   const navigate = useNavigate();
   const [showAddPopup, setShowAddPopup] = useState(false);
@@ -47,17 +50,36 @@ const DashBoard = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/duAnTongList');
-        setProjects(response.data.data);
-        setFilteredProjects(response.data.data);
+        let fetchedData = [];
+
+        if (selectedDuAnId) {
+          // Gọi API lấy chi tiết dự án thành phần theo DuAnID
+          const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${selectedDuAnId}`);
+          fetchedData = [{
+            ...response.data.data,
+            DuAnID: selectedDuAnId
+          }];
+          console.log(fetchedData)
+
+        } else {
+          // Gọi API lấy tất cả dự án
+          const response = await axios.get('http://localhost:5000/duAnTongList');
+          fetchedData = response.data.data;
+          console.log(fetchedData)
+        }
+
+        setProjects(fetchedData);
+        setFilteredProjects(fetchedData);
         setLoading(false);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
         setLoading(false);
       }
     };
+
     fetchProjects();
-  }, []);
+  }, [selectedDuAnId]);
+
 
   useEffect(() => {
     filterProjects();
@@ -151,7 +173,7 @@ const DashBoard = () => {
                   </select>
                 </div>
 
-                <button 
+                <button
                   className="reset-filter-btn"
                   onClick={resetFilters}
                 >
