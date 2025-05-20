@@ -22,19 +22,20 @@ const SideProject = () => {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [status, setStatus] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchSuggestions, setSearchSuggestions] = useState([]);
     const [completionLevel, setCompletionLevel] = useState('all');
     const [filteredSubProjects, setFilteredProjects] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const filterProjects = () => {
-        console.log(typeof(subProjects.phanTramHoanThanh));
         let result = [...subProjects];
         if (fromDate || toDate) {
             result = result.filter(subProject => {
                 const subProjectStartDate = new Date(subProject.NgayKhoiCong || '1970-01-01');
-                const subProjectEndDate = new Date(subProject.NgayHoanThanh || '9999-12-31');
                 const filterFromDate = fromDate ? new Date(fromDate) : new Date('1970-01-01');
                 const filterToDate = toDate ? new Date(toDate) : new Date('9999-12-31');
 
-                return subProjectStartDate >= filterFromDate && subProjectEndDate <= filterToDate;
+                return subProjectStartDate >= filterFromDate && subProjectStartDate <= filterToDate;
             });
         }
         if (status !== 'all') {
@@ -47,20 +48,59 @@ const SideProject = () => {
                 return percentage > level;
             });
         }
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            result = result.filter(project =>
+                project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)
+            )
+        }
+
         setFilteredProjects(result);
+    };
+    const updateSearchSuggestions = (term) => {
+        if (!term) {
+            setSearchSuggestions([]);
+            return;
+        }
+
+        const termLower = term.toLowerCase();
+        const suggestions = subProjects
+            .filter(project =>
+                project.TenDuAn && project.TenDuAn.toLowerCase().includes(termLower))
+            .map(project => project.TenDuAn)
+            .filter((name, index, self) => self.indexOf(name) === index) // Remove duplicates
+            .slice(0, 5); // Limit to 5 suggestions
+
+        setSearchSuggestions(suggestions);
+    };
+
+    // Handle search input change
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        updateSearchSuggestions(value);
+        setShowSuggestions(value.length > 0);
+    };
+
+    // Select a suggestion
+    const selectSuggestion = (suggestion) => {
+        setSearchTerm(suggestion);
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
     };
     useEffect(() => {
         const fetchProjectData = async () => {
             if (!DuAnID) {
                 console.error('Project ID is missing');
                 navigate('/');
-                return;    
+                return;
             }
             try {
                 setLoading(true);
                 const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${DuAnID}`);
                 setProject(response.data.data.duAnTong);
                 setSubProjects(response.data.data.duAnThanhPhan);
+                setFilteredProjects(response.data.data.duAnThanhPhan)
                 setLoading(false);
             } catch (error) {
                 console.error('Error fetching project data:', error);
@@ -72,7 +112,7 @@ const SideProject = () => {
     }, [DuAnID, navigate]);
     useEffect(() => {
         filterProjects();
-    }, [fromDate, toDate, status, ,completionLevel, subProjects]);
+    }, [fromDate, toDate, status, , completionLevel, subProjects, searchTerm]);
 
     const handleDetail = (subProjectId) => {
         const selectedSubProject = subProjects.find(sp => sp.DuAnID === subProjectId);
@@ -82,6 +122,7 @@ const SideProject = () => {
         }
         navigate('/detail', {
             state: {
+                projectId: DuAnID,
                 projectName: project.TenDuAn,
                 subProjectName: selectedSubProject.TenDuAn,
                 subProjectId: selectedSubProject.DuAnID
@@ -106,6 +147,9 @@ const SideProject = () => {
         setToDate('');
         setStatus('all');
         setCompletionLevel('all');
+        setSearchTerm('');
+        setSearchSuggestions([]);
+        setShowSuggestions(false);
     };
 
     if (loading) {
@@ -118,45 +162,99 @@ const SideProject = () => {
 
     return (
         <div className="SideProject">
-            <div className="header">
-                <div className="top-nav">
-                    <div className="nav-right">
-                        <div className="user-profile">
-                            <img src={menuIcon} alt="Menu" className="small-icon" />
-                            <img src={helpIcon} alt="Help" className="small-icon" />
-                            <img src={userIcon} alt="User" className="small-icon" />
+            <div className="app-header">
+                <div className="header-navbar">
+                    <div className="navbar-left">
+                        <button className="nav-button" aria-label="Navigation menu">
+                        </button>
+                    </div>
+
+                    <div className="navbar-right">
+                        <div className="user-actions">
+                            <img src={menuIcon} alt="Menu" className="nav-icon" />
+                            <img src={helpIcon} alt="Help" className="nav-icon" />
+                            <img src={userIcon} alt="User profile" className="nav-icon" />
                         </div>
                     </div>
                 </div>
 
-                <div className="header-content">
-                    <div className="header-row">
-                        <h1>{project.TenDuAn}</h1>
-
-                        <div className="search-filter">
-
-                            <div className="filter-form">
-                                <div className="filter-box">
-                                    <span>Lọc theo trạng thái:</span>
+                {/* Main Header Content */}
+                <div className="header-main-content">
+                    <div className="header-content-wrapper">
+                        <h1 className="page-title">Danh sách dự án đường bộ</h1>
+                        <div className="search-filters-container">
+                            <form className="filter-controls-form">
+                                <div className="search-control">
+                                    <label htmlFor="project-search" className="filter-label">Tìm kiếm dự án:</label>
+                                    <div className="search-input-wrapper">
+                                        <input
+                                            id="project-search"
+                                            type="text"
+                                            placeholder="Nhập tên dự án..."
+                                            value={searchTerm}
+                                            onChange={handleSearchChange}
+                                            className="search-input-field"
+                                        />
+                                        {showSuggestions && searchSuggestions.length > 0 && (
+                                            <ul className="search-suggestions-dropdown">
+                                                {searchSuggestions.map((suggestion, index) => (
+                                                    <li
+                                                        key={index}
+                                                        onClick={() => selectSuggestion(suggestion)}
+                                                        className="suggestion-option"
+                                                    >
+                                                        {suggestion}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="date-filter-control">
+                                    <span className="filter-label">Lọc theo khoảng thời gian:</span>
+                                    <div className="date-range-inputs">
+                                        <input
+                                            type="date"
+                                            value={fromDate}
+                                            onChange={(e) => setFromDate(e.target.value)}
+                                            className="date-input"
+                                            aria-label="Từ ngày"
+                                        />
+                                        <span className="date-range-separator">đến</span>
+                                        <input
+                                            type="date"
+                                            value={toDate}
+                                            onChange={(e) => setToDate(e.target.value)}
+                                            className="date-input"
+                                            aria-label="Đến ngày"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="status-filter-control">
+                                    <label htmlFor="status-filter" className="filter-label">Lọc theo trạng thái:</label>
                                     <select
-                                        name="status"
+                                        id="status-filter"
                                         value={status}
                                         onChange={(e) => setStatus(e.target.value)}
-                                        className="small-input"
+                                        className="status-select"
                                     >
                                         <option value="all">Tất cả</option>
-                                        <option value="Chậm tiến độ">Đang hoạt động</option>
-                                        <option value="Đang tiến hành">Đã phê duyệt – chậm tiến độ</option>
-                                        <option value="Đã hoàn thành">Chậm tiến độ – đang hoàn thiện</option>
+                                        <option value="Chậm tiến độ">Chậm tiến độ</option>
+                                        <option value="Đang tiến hành">Đang tiến hành</option>
+                                        <option value="Đã hoàn thành">Đã hoàn thành</option>
+                                        <option value="Đang triển khai">Đang triển khai</option>
+                                        <option value="Đã phê duyệt – chờ khởi công">Đã phê duyệt – chờ khởi công</option>
+                                        <option value="Dự kiến khởi công">Dự kiến khởi công</option>
+                                        <option value="Đang hoàn thiện hồ sơ đầu tư">Đang hoàn thiện hồ sơ đầu tư</option>
                                     </select>
                                 </div>
-                                <div className="filter-box">
-                                    <span>Mức độ hoàn thành</span>
+                                <div className="status-filter-control">
+                                    <label htmlFor="status-filter" className="filter-label">Mức độ hoàn thành:</label>
                                     <select
-                                        name="completionLevel"
+                                        id="status-filter"
                                         value={completionLevel}
                                         onChange={(e) => setCompletionLevel(e.target.value)}
-                                        className="small-input"
+                                        className="status-select"
                                     >
                                         <option value="all">Tất cả</option>
                                         <option value="20">Trên 20%</option>
@@ -164,15 +262,19 @@ const SideProject = () => {
                                         <option value="50">Trên 50%</option>
                                         <option value="80">Trên 80%</option>
                                         <option value="100">Đã hoàn thành (100%)</option>
+
                                     </select>
                                 </div>
-                                <button
-                                    className="reset-filter-btn"
-                                    onClick={resetFilters}
-                                >
-                                    Xóa lọc
-                                </button>
-                            </div>
+                                <div className="reset-button-wrapper">
+                                    <button
+                                        type="button"
+                                        className="reset-filters-button"
+                                        onClick={resetFilters}
+                                    >
+                                        Xóa lọc
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>

@@ -1,13 +1,17 @@
 import React from 'react';
 import './ConstructionProgress.css';
+import { useParams, useNavigate } from 'react-router-dom';
 
-const ConstructionProgress = ({ tasks = [] }) => {  
+const ConstructionProgress = ({ tasks = [], projectId }) => {  
+  const navigate = useNavigate();
+  
   const today = new Date().toLocaleDateString('vi-VN', { 
     weekday: 'long', 
     day: '2-digit', 
     month: '2-digit', 
     year: 'numeric' 
   });
+
   const formatDate = (dateString) => {
     if (typeof dateString === 'string') {
       const datePart = dateString.split('T')[0];
@@ -23,6 +27,13 @@ const ConstructionProgress = ({ tasks = [] }) => {
     
     return dateString; 
   };
+  console.log(projectId);
+  
+  const handleNavigateToWorkItems = () => {
+    if (projectId) {
+      navigate(`/work-items/${projectId}`);
+    }
+  };
 
   return (
     <div className="progress-container"> 
@@ -30,13 +41,19 @@ const ConstructionProgress = ({ tasks = [] }) => {
         <div className="header-bar">
           <div className="menu-icon">☰</div>
           <div className="title">TIẾN ĐỘ THI CÔNG</div>
+          <button 
+            onClick={handleNavigateToWorkItems}
+            className="navigate-button"
+          >
+            Xem chi tiết
+          </button>
         </div>
         <div className="today-date">{today}</div>
         <div className="task-list">
           {tasks.map((task, index) => (
             <div className="task-card" key={index}>
               <div className="task-date-time">
-              {formatDate(task.NgayKetThuc)}
+                {formatDate(task.NgayKetThuc)}
               </div>
               <div className="task-content">
                 <div className="task-title">{task.TenCongTac}</div>

@@ -22,7 +22,8 @@ const Detail = () => {
     const [loading, setLoading] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
     const [isExpanded, setIsExpanded] = useState(false);
-
+    const projectId = state.projectId
+    
 
     useEffect(() => {
         const fetchPackageDetails = async () => {
@@ -107,7 +108,7 @@ const Detail = () => {
                                 )}
                                 {packageData?.tienDo.chiTiet && (
                                     <div className="wrapper">
-                                        <ConstructionProgress tasks={packageData.tienDo.chiTiet} />
+                                        <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={projectId}/>
                                     </div>
                                 )}
                             </>

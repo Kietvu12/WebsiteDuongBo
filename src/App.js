@@ -12,6 +12,7 @@ import WorkItem from './page/WorkItem/WorkItem';
 import { ProjectProvider } from './contexts/ProjectContext';
 import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
+import Approvals from './page/Approvals/Approvals';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -65,6 +66,11 @@ function App() {
         <Route path='/project-progress/:projectId' element={
           <LayoutWithSidebar>
             <ProjectProgress/>
+          </LayoutWithSidebar>
+        } />
+        <Route path='/approvals' element={
+          <LayoutWithSidebar>
+            <Approvals/>
           </LayoutWithSidebar>
         } />
       </Routes>

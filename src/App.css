@@ -9,7 +9,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  padding-bottom: 100px; /* Tạo khoảng trống phía dưới */
+  padding-bottom: 100px; 
 }
 .App-logo {
   height: 40vmin;

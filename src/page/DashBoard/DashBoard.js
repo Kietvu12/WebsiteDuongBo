@@ -26,43 +26,127 @@ const DashBoard = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [provinces, setProvinces] = useState([]); // Thêm state cho danh sách tỉnh thành
+  const [selectedProvince, setSelectedProvince] = useState('');
+  
+  const fetchProvinces = async () => {
+    try {
+      const response = await axios.get('https://provinces.open-api.vn/api/?depth=1');
+      setProvinces(response.data);
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách tỉnh thành:', error);
+    }
+  };
   const filterProjects = () => {
     let result = [...projects];
+
+    // Lọc theo ngày
     if (fromDate || toDate) {
       result = result.filter(project => {
         const projectStartDate = new Date(project.NgayKhoiCong || '1970-01-01');
-        const projectEndDate = new Date(project.NgayHoanThanh || '9999-12-31');
         const filterFromDate = fromDate ? new Date(fromDate) : new Date('1970-01-01');
         const filterToDate = toDate ? new Date(toDate) : new Date('9999-12-31');
-
-        return projectStartDate >= filterFromDate && projectEndDate <= filterToDate;
+        return projectStartDate >= filterFromDate && projectStartDate <= filterToDate;
       });
     }
+
+    // Lọc theo trạng thái
     if (status !== 'all') {
       result = result.filter(project => project.TrangThai === status);
     }
+
+    // Lọc theo tên dự án
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(project =>
+        project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)
+      );
+    }
+
+    // Lọc theo tỉnh thành
+    if (selectedProvince) {
+      result = result.filter(project => {
+        if (!project.TinhThanh) return false;
+        
+        // Chuẩn hóa tên tỉnh cần tìm (bỏ dấu, viết thường)
+        const searchProvince = selectedProvince.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        // Chuẩn hóa tên tỉnh trong dữ liệu
+        const projectProvinces = project.TinhThanh
+          .split('–') // Dấu phân cách tỉnh liên tỉnh
+          .map(p => p.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+        
+        // Kiểm tra xem tỉnh cần tìm có trong danh sách tỉnh của dự án không
+        return projectProvinces.some(p => p.includes(searchProvince));
+      });
+    }
+  
+
     setFilteredProjects(result);
   };
 
+
+  // Hàm xử lý khi chọn tỉnh thành
+  const handleProvinceChange = (e) => {
+    setSelectedProvince(e.target.value);
+  };
+  const updateSearchSuggestions = (term) => {
+    if (!term) {
+      setSearchSuggestions([]);
+      return;
+    }
+
+    const termLower = term.toLowerCase();
+    const suggestions = projects
+      .filter(project =>
+        project.TenDuAn && project.TenDuAn.toLowerCase().includes(termLower))
+      .map(project => project.TenDuAn)
+      .filter((name, index, self) => self.indexOf(name) === index)
+      .slice(0, 5);
+
+    setSearchSuggestions(suggestions);
+  };
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    updateSearchSuggestions(value);
+    setShowSuggestions(value.length > 0);
+  };
+  const selectSuggestion = (suggestion) => {
+    setSearchTerm(suggestion);
+    setSearchSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/duAnTongList');
-        setProjects(response.data.data);
-        setFilteredProjects(response.data.data);
+        setLoading(true);
+        const [projectsRes, provincesRes] = await Promise.all([
+          axios.get('http://localhost:5000/duAnTongList'),
+          axios.get('https://provinces.open-api.vn/api/?depth=1')
+        ]);
+
+        setProjects(projectsRes.data.data);
+        setFilteredProjects(projectsRes.data.data);
+        setProvinces(provincesRes.data);
         setLoading(false);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
         setLoading(false);
       }
     };
-    fetchProjects();
+
+    fetchData();
   }, []);
 
+  // Cập nhật filter khi có thay đổi
   useEffect(() => {
     filterProjects();
-  }, [fromDate, toDate, status, projects]);
-
+  }, [fromDate, toDate, status, searchTerm, selectedProvince, projects]);
   const handleDetail = (DuAnID) => {
     navigate(`/side-project/${DuAnID}`);
     setSelectedProjectId(DuAnID)
@@ -89,56 +173,106 @@ const DashBoard = () => {
     setFromDate('');
     setToDate('');
     setStatus('all');
+    setSearchTerm('');
+    setSearchSuggestions([]);
+    setShowSuggestions(false);
   };
 
   return (
     <div className="dashboard">
-      <div className="header">
-        <div className="top-nav">
-          <div className="nav-left">
-            <button className="nav-btn"></button>
+      <div className="app-header">
+        <div className="header-navbar">
+          <div className="navbar-left">
+            <button className="nav-button" aria-label="Navigation menu">
+            </button>
           </div>
-          <div className="nav-right">
-            <div className="user-profile">
-              <img src={menuIcon} alt="Menu" className="small-icon" />
-              <img src={helpIcon} alt="Help" className="small-icon" />
-              <img src={userIcon} alt="User" className="small-icon" />
+
+          <div className="navbar-right">
+            <div className="user-actions">
+              <img src={menuIcon} alt="Menu" className="nav-icon" />
+              <img src={helpIcon} alt="Help" className="nav-icon" />
+              <img src={userIcon} alt="User profile" className="nav-icon" />
             </div>
           </div>
         </div>
 
-        <div className="header-content">
-          <div className="header-row">
-            <h1>Danh sách dự án đường bộ</h1>
-
-            <div className="search-filter">
-              <div className="filter-form">
-                <div className="filter-box">
-                  <span>Lọc theo khoảng thời gian:</span>
-                  <input
-                    type="date"
-                    name="from_date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="small-input"
-                  />
-                  <span>đến</span>
-                  <input
-                    type="date"
-                    name="to_date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="small-input"
-                  />
+        {/* Main Header Content */}
+        <div className="header-main-content">
+          <div className="header-content-wrapper">
+            <h1 className="page-title">Danh sách dự án đường bộ</h1>
+            <div className="search-filters-container">
+              <form className="filter-controls-form">
+                <div className="search-control">
+                  <label htmlFor="project-search" className="filter-label">Tìm kiếm dự án:</label>
+                  <div className="search-input-wrapper">
+                    <input
+                      id="project-search"
+                      type="text"
+                      placeholder="Nhập tên dự án..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      className="search-input-field"
+                    />
+                    {showSuggestions && searchSuggestions.length > 0 && (
+                      <ul className="search-suggestions-dropdown">
+                        {searchSuggestions.map((suggestion, index) => (
+                          <li
+                            key={index}
+                            onClick={() => selectSuggestion(suggestion)}
+                            className="suggestion-option"
+                          >
+                            {suggestion}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-
-                <div className="filter-box">
-                  <span>Lọc theo trạng thái:</span>
+                <div className="date-filter-control">
+                  <span className="filter-label">Lọc theo khoảng thời gian:</span>
+                  <div className="date-range-inputs">
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                      className="date-input"
+                      aria-label="Từ ngày"
+                    />
+                    <span className="date-range-separator">đến</span>
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                      className="date-input"
+                      aria-label="Đến ngày"
+                    />
+                  </div>
+                </div>
+                <div className="province-filter-control">
+                  <span className="filter-label">Lọc theo tỉnh thành:</span>
+                  <div className="province-select-wrapper">
+                    <select
+                      value={selectedProvince}
+                      onChange={handleProvinceChange}
+                      className="province-select"
+                      aria-label="Chọn tỉnh thành"
+                    >
+                      <option value="">Tất cả tỉnh thành</option>
+                      {provinces.map(province => (
+                        <option key={province.code} value={province.name}>
+                          {province.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="status-filter-control">
+                  <label htmlFor="status-filter" className="filter-label">Lọc theo trạng thái:</label>
                   <select
-                    name="status"
+                    id="status-filter"
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="small-input"
+                    className="status-select"
                   >
                     <option value="all">Tất cả</option>
                     <option value="Chậm tiến độ">Chậm tiến độ</option>
@@ -151,18 +285,20 @@ const DashBoard = () => {
                   </select>
                 </div>
 
-                <button 
-                  className="reset-filter-btn"
-                  onClick={resetFilters}
-                >
-                  Xóa lọc
-                </button>
-              </div>
+                <div className="reset-button-wrapper">
+                  <button
+                    type="button"
+                    className="reset-filters-button"
+                    onClick={resetFilters}
+                  >
+                    Xóa lọc
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
       </div>
-
       <div className="table-container">
         <div className="table-header">
           <h2>Danh sách dự án</h2>

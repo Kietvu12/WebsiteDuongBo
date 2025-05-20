@@ -6,6 +6,7 @@ import userIcon from '../../assets/img/user-icon.png';
 import addIcon from '../../assets/img/add-icon.png';
 import WorkTable from '../../component/WorkTable/WorkTable';
 import { useParams, useNavigate } from 'react-router-dom';
+import { FaArrowLeft } from 'react-icons/fa'
 import axios from 'axios';
 const WorkItem = () => {
     const navigate = useNavigate();
@@ -16,32 +17,38 @@ const WorkItem = () => {
     const [toDate, setToDate] = useState('2023-09-26');
     const [project, setProject] = useState(null);
     const [status, setStatus] = useState('all');
+    console.log(projectId);
+
     useEffect(() => {
-            const fetchProjectData = async () => {
-                if (!projectId) {
-                    console.error('Project ID is missing');
-                    navigate('/');
-                    return;    
-                }
-                try {
-                    setLoading(true);
-                    const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${projectId}`);
-                    setProject(response.data.data.duAnTong);
-                    setLoading(false);
-                } catch (error) {
-                    console.error('Error fetching project data:', error);
-                    setLoading(false);
-                }
-            };
-    
-            fetchProjectData();
-        }, [projectId, navigate]);
+        const fetchProjectData = async () => {
+            if (!projectId) {
+                console.error('Project ID is missing');
+                navigate('/');
+                return;
+            }
+            try {
+                setLoading(true);
+                const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${projectId}`);
+                setProject(response.data.data.duAnTong);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error fetching project data:', error);
+                setLoading(false);
+            }
+        };
+
+        fetchProjectData();
+    }, [projectId, navigate]);
     return (
         <div className='plan'>
             <div className="header">
                 <div className="top-nav">
                     <div className="nav-left">
-                        <button className="nav-btn">
+                        <button
+                            className="nav-btn"
+                            onClick={() => navigate(-1)}
+                        >
+                            <FaArrowLeft className="small-icon" />
                         </button>
                     </div>
                     <div className="nav-right">

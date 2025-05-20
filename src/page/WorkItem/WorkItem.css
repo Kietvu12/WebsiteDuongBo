@@ -18,6 +18,18 @@
   .work-item {
     background-color: #ffffff;
   }
+  .nav-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    margin-right: 10px;
+}
+
+.nav-btn:hover {
+    background-color: #f0f0f0;
+    border-radius: 4px;
+}
   
   /* Indentation for hierarchy levels */
   .package-header td:nth-child(3) {

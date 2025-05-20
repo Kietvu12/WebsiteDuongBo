@@ -10,8 +10,7 @@ const createCustomIcon = (color) => {
   return L.divIcon({
     className: 'custom-marker',
     html: `<div style="background-color:${color}; border:2px solid white; border-radius:50%; width:16px; height:16px;"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10]
+    iconSize: [0, 0]
   });
 };
 
@@ -157,8 +156,6 @@ const MapComponent = ({ projects = [] }) => {
               }
             }
           }
-
-          // Add main project if it has coordinates
           if (project.coordinates?.start && project.coordinates?.end) {
             const startLat = parseCoordinate(project.coordinates.start.lat);
             const startLng = parseCoordinate(project.coordinates.start.lng);
@@ -502,51 +499,51 @@ const MapComponent = ({ projects = [] }) => {
                 )}
               </div>
             )}
-            {activeRoute.projectData?.duAnThanhPhan?.flatMap(duAnTP => 
-  duAnTP.goiThau?.flatMap(goiThau => 
-    goiThau.hangMuc?.map((hangMuc, idx) => (
-      <div key={`${hangMuc.HangMucID}-${idx}`} className="info-item full-width">
-        <div className="info-label" style={{ 
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}>
-          {hangMuc.TenHangMuc}
-        </div>
-        <div className="info-value" style={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          <span style={{
-            fontWeight: 'bold',
-            minWidth: '40px',
-            color: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
-                  parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? '#2196F3' : '#9E9E9E'
-          }}>
-            {hangMuc.tienDo?.phanTramHoanThanh || 0}%
-          </span>
-          <div style={{
-            flexGrow: 1,
-            height: '8px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              width: `${hangMuc.tienDo?.phanTramHoanThanh || 0}%`,
-              height: '100%',
-              backgroundColor: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
+            {activeRoute.projectData?.duAnThanhPhan?.flatMap(duAnTP =>
+              duAnTP.goiThau?.flatMap(goiThau =>
+                goiThau.hangMuc?.map((hangMuc, idx) => (
+                  <div key={`${hangMuc.HangMucID}-${idx}`} className="info-item full-width">
+                    <div className="info-label" style={{
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}>
+                      {hangMuc.TenHangMuc}
+                    </div>
+                    <div className="info-value" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
+                    }}>
+                      <span style={{
+                        fontWeight: 'bold',
+                        minWidth: '40px',
+                        color: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
+                          parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? '#2196F3' : '#9E9E9E'
+                      }}>
+                        {hangMuc.tienDo?.phanTramHoanThanh || 0}%
+                      </span>
+                      <div style={{
+                        flexGrow: 1,
+                        height: '8px',
+                        backgroundColor: '#f5f5f5',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${hangMuc.tienDo?.phanTramHoanThanh || 0}%`,
+                          height: '100%',
+                          backgroundColor: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
                             parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? '#2196F3' : '#9E9E9E',
-              borderRadius: '4px',
-              transition: 'width 0.3s ease'
-            }}></div>
-          </div>
-        </div>
-      </div>
-    ))
-  )
-)}
+                          borderRadius: '4px',
+                          transition: 'width 0.3s ease'
+                        }}></div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )
+            )}
           </div>
         )}
       </div>
