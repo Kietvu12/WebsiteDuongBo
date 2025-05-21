@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import "./ChatbotButton.css";
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 
 const ChatbotButton = () => {
@@ -15,6 +16,7 @@ const ChatbotButton = () => {
   const [userInput, setUserInput] = useState('');
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
+  const [selectedDuAnId, setSelectedDuAnId] = useState(null);
 
   const toggleChatbot = () => {
     // Khi đóng chatbot, nếu modal đang mở, cũng đóng modal
@@ -232,22 +234,53 @@ const ChatbotButton = () => {
   const navigate = useNavigate();
 
   const handleShowData = () => {
-    if (mcpBlocks.length === 0) return;
-  
-    const firstDataArray = mcpBlocks[0]?.data;
-    if (Array.isArray(firstDataArray) && firstDataArray.length > 0) {
-      const firstProject = firstDataArray[0];
-      const projectId = firstProject?.DuAnID;
-      console.log(projectId)
-      if (typeof projectId === 'number') {
-        // Chuyển về trang /home và truyền DuAnID (cách 1: qua state)
-        console.log(1)
-        navigate('/home', { state: { selectedDuAnId: projectId } });
+    console.log("Button clicked, mcpBlocks:", mcpBlocks);
+    
+    if (mcpBlocks.length === 0) {
+      alert("Chưa có dữ liệu để hiển thị");
+      return;
+    }
+
+    try {
+      // Tạo mảng chứa tất cả các ID dự án
+      const projectIds = [];
+      
+      // Duyệt qua tất cả các block trong mcpBlocks
+      mcpBlocks.forEach((block, blockIndex) => {
+        console.log(`Đang xử lý block ${blockIndex}:`, block);
+        
+        if (block && block.data) {
+          const data = block.data;
+          
+          // Trường hợp 1: data là mảng các đối tượng
+          if (Array.isArray(data)) {
+            data.forEach(item => {
+              if (item.DuAnID) {
+                projectIds.push(item.DuAnID);
+              }
+            });
+          } 
+          // Trường hợp 2: data là đối tượng có chứa DuAnID
+          else if (data.DuAnID) {
+            projectIds.push(data.DuAnID);
+          }
+        }
+      });
+      
+      console.log("Danh sách các DuAnID:", projectIds);
+      
+      if (projectIds.length > 0) {
+        // Tạo chuỗi query parameter với nhiều ID
+        const queryString = projectIds.join(',');
+        
+        // Điều hướng đến dashboard với danh sách ID
+        navigate(`/home?DuAnIDs=${queryString}`);
       } else {
-        console.warn('❌ Không tìm thấy DuAnID hợp lệ trong MCP');
+        alert("Không tìm thấy ID dự án nào trong dữ liệu");
       }
-    } else {
-      console.warn('❌ MCP Data không hợp lệ hoặc rỗng');
+    } catch (error) {
+      console.error("Lỗi xử lý dữ liệu:", error);
+      alert("Đã xảy ra lỗi khi xử lý dữ liệu");
     }
   };
   
@@ -259,6 +292,11 @@ const ChatbotButton = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    const id = sessionStorage.getItem('selectedDuAnId');
+    if (id) setSelectedDuAnId(Number(id));
+  }, []);
 
   return (
     <>
@@ -340,7 +378,6 @@ const ChatbotButton = () => {
             <button
               className="show-data-button"
               onClick={handleShowData}
-              disabled={mcpBlocks.length === 0}
               title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
             >
               <FaDatabase />
@@ -350,12 +387,12 @@ const ChatbotButton = () => {
         </div>
       )}
       {mcpBlocks.length > 0 ? console.log(mcpBlocks) : ""}
-      {/* Modal overlay hiển thị MCP Data */}
+      {}
       {isMcpModalOpen && (
         <div className="mcp-modal-overlay" onClick={handleCloseModal}>
           <div
             className="mcp-modal-content"
-            onClick={(e) => e.stopPropagation() /* Ngăn không cho click ngoài đóng */}
+            onClick={(e) => e.stopPropagation() }
           >
             <div className="mcp-modal-header">
               <button onClick={handleCloseModal} aria-label="Đóng">

@@ -33,7 +33,7 @@ app.get('/duAnTongList', async (req, res) => {
     const result = await Promise.all(duAnTongList.map(async (duAnTong) => {
       const duAnId = duAnTong.DuAnID;
       const [duAnThanhPhan] = await db.query(
-        'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
+        'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
         [duAnId]
       );
       const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
@@ -63,8 +63,8 @@ app.get('/duAnTongList', async (req, res) => {
 
               const khoiLuongThucHien = tienDo.length > 0 ? tienDo[0].KhoiLuongThucHien : 0;
               const donViTinh = tienDo.length > 0 ? tienDo[0].DonViTinh : keHoach.DonViTinh;
-              const phanTramHoanThanh = keHoach.KhoiLuongKeHoach > 0 
-                ? (khoiLuongThucHien / keHoach.KhoiLuongKeHoach) * 100 
+              const phanTramHoanThanh = keHoach.KhoiLuongKeHoach > 0
+                ? (khoiLuongThucHien / keHoach.KhoiLuongKeHoach) * 100
                 : 0;
 
               return {
@@ -120,7 +120,7 @@ app.get('/duAnTongList', async (req, res) => {
       );
       let totalProgress = 0;
       let count = 0;
-      
+
       for (const duAnTP of duAnThanhPhanWithDetails) {
         for (const goiThau of duAnTP.goiThau) {
           for (const hangMuc of goiThau.hangMuc) {
@@ -193,7 +193,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
 
     if (allGoiThau.length > 0) {
       const goiThauIds = allGoiThau.map(gt => gt.GoiThau_ID);
-      
+
       // Tính tổng khối lượng kế hoạch của toàn bộ dự án tổng
       const [tongKeHoach] = await db.query(
         `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
@@ -237,7 +237,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
 
         if (goiThauTP.length > 0) {
           const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
-          
+
           // Tính tổng khối lượng kế hoạch của dự án thành phần
           const [keHoachTP] = await db.query(
             `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
@@ -338,7 +338,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
           MoTaChung: duAnTong[0].MoTaChung,
           tongKhoiLuongKeHoach: tongKhoiLuongKeHoach,
           tongKhoiLuongThucHien: tongKhoiLuongThucHien,
-          phanTramHoanThanhTong: tongKhoiLuongKeHoach > 0 
+          phanTramHoanThanhTong: tongKhoiLuongKeHoach > 0
             ? ((tongKhoiLuongThucHien / tongKhoiLuongKeHoach) * 100).toFixed(2)
             : "0.00"
         },
@@ -355,6 +355,204 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
     });
   }
 });
+
+app.get('/duAn/:duAnId', async (req, res) => {
+  try {
+    const duAnId = req.params.duAnId;
+    const [duAnTong] = await db.query(
+      'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NULL',
+      [duAnId]
+    );
+
+    if (duAnTong.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy dự án TỔNG với ID này'
+      });
+    }
+
+    // 2. Lấy các dự án thành phần
+    const [duAnThanhPhan] = await db.query(
+      'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
+      [duAnId]
+    );
+
+    // 3. Tính toán khối lượng kế hoạch và thực hiện tổng thể
+    let tongKhoiLuongKeHoach = 0;
+    let tongKhoiLuongThucHien = 0;
+
+    // Lấy tất cả gói thầu thuộc dự án tổng
+    const [allGoiThau] = await db.query(
+      `SELECT gt.GoiThau_ID 
+       FROM goithau gt
+       JOIN duan d ON gt.DuAn_ID = d.DuAnID
+       WHERE d.DuAnID = ? OR d.ParentID = ?`,
+      [duAnId, duAnId]
+    );
+
+    if (allGoiThau.length > 0) {
+      const goiThauIds = allGoiThau.map(gt => gt.GoiThau_ID);
+
+      // Tính tổng khối lượng kế hoạch của toàn bộ dự án tổng
+      const [tongKeHoach] = await db.query(
+        `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
+         FROM quanlykehoach kh
+         JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
+         WHERE hm.GoiThauID IN (?)`,
+        [goiThauIds]
+      );
+      tongKhoiLuongKeHoach = tongKeHoach[0].tongKeHoach || 0;
+
+      // Tính tổng khối lượng thực hiện của toàn bộ dự án tổng
+      const [tongThucHien] = await db.query(
+        `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
+         FROM tiendothuchien td
+         JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
+         JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
+         WHERE hm.GoiThauID IN (?)`,
+        [goiThauIds]
+      );
+      tongKhoiLuongThucHien = tongThucHien[0].tongThucHien || 0;
+    }
+
+    // 4. Lấy thông tin chi tiết cho từng dự án thành phần
+    const duAnThanhPhanWithDetails = await Promise.all(
+      duAnThanhPhan.map(async (duAnTP) => {
+        // Lấy các gói thầu thuộc dự án thành phần này
+        const [goiThauTP] = await db.query(
+          `SELECT gt.* 
+           FROM goithau gt
+           WHERE gt.DuAn_ID = ?
+           ORDER BY gt.GoiThau_ID ASC`,
+          [duAnTP.DuAnID]
+        );
+
+        // Tính toán khối lượng kế hoạch và thực hiện cho từng dự án thành phần
+        let khoiLuongKeHoachTP = 0;
+        let khoiLuongThucHienTP = 0;
+        let phanTramKeHoach = 0;
+        let phanTramHoanThanh = 0;
+        let phanTramChamTienDo = 0;
+
+        if (goiThauTP.length > 0) {
+          const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
+
+          // Tính tổng khối lượng kế hoạch của dự án thành phần
+          const [keHoachTP] = await db.query(
+            `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
+             FROM quanlykehoach kh
+             JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
+             WHERE hm.GoiThauID IN (?)`,
+            [goiThauIds]
+          );
+          khoiLuongKeHoachTP = keHoachTP[0].tongKeHoach || 0;
+
+          // Tính tổng khối lượng thực hiện của dự án thành phần
+          const [thucHienTP] = await db.query(
+            `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
+             FROM tiendothuchien td
+             JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
+             JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
+             WHERE hm.GoiThauID IN (?)`,
+            [goiThauIds]
+          );
+          khoiLuongThucHienTP = thucHienTP[0].tongThucHien || 0;
+
+          // Tính phần trăm
+          if (tongKhoiLuongKeHoach > 0) {
+            phanTramKeHoach = (khoiLuongKeHoachTP / tongKhoiLuongKeHoach) * 100;
+            phanTramHoanThanh = (khoiLuongThucHienTP / tongKhoiLuongKeHoach) * 100;
+            phanTramChamTienDo = Math.max(phanTramKeHoach - phanTramHoanThanh, 0);
+          }
+        }
+
+        // Xác định tọa độ đầu cuối cho dự án thành phần
+        let toaDoDauTP = null;
+        let toaDoCuoiTP = null;
+
+        if (goiThauTP.length > 0) {
+          const firstGoiThauTP = goiThauTP[0];
+          toaDoDauTP = {
+            x: firstGoiThauTP.ToaDo_BatDau_X,
+            y: firstGoiThauTP.ToaDo_BatDau_Y
+          };
+
+          const lastGoiThauTP = goiThauTP[goiThauTP.length - 1];
+          toaDoCuoiTP = {
+            x: lastGoiThauTP.ToaDo_KetThuc_X,
+            y: lastGoiThauTP.ToaDo_KetThuc_Y
+          };
+        }
+
+        // Lấy số lượng hạng mục cho dự án thành phần
+        let countHangMuc = 0;
+        if (goiThauTP.length > 0) {
+          const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
+          const [hangMuc] = await db.query(
+            `SELECT COUNT(*) as count FROM hangmuc WHERE GoiThauID IN (?)`,
+            [goiThauIds]
+          );
+          countHangMuc = hangMuc[0].count;
+        }
+
+        return {
+          DuAnID: duAnTP.DuAnID,
+          TenDuAn: duAnTP.TenDuAn,
+          TinhThanh: duAnTP.TinhThanh,
+          ChuDauTu: duAnTP.ChuDauTu,
+          NgayKhoiCong: duAnTP.NgayKhoiCong,
+          TrangThai: duAnTP.TrangThai,
+          NguonVon: duAnTP.NguonVon,
+          TongChieuDai: duAnTP.TongChieuDai,
+          KeHoachHoanThanh: duAnTP.KeHoachHoanThanh,
+          MoTaChung: duAnTP.MoTaChung,
+          ParentID: duAnTP.ParentID,
+          coordinates: {
+            start: toaDoDauTP ? { lat: toaDoDauTP.y, lng: toaDoDauTP.x } : null,
+            end: toaDoCuoiTP ? { lat: toaDoCuoiTP.y, lng: toaDoCuoiTP.x } : null
+          },
+          soLuongHangMuc: countHangMuc,
+          khoiLuongKeHoach: khoiLuongKeHoachTP,
+          khoiLuongThucHien: khoiLuongThucHienTP,
+          phanTramKeHoach: phanTramKeHoach.toFixed(2),
+          phanTramHoanThanh: phanTramHoanThanh.toFixed(2),
+          phanTramChamTienDo: phanTramChamTienDo.toFixed(2)
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        DuAnID: duAnTong[0].DuAnID,
+        TenDuAn: duAnTong[0].TenDuAn,
+        TinhThanh: duAnTong[0].TinhThanh,
+        ChuDauTu: duAnTong[0].ChuDauTu,
+        NgayKhoiCong: duAnTong[0].NgayKhoiCong,
+        TrangThai: duAnTong[0].TrangThai,
+        NguonVon: duAnTong[0].NguonVon,
+        TongChieuDai: duAnTong[0].TongChieuDai,
+        KeHoachHoanThanh: duAnTong[0].KeHoachHoanThanh,
+        MoTaChung: duAnTong[0].MoTaChung,
+        tongKhoiLuongKeHoach: tongKhoiLuongKeHoach,
+        tongKhoiLuongThucHien: tongKhoiLuongThucHien,
+        phanTramHoanThanhTong: tongKhoiLuongKeHoach > 0
+          ? ((tongKhoiLuongThucHien / tongKhoiLuongKeHoach) * 100).toFixed(2)
+          : "0.00",
+        duAnThanhPhan: duAnThanhPhanWithDetails
+      }
+    });
+
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 app.get('/duAn/goiThau/:duAnId', async (req, res) => {
   try {
     const duAnId = req.params.duAnId;
@@ -444,7 +642,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
        WHERE hm.GoiThauID = ?`,
       [goiThauId]
     );
-    
+
     const tongKhoiLuong = tongKhoiLuongResult[0].TongKhoiLuong || 1; // Tránh chia cho 0
 
     // 5. Tính tổng khối lượng kế hoạch theo từng nhà thầu
@@ -536,7 +734,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     // 10. Đánh giá rủi ro
     const overdueItems = tienDoThiCong.filter(item => item.TrangThai.includes('Quá hạn'));
     const criticalItems = tienDoThiCong.filter(item => item.TrangThai.includes('Còn') && item.NgayKetThuc <= new Date(new Date().setDate(new Date().getDate() + 1)));
-    
+
     let danhGiaRuiRo = 'Ổn định';
     let riskScore = overdueItems.length * 2 + criticalItems.length;
     if (riskScore > 5) danhGiaRuiRo = 'Rủi ro cao';
@@ -657,7 +855,7 @@ app.get('/duAnThanhPhan/:duAnId/detail', async (req, res) => {
                       ...keHoach,
                       tienDoThucHien: tienDoList,
                       tongKhoiLuongThucHien: tongThucHien,
-                      phanTramHoanThanh: keHoach.KhoiLuongKeHoach > 0 
+                      phanTramHoanThanh: keHoach.KhoiLuongKeHoach > 0
                         ? (tongThucHien / keHoach.KhoiLuongKeHoach * 100).toFixed(2)
                         : "0.00"
                     };
@@ -673,7 +871,7 @@ app.get('/duAnThanhPhan/:duAnId/detail', async (req, res) => {
                   keHoach: keHoachWithTienDo,
                   tongKhoiLuongKeHoach: tongKhoiLuongKeHoach,
                   tongKhoiLuongThucHien: tongKhoiLuongThucHien,
-                  phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
+                  phanTramHoanThanh: tongKhoiLuongKeHoach > 0
                     ? (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100).toFixed(2)
                     : "0.00"
                 };
@@ -689,7 +887,7 @@ app.get('/duAnThanhPhan/:duAnId/detail', async (req, res) => {
               hangMuc: hangMucWithDetails,
               tongKhoiLuongKeHoach: tongKhoiLuongKeHoachGT,
               tongKhoiLuongThucHien: tongKhoiLuongThucHienGT,
-              phanTramHoanThanh: tongKhoiLuongKeHoachGT > 0 
+              phanTramHoanThanh: tongKhoiLuongKeHoachGT > 0
                 ? (tongKhoiLuongThucHienGT / tongKhoiLuongKeHoachGT * 100).toFixed(2)
                 : "0.00"
             };
@@ -706,7 +904,7 @@ app.get('/duAnThanhPhan/:duAnId/detail', async (req, res) => {
           goiThau: goiThauWithDetails,
           tongKhoiLuongKeHoach: tongKhoiLuongKeHoachTP,
           tongKhoiLuongThucHien: tongKhoiLuongThucHienTP,
-          phanTramHoanThanh: tongKhoiLuongKeHoachTP > 0 
+          phanTramHoanThanh: tongKhoiLuongKeHoachTP > 0
             ? (tongKhoiLuongThucHienTP / tongKhoiLuongKeHoachTP * 100).toFixed(2)
             : "0.00"
         };
@@ -725,7 +923,7 @@ app.get('/duAnThanhPhan/:duAnId/detail', async (req, res) => {
           TenDuAn: duAnTong[0].TenDuAn,
           tongKhoiLuongKeHoach: tongKhoiLuongKeHoach,
           tongKhoiLuongThucHien: tongKhoiLuongThucHien,
-          phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
+          phanTramHoanThanh: tongKhoiLuongKeHoach > 0
             ? (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100).toFixed(2)
             : "0.00"
         },

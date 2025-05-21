@@ -16,12 +16,12 @@ import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
 
 const DashBoard = () => {
+  const [selectedDuAnIds, setSelectedDuAnIds] = useState([]);
+  const [selectedDuAnId, setSelectedDuAnId] = useState(null);
   const location = useLocation();
-  const selectedDuAnId = location.state?.selectedDuAnId;
   const { setSelectedProjectId } = useProject();
   const navigate = useNavigate();
   const [showAddPopup, setShowAddPopup] = useState(false);
-  const [showEditPopup, setShowEditPopup] = useState(false);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [status, setStatus] = useState('all');
@@ -29,6 +29,33 @@ const DashBoard = () => {
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mcpBlocks, setMcpBlocks] = useState([]);
+
+  useEffect(() => {
+    // Đọc danh sách ID từ URL query parameter
+    const queryParams = new URLSearchParams(location.search);
+    
+    // Kiểm tra tham số DuAnIDs (nhiều ID)
+    const duAnIdsString = queryParams.get('DuAnIDs');
+    if (duAnIdsString) {
+      const idList = duAnIdsString.split(',').map(id => Number(id));
+      console.log("Danh sách DuAnIDs từ URL:", idList);
+      setSelectedDuAnIds(idList);
+    }
+    // Kiểm tra tham số DuAnID (một ID)
+    else {
+      const singleId = queryParams.get('DuAnID');
+      if (singleId) {
+        console.log("Đọc DuAnID từ URL:", singleId);
+        setSelectedDuAnId(Number(singleId));
+      } else {
+        // Kiểm tra sessionStorage nếu không có ID từ URL
+        const id = sessionStorage.getItem('selectedDuAnId');
+        if (id) setSelectedDuAnId(Number(id));
+      }
+    }
+  }, [location.search]);
+
   const filterProjects = () => {
     let result = [...projects];
     if (fromDate || toDate) {
@@ -51,23 +78,42 @@ const DashBoard = () => {
     const fetchProjects = async () => {
       try {
         let fetchedData = [];
-
-        if (selectedDuAnId) {
-          // Gọi API lấy chi tiết dự án thành phần theo DuAnID
-          const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${selectedDuAnId}`);
+        console.log("selectedDuAnIds:", selectedDuAnIds);
+        console.log("selectedDuAnId:", selectedDuAnId);
+        
+        // Xử lý nhiều ID 
+        if (selectedDuAnIds.length > 0) {
+          // Tạo mảng các promises cho các request API
+          const promises = selectedDuAnIds.map(id => 
+            axios.get(`http://localhost:5000/duAn/${id}`)
+          );
+          
+          // Chạy tất cả các requests cùng lúc
+          const results = await Promise.all(promises);
+          
+          // Tổng hợp kết quả
+          fetchedData = results.map((res, index) => ({
+            ...res.data.data,
+            DuAnID: selectedDuAnIds[index]
+          }));
+        }
+        // Xử lý một ID
+        else if (selectedDuAnId) {
+          const response = await axios.get(`http://localhost:5000/duAn/${selectedDuAnId}`);
           fetchedData = [{
             ...response.data.data,
             DuAnID: selectedDuAnId
           }];
-          console.log(fetchedData)
-
-        } else {
-          // Gọi API lấy tất cả dự án
+          
+          setSelectedDuAnId(null);
+        }
+        // Trường hợp không có ID nào, lấy tất cả dự án
+        else {
           const response = await axios.get('http://localhost:5000/duAnTongList');
           fetchedData = response.data.data;
-          console.log(fetchedData)
         }
 
+        console.log("Dữ liệu đã tìm nạp:", fetchedData);
         setProjects(fetchedData);
         setFilteredProjects(fetchedData);
         setLoading(false);
@@ -76,10 +122,9 @@ const DashBoard = () => {
         setLoading(false);
       }
     };
-
+    
     fetchProjects();
-  }, [selectedDuAnId]);
-
+  }, [selectedDuAnIds, selectedDuAnId]);
 
   useEffect(() => {
     filterProjects();
