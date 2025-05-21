@@ -61,7 +61,7 @@ const ChatbotButton = () => {
       const response = await fetch('http://localhost:3100/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userInput , conversation_id: "1234567"}),
+        body: JSON.stringify({ message: userInput , conversation_id: "Mono"}),
       });
       if (!response.ok || !response.body) {
         throw new Error('Lỗi kết nối tới server hoặc không có body');
