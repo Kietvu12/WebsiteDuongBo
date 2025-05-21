@@ -61,7 +61,7 @@ const ChatbotButton = () => {
       const response = await fetch('http://localhost:3100/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userInput }),
+        body: JSON.stringify({ message: userInput , conversation_id: "1234567"}),
       });
       if (!response.ok || !response.body) {
         throw new Error('Lỗi kết nối tới server hoặc không có body');
@@ -242,8 +242,11 @@ const ChatbotButton = () => {
     }
 
     try {
-      // Tạo mảng chứa tất cả các ID dự án
-      const projectIds = [];
+      // Tạo object để phân loại dự án
+      const projects = {
+        main: [], // Các dự án chính (ParentID == null)
+        sub: {}   // Các dự án phụ, theo dạng { parentId: [childIds] }
+      };
       
       // Duyệt qua tất cả các block trong mcpBlocks
       mcpBlocks.forEach((block, blockIndex) => {
@@ -256,25 +259,63 @@ const ChatbotButton = () => {
           if (Array.isArray(data)) {
             data.forEach(item => {
               if (item.DuAnID) {
-                projectIds.push(item.DuAnID);
+                // Kiểm tra xem là dự án chính hay phụ
+                if (item.ParentID == null || item.ParentID === undefined) {
+                  // Dự án chính
+                  projects.main.push(item.DuAnID);
+                } else {
+                  // Dự án phụ
+                  if (!projects.sub[item.ParentID]) {
+                    projects.sub[item.ParentID] = [];
+                  }
+                  projects.sub[item.ParentID].push(item.DuAnID);
+                }
               }
             });
           } 
           // Trường hợp 2: data là đối tượng có chứa DuAnID
           else if (data.DuAnID) {
-            projectIds.push(data.DuAnID);
+            if (data.ParentID == null || data.ParentID === undefined) {
+              // Dự án chính
+              projects.main.push(data.DuAnID);
+            } else {
+              // Dự án phụ
+              if (!projects.sub[data.ParentID]) {
+                projects.sub[data.ParentID] = [];
+              }
+              projects.sub[data.ParentID].push(data.DuAnID);
+            }
           }
         }
       });
       
-      console.log("Danh sách các DuAnID:", projectIds);
       
-      if (projectIds.length > 0) {
-        // Tạo chuỗi query parameter với nhiều ID
-        const queryString = projectIds.join(',');
-        
-        // Điều hướng đến dashboard với danh sách ID
+      // Xử lý điều hướng dựa trên phân loại
+      
+      // Trường hợp 1: Chỉ có dự án chính
+      if (projects.main.length > 0 && Object.keys(projects.sub).length === 0) {
+        const queryString = projects.main.join(',');
         navigate(`/home?DuAnIDs=${queryString}`);
+      }
+      // Trường hợp 2: Chỉ có dự án phụ thuộc vào 1 dự án cha
+      else if (projects.main.length === 0 && Object.keys(projects.sub).length === 1) {
+        const parentId = Object.keys(projects.sub)[0];
+        const childIds = projects.sub[parentId].join(',');
+        navigate(`/side-project/${parentId}?DuAnConIDs=${childIds}`);
+      }
+      // Trường hợp 3: Có cả dự án chính và phụ hoặc nhiều dự án phụ khác nhau
+      else if (projects.main.length > 0 || Object.keys(projects.sub).length > 0) {
+        // Ưu tiên dự án chính
+        if (projects.main.length > 0) {
+          const queryString = projects.main.join(',');
+          navigate(`/home?DuAnIDs=${queryString}`);
+        } 
+        // Nếu không có dự án chính, lấy dự án phụ đầu tiên
+        else {
+          const parentId = Object.keys(projects.sub)[0];
+          const childIds = projects.sub[parentId].join(',');
+          navigate(`/side-project/${parentId}?DuAnConIDs=${childIds}`);
+        }
       } else {
         alert("Không tìm thấy ID dự án nào trong dữ liệu");
       }
@@ -386,8 +427,6 @@ const ChatbotButton = () => {
           </div>
         </div>
       )}
-      {mcpBlocks.length > 0 ? console.log(mcpBlocks) : ""}
-      {}
       {isMcpModalOpen && (
         <div className="mcp-modal-overlay" onClick={handleCloseModal}>
           <div

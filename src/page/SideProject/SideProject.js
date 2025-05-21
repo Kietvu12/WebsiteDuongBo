@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './SideProject.css';
 import menuIcon from '../../assets/img/menu-icon.png';
@@ -15,6 +15,7 @@ import delayIcon from '../../assets/img/delay-icon.png';
 const SideProject = () => {
     const { DuAnID } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [project, setProject] = useState(null);
     const [subProjects, setSubProjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -24,6 +25,10 @@ const SideProject = () => {
     const [status, setStatus] = useState('all');
     const [completionLevel, setCompletionLevel] = useState('all');
     const [filteredSubProjects, setFilteredProjects] = useState([]);
+    const [selectedDuAnConIds, setSelectedDuAnConIds] = useState([]);
+    const [selectedDuAnConId, setSelectedDuAnConId] = useState(null);
+    const [duAnConList, setDuAnConList] = useState([]);
+
     const filterProjects = () => {
         console.log(typeof(subProjects.phanTramHoanThanh));
         let result = [...subProjects];
@@ -49,6 +54,7 @@ const SideProject = () => {
         }
         setFilteredProjects(result);
     };
+
     useEffect(() => {
         const fetchProjectData = async () => {
             if (!DuAnID) {
@@ -70,9 +76,101 @@ const SideProject = () => {
 
         fetchProjectData();
     }, [DuAnID, navigate]);
+
     useEffect(() => {
         filterProjects();
     }, [fromDate, toDate, status, ,completionLevel, subProjects]);
+
+    useEffect(() => {
+        // Đọc danh sách ID từ URL query parameter
+        const queryParams = new URLSearchParams(location.search);
+        
+        // Kiểm tra tham số DuAnConIDs (nhiều ID)
+        const duAnConIdsString = queryParams.get('DuAnConIDs');
+        if (duAnConIdsString) {
+            const idList = duAnConIdsString.split(',').map(id => Number(id));
+            console.log("Danh sách DuAnConIDs từ URL:", idList);
+            setSelectedDuAnConIds(idList);
+        }
+        // Kiểm tra tham số DuAnConID (một ID)
+        else {
+            const singleId = queryParams.get('DuAnConID');
+            if (singleId) {
+                console.log("Đọc DuAnConID từ URL:", singleId);
+                setSelectedDuAnConId(Number(singleId));
+            }
+        }
+        
+        // Xóa query params sau khi đã lấy
+    }, [location.search, DuAnID]);
+
+    useEffect(() => {
+        const fetchProjectDetails = async () => {
+            try {
+                // Trường hợp 1: Có danh sách ID dự án con cần hiển thị
+                if (selectedDuAnConIds.length > 0) {
+                    console.log("Đang xử lý nhiều dự án con:", selectedDuAnConIds);
+                    
+                    // Tạo mảng các promises cho các request API
+                    const promises = selectedDuAnConIds.map(conId => 
+                        axios.get(`http://localhost:5000/duAntp/${conId}`)
+                    );
+                    
+                    // Chạy tất cả các requests cùng lúc
+                    const results = await Promise.all(promises);
+                    
+                    // Xử lý kết quả và cập nhật state hiển thị
+                    const duAnConData = results.map((res, index) => ({
+                        ...res.data.data,
+                        DuAnID: selectedDuAnConIds[index]
+                    }));
+                    
+                    // Cập nhật subProjects để hiển thị trong bảng
+                    setSubProjects(duAnConData);
+                    setLoading(false);
+                    
+                    // Xóa IDs khỏi URL sau khi đã lấy dữ liệu
+                    // window.history.replaceState({}, '', `/side-project/${DuAnID}`);
+                    // setSelectedDuAnConIds([]);
+                }
+                // Trường hợp 2: Có một ID dự án con duy nhất
+                else if (selectedDuAnConId) {
+                    console.log("Đang xử lý một dự án con:", selectedDuAnConId);
+                    
+                    const response = await axios.get(`http://localhost:5000/duAntp/${selectedDuAnConId}`);
+                    const duAnConData = [{
+                        ...response.data.data,
+                        DuAnID: selectedDuAnConId
+                    }];
+                    
+                    // Cập nhật subProjects để hiển thị trong bảng
+                    setSubProjects(duAnConData);
+                    setLoading(false);
+                    
+                    // Xóa ID khỏi URL sau khi đã lấy dữ liệu
+                    window.history.replaceState({}, '', `/side-project/${DuAnID}`);
+                    setSelectedDuAnConId(null);
+                }
+                // Trường hợp 3: Tải tất cả dự án con (trường hợp mặc định)
+                else {
+                    console.log("Đang tải tất cả dự án con của dự án cha:", DuAnID);
+                    
+                    // Tải dữ liệu dự án cha và danh sách dự án con
+                    const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${DuAnID}`);
+                    if (response.data.data) {
+                        setProject(response.data.data.duAnTong);
+                        setSubProjects(response.data.data.duAnThanhPhan);
+                    }
+                    setLoading(false);
+                }
+            } catch (error) {
+                console.error('Lỗi khi lấy dữ liệu dự án:', error);
+                setLoading(false);
+            }
+        };
+        
+        fetchProjectDetails();
+    }, [DuAnID, selectedDuAnConIds, selectedDuAnConId]);
 
     const handleDetail = (subProjectId) => {
         const selectedSubProject = subProjects.find(sp => sp.DuAnID === subProjectId);

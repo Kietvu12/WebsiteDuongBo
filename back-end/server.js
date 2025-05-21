@@ -1031,3 +1031,34 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log(`Server đang chạy trên port ${port}`);
 });
+
+// API endpoint lấy một dự án thành phần theo ID của dự án thành phần đó
+app.get('/duAntp/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Truy vấn chi tiết dự án thành phần (có ParentID không null)
+    const [rows] = await db.query(
+      'SELECT * FROM DuAn WHERE DuAnID = ?', 
+      [id]
+    );
+    
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `Không tìm thấy dự án thành phần với ID ${id}`
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: rows[0]
+    });
+  } catch (error) {
+    console.error(`Lỗi khi truy vấn dự án thành phần ID ${req.params.id}:`, error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi server khi lấy chi tiết dự án thành phần'
+    });
+  }
+});
