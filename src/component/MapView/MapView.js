@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './MapView.css';
+import { FaMap } from 'react-icons/fa';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -43,7 +44,7 @@ const MapView = ({ selectedProject, isExpanded }) => {
   const [bounds, setBounds] = useState(null);
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
-  const [route, setRoute] = useState(null); // tuyến đường thực tế
+  const [route, setRoute] = useState(null);
 
   useEffect(() => {
     const fetchRoute = async () => {
@@ -70,11 +71,11 @@ const MapView = ({ selectedProject, isExpanded }) => {
             const coordinates = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
             setRoute(coordinates);
           } else {
-            setRoute([start, end]); // fallback nếu không có route
+            setRoute([start, end]);
           }
         } catch (error) {
           console.error("Lỗi khi gọi OSRM:", error);
-          setRoute([start, end]); // fallback nếu lỗi
+          setRoute([start, end]);
         }
       }
     };
@@ -84,26 +85,28 @@ const MapView = ({ selectedProject, isExpanded }) => {
 
   return (
     <div className="map-container">
-      <MapContainer 
-        center={startPoint || [21.8534, 106.7615]} 
-        zoom={13} 
+      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center">
+        <FaMap className="text-gray-500 mr-2" size={14} />
+        <h2 className="text-base font-semibold text-gray-800">BẢN ĐỒ DỰ ÁN</h2>
+      </div>
+      <MapContainer
+        center={startPoint || [21.8534, 106.7615]}
+        zoom={13}
         scrollWheelZoom={true}
         className="leaflet-map"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-
         {route && (
-          <Polyline 
-            positions={route} 
+          <Polyline
+            positions={route}
             color="#1890ff"
             weight={4}
             opacity={0.8}
           />
         )}
-
         {startPoint && (
           <Marker position={startPoint}>
             <Popup>
@@ -116,7 +119,6 @@ const MapView = ({ selectedProject, isExpanded }) => {
             </Popup>
           </Marker>
         )}
-
         {endPoint && (
           <Marker position={endPoint}>
             <Popup>
@@ -129,10 +131,8 @@ const MapView = ({ selectedProject, isExpanded }) => {
             </Popup>
           </Marker>
         )}
-
         <MapController bounds={bounds} isExpanded={isExpanded} />
       </MapContainer>
-
       {isExpanded && selectedProject && (
         <div className="floating-info-container">
           <div className="floating-card slide-in" style={{ animationDelay: '0s' }}>
