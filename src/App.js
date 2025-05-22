@@ -68,7 +68,7 @@ function App() {
             <ProjectProgress/>
           </LayoutWithSidebar>
         } />
-        <Route path='/approvals' element={
+        <Route path='/approvals/:projectId' element={
           <LayoutWithSidebar>
             <Approvals/>
           </LayoutWithSidebar>

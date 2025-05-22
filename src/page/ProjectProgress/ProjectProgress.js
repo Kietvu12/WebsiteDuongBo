@@ -6,8 +6,9 @@ import userIcon from '../../assets/img/user-icon.png';
 import addIcon from '../../assets/img/add-icon.png';
 import { useParams } from 'react-router-dom';
 import ProjectManagement from '../../component/ProjectManagement/ProjectManagement';
+import { useProject } from '../../contexts/ProjectContext';
 const ProjectProgress = () => {
-  const { projectId } = useParams();
+  const { selectedProjectId } = useProject();
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [fromDate, setFromDate] = useState('2023-02-26');
   const [toDate, setToDate] = useState('2023-09-26');
@@ -88,7 +89,7 @@ const ProjectProgress = () => {
           </div>
         </div>
       </div>
-      <ProjectManagement projectId={projectId} />
+      <ProjectManagement projectId={selectedProjectId} />
     </div>
   )
 }

@@ -1,17 +1,16 @@
-
 import React, { useState, useEffect } from 'react';
-import './WorkTable.css';
 import downIcon from '../../assets/img/down.png';
 
 const WorkTable = ({ projectId }) => {
   const [expandedItems, setExpandedItems] = useState({
     projects: {},
     packages: {},
-    categories: {}
+    categories: {},
+    items: {}
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-
+  console.log('Đây 0 là dự án thành phần');
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -38,8 +37,8 @@ const WorkTable = ({ projectId }) => {
     }));
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (!data) return <div>No data available</div>;
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (!data) return <div className="p-4">No data available</div>;
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -55,158 +54,159 @@ const WorkTable = ({ projectId }) => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const renderPlanRow = (plan, indexes) => {
-    return (
-      <tr key={`plan-${plan.keHoachId}`}>
-        <td>{indexes.join('.')}</td>
-        <td>{plan.keHoachId}</td>
-        <td>
-          <span style={{ paddingLeft: `${60 + (indexes.length - 1) * 20}px` }}>
-            {plan.tenCongTac}
-          </span>
-        </td>
-        <td>{plan.tongKhoiLuongThucHien?.toLocaleString() || '0'}</td>
-        <td>{plan.khoiLuongKeHoach?.toLocaleString() || '0'}</td>
-        <td>{plan.donViTinh || '-'}</td>
-        <td>-</td>
-        <td>{calculateDays(plan.ngayBatDau, plan.ngayKetThuc)}</td>
-        <td>{formatDate(plan.ngayBatDau)}</td>
-        <td>{formatDate(plan.ngayKetThuc)}</td>
-      </tr>
-    );
-  };
-
   return (
-    <div className="table-container-sub">
-      <table className="work-table">
-        <thead>
-          <tr>
-            <th>STT</th>
-            <th>Mã số</th>
-            <th>Công việc</th>
-            <th>Khối lượng thực hiện</th>
-            <th>Khối lượng kế hoạch</th>
-            <th>Đơn vị</th>
-            <th>Đơn vị thực hiện</th>
-            <th>Thời gian (ngày)</th>
-            <th>Bắt đầu kế hoạch</th>
-            <th>Kết thúc kế hoạch</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.duAnThanhPhan.map((project, projectIndex) => (
-            <React.Fragment key={`project-${project.duAnId}`}>
-              {/* Project row */}
-              <tr 
-                className="project-header" 
+<div className="w-full overflow-x-auto p-2">
+  <table className=" w-full divide-y divide-gray-200 border text-sm">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Mã số</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Công việc</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL thực</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL KH</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ĐV</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">ĐV thực hiện</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">TG (ngày)</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Bắt đầu</th>
+        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Kết thúc</th>
+      </tr>
+    </thead>
+    <tbody className="bg-white divide-y divide-gray-200">
+      {data.duAnThanhPhan.map((project, projectIndex) => (
+        <React.Fragment key={`project-${project.duAnId}`}>
+          {/* Level 1: Project (Blue) */}
+          <tr className="bg-green-50 hover:bg-green-100">
+            <td className="px-3 py-2 whitespace-nowrap">{projectIndex + 1}</td>
+            <td className="px-3 py-2 whitespace-nowrap">DA-{project.duAnId}</td>
+            <td className="px-3 py-2 whitespace-nowrap font-medium">
+              <button 
                 onClick={() => toggleItem('projects', project.duAnId)}
+                className="flex items-center focus:outline-none"
               >
-                <td>{projectIndex + 1}.</td>
-                <td>{project.duAnId}</td>
-                <td>
-                  <img 
-                    src={downIcon} 
-                    alt="Toggle" 
-                    className={`dropdown-icon ${expandedItems.projects[project.duAnId] ? '' : 'collapsed'}`}
-                  />
-                  {project.tenDuAn}
+                <img 
+                  src={downIcon} 
+                  alt="Toggle" 
+                  className={`w-3 h-3 mr-1 transform ${expandedItems.projects[project.duAnId] ? 'rotate-180' : ''}`}
+                />
+                <span className="truncate">{project.tenDuAn}</span>
+              </button>
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap">{project.tongKhoiLuongThucHien?.toLocaleString()}</td>
+            <td className="px-3 py-2 whitespace-nowrap">{project.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+            <td className="px-3 py-2 whitespace-nowrap"></td>
+            <td className="px-3 py-2 whitespace-nowrap"></td>
+            <td className="px-3 py-2 whitespace-nowrap"></td>
+            <td className="px-3 py-2 whitespace-nowrap"></td>
+            <td className="px-3 py-2 whitespace-nowrap"></td>
+          </tr>
+
+          {/* Level 2: Packages (Yellow) - Only show if expanded */}
+          {expandedItems.projects[project.duAnId] && project.danhSachGoiThau?.map((packageItem, packageIndex) => (
+            <React.Fragment key={`package-${packageItem.goiThauId}`}>
+              <tr className="bg-yellow-50 hover:bg-yellow-100">
+                <td className="px-3 py-2 whitespace-nowrap pl-8">{`${projectIndex + 1}.${packageIndex + 1}`}</td>
+                <td className="px-3 py-2 whitespace-nowrap">GT-{packageItem.goiThauId}</td>
+                <td className="px-3 py-2 whitespace-nowrap font-medium">
+                  <button 
+                    onClick={() => toggleItem('packages', packageItem.goiThauId)}
+                    className="flex items-center focus:outline-none"
+                  >
+                    <img 
+                      src={downIcon} 
+                      alt="Toggle" 
+                      className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
+                    />
+                    <span className="truncate">{packageItem.tenGoiThau}</span>
+                  </button>
                 </td>
-                <td>{project.tongKhoiLuongThucHien?.toLocaleString() || '0'}</td>
-                <td>{project.tongKhoiLuongKeHoach?.toLocaleString() || '0'}</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayKhoiCong)}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayHoanThanh)}</td>
               </tr>
 
-              {/* Package rows - only visible when project is expanded */}
-              {expandedItems.projects[project.duAnId] && 
-                project.danhSachGoiThau?.map((pkg, pkgIndex) => (
-                  <React.Fragment key={`pkg-${pkg.goiThauId}`}>
-                    <tr 
-                      className="package-header"
-                      onClick={() => toggleItem('packages', pkg.goiThauId)}
-                    >
-                      <td>{`${projectIndex + 1}.${pkgIndex + 1}`}</td>
-                      <td>{pkg.goiThauId}</td>
-                      <td>
-                        <span style={{ paddingLeft: '20px' }}>
-                          <img 
-                            src={downIcon} 
-                            alt="Toggle" 
-                            className={`dropdown-icon ${expandedItems.packages[pkg.goiThauId] ? '' : 'collapsed'}`}
-                          />
-                          {pkg.tenGoiThau}
-                        </span>
-                      </td>
-                      <td>{pkg.tongKhoiLuongThucHien?.toLocaleString() || '0'}</td>
-                      <td>{pkg.tongKhoiLuongKeHoach?.toLocaleString() || '0'}</td>
-                      <td>-</td>
-                      <td>{pkg.nhaThauID || '-'}</td>
-                      <td>{calculateDays(pkg.ngayKhoiCong, pkg.ngayHoanThanh)}</td>
-                      <td>{formatDate(pkg.ngayKhoiCong)}</td>
-                      <td>{formatDate(pkg.ngayHoanThanh)}</td>
-                    </tr>
+              {/* Level 3: Categories (Gray) - Only show if expanded */}
+              {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachLoaiHangMuc?.map((category, categoryIndex) => (
+                <React.Fragment key={`category-${category.loaiHangMuc}`}>
+                  <tr className="bg-gray-50 hover:bg-gray-100">
+                    <td className="px-3 py-2 whitespace-nowrap pl-12">{`${projectIndex + 1}.${packageIndex + 1}.${categoryIndex + 1}`}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">HM-{category.loaiHangMuc}</td>
+                    <td className="px-3 py-2 whitespace-nowrap font-medium">
+                      <button 
+                        onClick={() => toggleItem('categories', `${packageItem.goiThauId}-${category.loaiHangMuc}`)}
+                        className="flex items-center focus:outline-none"
+                      >
+                        <img 
+                          src={downIcon} 
+                          alt="Toggle" 
+                          className={`w-3 h-3 mr-1 transform ${expandedItems.categories[`${packageItem.goiThauId}-${category.loaiHangMuc}`] ? 'rotate-180' : ''}`}
+                        />
+                        <span className="truncate">{category.loaiHangMuc}</span>
+                      </button>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">{category.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                    <td className="px-3 py-2 whitespace-nowrap">{category.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                    <td className="px-3 py-2 whitespace-nowrap"></td>
+                    <td className="px-3 py-2 whitespace-nowrap"></td>
+                    <td className="px-3 py-2 whitespace-nowrap"></td>
+                    <td className="px-3 py-2 whitespace-nowrap"></td>
+                    <td className="px-3 py-2 whitespace-nowrap"></td>
+                  </tr>
 
-                    {expandedItems.packages[pkg.goiThauId] && 
-                      pkg.danhSachLoaiHangMuc?.map((category, categoryIndex) => (
-                        <React.Fragment key={`category-${pkg.goiThauId}-${category.loaiHangMuc}`}>
-                          <tr 
-                            className="category-header"
-                            onClick={() => toggleItem('categories', `${pkg.goiThauId}-${category.loaiHangMuc}`)}
+                  {/* Level 4: Items (White) - Only show if expanded */}
+                  {expandedItems.categories[`${packageItem.goiThauId}-${category.loaiHangMuc}`] && category.danhSachHangMuc?.map((item, itemIndex) => (
+                    <React.Fragment key={`item-${item.hangMucId}`}>
+                      <tr className="bg-white hover:bg-gray-50">
+                        <td className="px-3 py-2 whitespace-nowrap pl-16">{`${projectIndex + 1}.${packageIndex + 1}.${categoryIndex + 1}.${itemIndex + 1}`}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">CT-{item.hangMucId}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          <button 
+                            onClick={() => toggleItem('items', item.hangMucId)}
+                            className="flex items-center focus:outline-none"
                           >
-                            <td>{`${projectIndex + 1}.${pkgIndex + 1}.${categoryIndex + 1}`}</td>
-                            <td>{category.loaiHangMuc}</td>
-                            <td>
-                              <span style={{ paddingLeft: '40px' }}>
-                                <img 
-                                  src={downIcon} 
-                                  alt="Toggle" 
-                                  className={`dropdown-icon ${expandedItems.categories[`${pkg.goiThauId}-${category.loaiHangMuc}`] ? '' : 'collapsed'}`}
-                                />
-                                {category.loaiHangMuc}
-                              </span>
-                            </td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                          </tr>
+                            <span className="truncate">{item.tenHangMuc}</span>
+                          </button>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">
+                          {item.danhSachKeHoach?.[0]?.donViTinh || ''}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{item.nhanLucThiCong || ''}</td>
+                        <td className="px-3 py-2 whitespace-nowrap"></td>
+                        <td className="px-3 py-2 whitespace-nowrap">{formatDate(item.thoiGianHoanThanh)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap"></td>
+                      </tr>
 
-                          {expandedItems.categories[`${pkg.goiThauId}-${category.loaiHangMuc}`] && 
-                            category.danhSachHangMuc?.map((item, itemIndex) => (
-                              <React.Fragment key={`item-${item.hangMucId}`}>
-                                <tr className="work-item">
-                                  <td>{`${projectIndex + 1}.${pkgIndex + 1}.${categoryIndex + 1}.${itemIndex + 1}`}</td>
-                                  <td>{item.hangMucId}</td>
-                                  <td>
-                                    <span style={{ paddingLeft: '60px' }}>
-                                      {item.tenHangMuc}
-                                    </span>
-                                  </td>
-                                  <td>{item.tongKhoiLuongThucHien?.toLocaleString() || '0'}</td>
-                                  <td>{item.tongKhoiLuongKeHoach?.toLocaleString() || '0'}</td>
-                                  <td>{item.danhSachKeHoach?.[0]?.donViTinh || '-'}</td>
-                                  <td>-</td>
-                                  <td>{calculateDays(item.danhSachKeHoach?.[0]?.ngayBatDau, item.danhSachKeHoach?.[0]?.ngayKetThuc)}</td>
-                                  <td>{formatDate(item.danhSachKeHoach?.[0]?.ngayBatDau)}</td>
-                                  <td>{formatDate(item.danhSachKeHoach?.[0]?.ngayKetThuc)}</td>
-                                </tr>
-                              </React.Fragment>
-                            ))}
-                        </React.Fragment>
+                      {/* Work Plans - Only show if expanded */}
+                      {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
+                        <tr key={`plan-${plan.keHoachId}`} className="bg-white hover:bg-gray-50 border-t">
+                          <td className="px-3 py-2 whitespace-nowrap pl-20">{`${projectIndex + 1}.${packageIndex + 1}.${categoryIndex + 1}.${itemIndex + 1}.${planIndex + 1}`}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">KH-{plan.keHoachId}</td>
+                          <td className="px-3 py-2 whitespace-nowrap pl-4">{plan.tenCongTac}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{item.nhanLucThiCong}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{calculateDays(plan.ngayBatDau, plan.ngayKetThuc)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayBatDau)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayKetThuc)}</td>
+                        </tr>
                       ))}
-                  </React.Fragment>
-                ))}
+                    </React.Fragment>
+                  ))}
+                </React.Fragment>
+              ))}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </React.Fragment>
+      ))}
+    </tbody>
+  </table>
+</div>
   );
 };
 

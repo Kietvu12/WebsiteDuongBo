@@ -13,6 +13,7 @@ import ConstructionVolume from '../../component/ConstructionVolume/ConstructionV
 import MapView from '../../component/MapView/MapView';
 import { useLocation, useParams } from 'react-router-dom';
 import axios from 'axios';
+import { useProject } from '../../contexts/ProjectContext';
 
 const Detail = () => {
     const location = useLocation();
@@ -23,8 +24,6 @@ const Detail = () => {
     const [selectedProject, setSelectedProject] = useState(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const projectId = state.projectId
-    
-
     useEffect(() => {
         const fetchPackageDetails = async () => {
             if (!selectedPackageId) return;
@@ -33,7 +32,7 @@ const Detail = () => {
                 setLoading(true);
                 const response = await axios.get(`http://localhost:5000/goiThau/chiTiet/${selectedPackageId}`);
                 setPackageData(response.data.data);
-                setSelectedProject(response.data.data); // Nếu muốn dùng cho các component khác
+                setSelectedProject(response.data.data); 
             } catch (error) {
                 console.error('Error fetching package details:', error);
             } finally {

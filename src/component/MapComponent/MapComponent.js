@@ -275,23 +275,10 @@ const MapComponent = ({ projects = [] }) => {
             value={mapType}
             onChange={(e) => setMapType(e.target.value)}
           >
-            <option value="standard">Tiêu chuẩn</option>
-            <option value="satellite">Vệ tinh</option>
-            <option value="terrain">Địa hình</option>
-            <option value="dark">Tối</option>
-          </select>
-        </div>
-
-        <div className="project-type-selector">
-          <label htmlFor="project-type">Lọc theo trạng thái:</label>
-          <select
-            id="project-type"
-            value={selectedProjectType}
-            onChange={(e) => setSelectedProjectType(e.target.value)}
-          >
-            {projectTypes.map(type => (
-              <option key={type.value} value={type.value}>{type.label}</option>
-            ))}
+            <option className='text-black' value="standard" >Tiêu chuẩn</option>
+            <option className='text-black' value="satellite">Vệ tinh</option>
+            <option className='text-black' value="terrain">Địa hình</option>
+            <option className='text-black' value="dark">Tối</option>
           </select>
         </div>
       </div>

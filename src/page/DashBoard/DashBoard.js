@@ -16,9 +16,10 @@ import { useProject } from '../../contexts/ProjectContext';
 
 const DashBoard = () => {
   const { setSelectedProjectId } = useProject();
+  const [selectedDuAnIds, setSelectedDuAnIds] = useState([]);
+  const [selectedDuAnId, setSelectedDuAnId] = useState(null);
   const navigate = useNavigate();
   const [showAddPopup, setShowAddPopup] = useState(false);
-  const [showEditPopup, setShowEditPopup] = useState(false);
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [status, setStatus] = useState('all');
@@ -29,17 +30,12 @@ const DashBoard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [provinces, setProvinces] = useState([]); // Thêm state cho danh sách tỉnh thành
+  const [provinces, setProvinces] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState('');
-  
-  const fetchProvinces = async () => {
-    try {
-      const response = await axios.get('https://provinces.open-api.vn/api/?depth=1');
-      setProvinces(response.data);
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách tỉnh thành:', error);
-    }
-  };
+  const [contractor, setContractor] = useState('all');
+  const [contractorList, setContractorList] = useState([]);
+  const [completionLevel, setCompletionLevel] = useState('all');
+
   const filterProjects = () => {
     let result = [...projects];
 
@@ -70,26 +66,37 @@ const DashBoard = () => {
     if (selectedProvince) {
       result = result.filter(project => {
         if (!project.TinhThanh) return false;
-        
-        // Chuẩn hóa tên tỉnh cần tìm (bỏ dấu, viết thường)
         const searchProvince = selectedProvince.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        // Chuẩn hóa tên tỉnh trong dữ liệu
+
         const projectProvinces = project.TinhThanh
-          .split('–') // Dấu phân cách tỉnh liên tỉnh
+          .split('–')
           .map(p => p.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-        
-        // Kiểm tra xem tỉnh cần tìm có trong danh sách tỉnh của dự án không
         return projectProvinces.some(p => p.includes(searchProvince));
       });
     }
-  
 
+    // Lọc theo nhà thầu (mới thêm)
+    if (contractor !== 'all') {
+      result = result.filter(project => {
+        // Kiểm tra xem dự án có chứa nhà thầu được chọn không
+        return project.danhSachNhaThau?.some(
+          nhathau => nhathau.NhaThauID.toString() === contractor
+        );
+      });
+    }
+
+    if (completionLevel !== 'all') {
+      const minCompletion = parseFloat(completionLevel);
+      result = result.filter(project => {
+        const completion = parseFloat(project.phanTramHoanThanh || '0');
+        console.log(completion);
+        
+        return completion >= minCompletion;
+      });
+    }
     setFilteredProjects(result);
   };
-
-
-  // Hàm xử lý khi chọn tỉnh thành
+  
   const handleProvinceChange = (e) => {
     setSelectedProvince(e.target.value);
   };
@@ -125,14 +132,17 @@ const DashBoard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [projectsRes, provincesRes] = await Promise.all([
+        const [projectsRes, provincesRes, contractorRes] = await Promise.all([
           axios.get('http://localhost:5000/duAnTongList'),
-          axios.get('https://provinces.open-api.vn/api/?depth=1')
+          axios.get('https://provinces.open-api.vn/api/?depth=1'),
+          axios.get('http://localhost:5000/nhaThauList')
         ]);
 
         setProjects(projectsRes.data.data);
         setFilteredProjects(projectsRes.data.data);
+        setContractorList(contractorRes.data.data);
         setProvinces(provincesRes.data);
+        
         setLoading(false);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
@@ -142,11 +152,60 @@ const DashBoard = () => {
 
     fetchData();
   }, []);
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        let fetchedData = [];
+        console.log("selectedDuAnIds:", selectedDuAnIds);
+        console.log("selectedDuAnId:", selectedDuAnId);
+        
+        // Xử lý nhiều ID 
+        if (selectedDuAnIds.length > 0) {
+          // Tạo mảng các promises cho các request API
+          const promises = selectedDuAnIds.map(id => 
+            axios.get(`http://localhost:5000/duAn/${id}`)
+          );
+          
+          // Chạy tất cả các requests cùng lúc
+          const results = await Promise.all(promises);
+          
+          // Tổng hợp kết quả
+          fetchedData = results.map((res, index) => ({
+            ...res.data.data,
+            DuAnID: selectedDuAnIds[index]
+          }));
+        }
+        // Xử lý một ID
+        else if (selectedDuAnId) {
+          const response = await axios.get(`http://localhost:5000/duAn/${selectedDuAnId}`);
+          fetchedData = [{
+            ...response.data.data,
+            DuAnID: selectedDuAnId
+          }];
+          
+          setSelectedDuAnId(null);
+        }
+        // Trường hợp không có ID nào, lấy tất cả dự án
+        else {
+          const response = await axios.get('http://localhost:5000/duAnTongList');
+          fetchedData = response.data.data;
+        }
 
-  // Cập nhật filter khi có thay đổi
+        console.log("Dữ liệu đã tìm nạp:", fetchedData);
+        setProjects(fetchedData);
+        setFilteredProjects(fetchedData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+        setLoading(false);
+      }
+    };
+    
+    fetchProjects();
+  }, [selectedDuAnIds, selectedDuAnId]);
   useEffect(() => {
     filterProjects();
-  }, [fromDate, toDate, status, searchTerm, selectedProvince, projects]);
+  }, [fromDate, toDate, status, searchTerm, selectedProvince, contractor, completionLevel, projects]);
   const handleDetail = (DuAnID) => {
     navigate(`/side-project/${DuAnID}`);
     setSelectedProjectId(DuAnID)
@@ -176,129 +235,185 @@ const DashBoard = () => {
     setSearchTerm('');
     setSearchSuggestions([]);
     setShowSuggestions(false);
+    setContractor('all')
   };
 
   return (
     <div className="dashboard">
-      <div className="app-header">
-        <div className="header-navbar">
-          <div className="navbar-left">
-            <button className="nav-button" aria-label="Navigation menu">
+      <div className="w-full bg-white shadow-md">
+        {/* Navbar */}
+        <div className="flex justify-between items-center px-4 py-2 border-b">
+          <div>
+            <button className="p-2 rounded hover:bg-gray-200" aria-label="Navigation menu">
+              {/* Icon hoặc menu toggle button */}
             </button>
           </div>
 
-          <div className="navbar-right">
-            <div className="user-actions">
-              <img src={menuIcon} alt="Menu" className="nav-icon" />
-              <img src={helpIcon} alt="Help" className="nav-icon" />
-              <img src={userIcon} alt="User profile" className="nav-icon" />
-            </div>
+          <div className="flex items-center gap-3">
+            <img src={menuIcon} alt="Menu" className="w-6 h-6 cursor-pointer" />
+            <img src={helpIcon} alt="Help" className="w-6 h-6 cursor-pointer" />
+            <img src={userIcon} alt="User profile" className="w-6 h-6 cursor-pointer" />
           </div>
         </div>
 
-        {/* Main Header Content */}
-        <div className="header-main-content">
-          <div className="header-content-wrapper">
-            <h1 className="page-title">Danh sách dự án đường bộ</h1>
-            <div className="search-filters-container">
-              <form className="filter-controls-form">
-                <div className="search-control">
-                  <label htmlFor="project-search" className="filter-label">Tìm kiếm dự án:</label>
-                  <div className="search-input-wrapper">
-                    <input
-                      id="project-search"
-                      type="text"
-                      placeholder="Nhập tên dự án..."
-                      value={searchTerm}
-                      onChange={handleSearchChange}
-                      className="search-input-field"
-                    />
-                    {showSuggestions && searchSuggestions.length > 0 && (
-                      <ul className="search-suggestions-dropdown">
-                        {searchSuggestions.map((suggestion, index) => (
-                          <li
-                            key={index}
-                            onClick={() => selectSuggestion(suggestion)}
-                            className="suggestion-option"
-                          >
-                            {suggestion}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-                <div className="date-filter-control">
-                  <span className="filter-label">Lọc theo khoảng thời gian:</span>
-                  <div className="date-range-inputs">
-                    <input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => setFromDate(e.target.value)}
-                      className="date-input"
-                      aria-label="Từ ngày"
-                    />
-                    <span className="date-range-separator">đến</span>
-                    <input
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => setToDate(e.target.value)}
-                      className="date-input"
-                      aria-label="Đến ngày"
-                    />
-                  </div>
-                </div>
-                <div className="province-filter-control">
-                  <span className="filter-label">Lọc theo tỉnh thành:</span>
-                  <div className="province-select-wrapper">
-                    <select
-                      value={selectedProvince}
-                      onChange={handleProvinceChange}
-                      className="province-select"
-                      aria-label="Chọn tỉnh thành"
-                    >
-                      <option value="">Tất cả tỉnh thành</option>
-                      {provinces.map(province => (
-                        <option key={province.code} value={province.name}>
-                          {province.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="status-filter-control">
-                  <label htmlFor="status-filter" className="filter-label">Lọc theo trạng thái:</label>
-                  <select
-                    id="status-filter"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="status-select"
-                  >
-                    <option value="all">Tất cả</option>
-                    <option value="Chậm tiến độ">Chậm tiến độ</option>
-                    <option value="Đang tiến hành">Đang tiến hành</option>
-                    <option value="Đã hoàn thành">Đã hoàn thành</option>
-                    <option value="Đang triển khai">Đang triển khai</option>
-                    <option value="Đã phê duyệt – chờ khởi công">Đã phê duyệt – chờ khởi công</option>
-                    <option value="Dự kiến khởi công">Dự kiến khởi công</option>
-                    <option value="Đang hoàn thiện hồ sơ đầu tư">Đang hoàn thiện hồ sơ đầu tư</option>
-                  </select>
-                </div>
+        {/* Header Main Content */}
+        <div className="px-6 py-4">
+          <h1 className="text-2xl font-semibold text-gray-800 mb-4">Danh sách dự án đường bộ</h1>
 
-                <div className="reset-button-wrapper">
-                  <button
-                    type="button"
-                    className="reset-filters-button"
-                    onClick={resetFilters}
-                  >
-                    Xóa lọc
-                  </button>
-                </div>
-              </form>
+          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="col-span-1 md:col-span-2">
+              <label htmlFor="project-search" className="block text-sm font-medium text-gray-700 mb-1">
+                Tìm kiếm dự án
+              </label>
+              <div className="relative">
+                <input
+                  id="project-search"
+                  type="text"
+                  placeholder="Nhập tên dự án..."
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {showSuggestions && searchSuggestions.length > 0 && (
+                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {searchSuggestions.map((suggestion, index) => (
+                      <li
+                        key={index}
+                        onClick={() => selectSuggestion(suggestion)}
+                        className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer"
+                      >
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
-          </div>
+
+            {/* Date Range */}
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-1">Khoảng thời gian</span>
+              <div className="grid grid-cols-5 gap-2">
+                <div className="col-span-2">
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Từ ngày"
+                  />
+                </div>
+                <div className="col-span-1 flex items-center justify-center">
+                  <span className="text-sm text-gray-500">đến</span>
+                </div>
+                <div className="col-span-2">
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    aria-label="Đến ngày"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Province */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh thành</label>
+              <select
+                value={selectedProvince}
+                onChange={handleProvinceChange}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Tất cả tỉnh thành</option>
+                {provinces.map(province => (
+                  <option key={province.code} value={province.name}>
+                    {province.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                Trạng thái
+              </label>
+              <select
+                id="status-filter"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Tất cả</option>
+                <option value="Chậm tiến độ">Chậm tiến độ</option>
+                <option value="Đang tiến hành">Đang tiến hành</option>
+                <option value="Đã hoàn thành">Đã hoàn thành</option>
+                <option value="Đang triển khai">Đang triển khai</option>
+                <option value="Đã phê duyệt – chờ khởi công">Đã phê duyệt – chờ khởi công</option>
+              </select>
+            </div>
+
+            {/* Contractor Filter - New */}
+            <div>
+              <label htmlFor="contractor-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                Nhà thầu
+              </label>
+              <select
+                id="contractor-filter"
+                value={contractor}
+                onChange={(e) => setContractor(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={loading}
+              >
+                <option value="all">Tất cả nhà thầu</option>
+                {loading ? (
+                  <option disabled>Đang tải danh sách nhà thầu...</option>
+                ) : (
+                  contractorList.map((nhathau) => (
+                    <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
+                      {nhathau.TenNhaThau}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            {/* Completion Level Filter - New */}
+            <div>
+              <label htmlFor="completion-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                Mức độ hoàn thành
+              </label>
+              <select
+                id="completion-filter"
+                value={completionLevel}
+                onChange={(e) => setCompletionLevel(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Tất cả</option>
+                <option value="20">Trên 20%</option>
+                <option value="50">Trên 50%</option>
+                <option value="80">Trên 80%</option>
+                <option value="100">Hoàn thành 100%</option>
+              </select>
+            </div>
+
+            {/* Reset Button */}
+            <div className="flex items-end col-span-1 md:col-span-2 lg:col-span-1">
+              <button
+                type="button"
+                className="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm rounded-md transition-colors duration-200"
+                onClick={resetFilters}
+              >
+                Xóa lọc
+              </button>
+            </div>
+          </form>
         </div>
       </div>
+
       <div className="table-container">
         <div className="table-header">
           <h2>Danh sách dự án</h2>
@@ -404,7 +519,6 @@ const DashBoard = () => {
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>
           <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-            {/* ... giữ nguyên nội dung popup ... */}
           </div>
         </div>
       )}

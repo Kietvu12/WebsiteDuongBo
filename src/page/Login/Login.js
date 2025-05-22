@@ -14,7 +14,7 @@ const Login = () => {
       <div className="login-box">
         <div className="left">
           <img src={icon} alt="logo" className="logo" />
-          <h2>BỘ XÂY DỰNG</h2>
+          <h2 >BỘ XÂY DỰNG</h2>
           <h3>CỤC KINH TẾ QUẢN LÝ<br />ĐẦU TƯ XÂY DỰNG</h3>
           <input type="text" placeholder="Tài khoản" />
           <input type="password" placeholder="Mật khẩu" />

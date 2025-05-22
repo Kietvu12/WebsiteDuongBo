@@ -4,9 +4,9 @@ const ProjectContext = createContext();
 
 export const ProjectProvider = ({ children }) => {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-
+  const [selectedSubProjectId, setSelectedSubProjectId] = useState(null)
   return (
-    <ProjectContext.Provider value={{ selectedProjectId, setSelectedProjectId }}>
+    <ProjectContext.Provider value={{ selectedProjectId, setSelectedProjectId , selectedSubProjectId ,setSelectedSubProjectId }}>
       {children}
     </ProjectContext.Provider>
   );

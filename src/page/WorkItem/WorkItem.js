@@ -8,133 +8,156 @@ import WorkTable from '../../component/WorkTable/WorkTable';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa'
 import axios from 'axios';
+import { useProject } from '../../contexts/ProjectContext';
+import SubProjectTable from '../../component/SubProjectTable/SubProjectTable';
 const WorkItem = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
-    const { projectId } = useParams();
     const [showAddPopup, setShowAddPopup] = useState(false);
     const [fromDate, setFromDate] = useState('2023-02-26');
     const [toDate, setToDate] = useState('2023-09-26');
     const [project, setProject] = useState(null);
     const [status, setStatus] = useState('all');
-    console.log(projectId);
+    const { selectedProjectId, selectedSubProjectId } = useProject();
+    const [subProject, setSubProject] = useState(null);
 
     useEffect(() => {
-        const fetchProjectData = async () => {
-            if (!projectId) {
-                console.error('Project ID is missing');
-                navigate('/');
-                return;
-            }
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${projectId}`);
-                setProject(response.data.data.duAnTong);
+
+                if (selectedSubProjectId) {
+                    const response = await axios.get(`http://localhost:5000/hangMuc/${selectedSubProjectId}/detail`);
+                    setSubProject(response.data.data.duAnThanhPhan);
+                } else if (selectedProjectId) {
+                    const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${selectedProjectId}`);
+                    setProject(response.data.data.duAnTong);
+                }
+
                 setLoading(false);
             } catch (error) {
-                console.error('Error fetching project data:', error);
+                console.error('Error fetching data:', error);
                 setLoading(false);
             }
         };
 
-        fetchProjectData();
-    }, [projectId, navigate]);
+        fetchData();
+    }, [selectedProjectId, selectedSubProjectId, navigate]);
+    const renderTitle = () => {
+        if (selectedSubProjectId && subProject) {
+            return `Kế hoạch các hạng mục - ${subProject.tenDuAn}`;
+        } else if (project) {
+            return `Kế hoạch các hạng mục - ${project.TenDuAn}`;
+        }
+        return 'Kế hoạch các hạng mục';
+    };
+
     return (
         <div className='plan'>
-            <div className="header">
-                <div className="top-nav">
-                    <div className="nav-left">
-                        <button
-                            className="nav-btn"
-                            onClick={() => navigate(-1)}
-                        >
-                            <FaArrowLeft className="small-icon" />
-                        </button>
-                    </div>
-                    <div className="nav-right">
-                        <div className="user-profile">
-                            <img src={menuIcon} alt="Menu" className="small-icon" />
-                            <img src={helpIcon} alt="Help" className="avatar small-icon" />
-                            <img src={userIcon} alt="User" className="avatar small-icon" />
-                        </div>
-                    </div>
+<div className="w-full bg-white shadow-md px-4 py-3">
+    {/* Top Nav */}
+    <div className="flex justify-between items-center">
+        <div>
+            <button
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded"
+            >
+                <FaArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+        </div>
+        <div className="flex items-center space-x-3">
+            <img src={menuIcon} alt="Menu" className="w-5 h-5" />
+            <img src={helpIcon} alt="Help" className="w-6 h-6 rounded-full" />
+            <img src={userIcon} alt="User" className="w-6 h-6 rounded-full" />
+        </div>
+    </div>
+
+    {/* Title */}
+    <div className="mt-4">
+        <h1 className="text-[22px] text-gray-800 font-semibold m-0">
+            {renderTitle()}
+        </h1>
+    </div>
+
+    {/* Search and Filter */}
+    <div className="mt-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
+            {/* Search Box */}
+            <div className="flex items-center space-x-2">
+                <button
+                    onClick={() => setShowAddPopup(true)}
+                    className="flex items-center space-x-2 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
+                >
+                    <img src={addIcon} alt="Add" className="w-4 h-4" />
+                    <span>Thêm mới</span>
+                </button>
+                <input
+                    type="text"
+                    placeholder="Tìm kiếm..."
+                    className="border border-gray-300 rounded px-3 py-1.5 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <button className="bg-gray-200 px-3 py-1.5 rounded hover:bg-gray-300">
+                    Tìm kiếm
+                </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-6">
+                {/* Date Filter */}
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-700">Lọc theo khoảng thời gian:</span>
+                    <input
+                        type="date"
+                        name="from_date"
+                        value={fromDate}
+                        onChange={(e) => setFromDate(e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                    <span className="text-sm text-gray-700">đến</span>
+                    <input
+                        type="date"
+                        name="to_date"
+                        value={toDate}
+                        onChange={(e) => setToDate(e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
                 </div>
 
-                <div className="header-content">
-                    <div className="header-row">
-                        <h1 style={{ margin: 0, fontSize: '22px', color: '#333', fontWeight: 600 }}>
-                            {project && project.TenDuAn} {'>'}
-                            <span style={{ margin: '8px 8px', fontSize: '18px', color: '#666', fontWeight: 500 }}>
-                                Tiến độ thi công
-                            </span>
-                        </h1>
-                    </div>
-                </div>
-
-                <div style={{ marginTop: 10 }} className="header-content">
-                    <div className="header-row">
-                        <div className="search-box-sub">
-                            <button
-                                onClick={() => setShowAddPopup(true)}
-                                className="add-btn"
-                            >
-                                <img src={addIcon} alt="Add" />
-                                Thêm mới
-                            </button>
-                            <input type="text" placeholder="Tìm kiếm..." />
-                            <button className="search-btn">
-                                Tìm kiếm
-                            </button>
-                        </div>
-
-                        <div className="search-filter">
-                            <div className="filter-form">
-                                <div className="filter-box">
-                                    <span>Lọc theo khoảng thời gian:</span>
-                                    <input
-                                        type="date"
-                                        name="from_date"
-                                        value={fromDate}
-                                        onChange={(e) => setFromDate(e.target.value)}
-                                        className="small-input"
-                                    />
-                                    <span>đến</span>
-                                    <input
-                                        type="date"
-                                        name="to_date"
-                                        value={toDate}
-                                        onChange={(e) => setToDate(e.target.value)}
-                                        className="small-input"
-                                    />
-                                </div>
-
-                                <div className="filter-box">
-                                    <span>Lọc theo trạng thái:</span>
-                                    <select
-                                        name="status"
-                                        value={status}
-                                        onChange={(e) => setStatus(e.target.value)}
-                                        className="small-input"
-                                    >
-                                        <option value="all">Tất cả</option>
-                                        <option value="Chậm tiến độ">Chậm tiến độ</option>
-                                        <option value="Đang tiến hành">Đang tiến hành</option>
-                                        <option value="Đã hoàn thành">Đã hoàn thành</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* Status Filter */}
+                <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-700">Lọc theo trạng thái:</span>
+                    <select
+                        name="status"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-sm"
+                    >
+                        <option value="all">Tất cả</option>
+                        <option value="Chậm tiến độ">Chậm tiến độ</option>
+                        <option value="Đang tiến hành">Đang tiến hành</option>
+                        <option value="Đã hoàn thành">Đã hoàn thành</option>
+                    </select>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
             <div className='content'>
-                {projectId ? (
-                    <WorkTable projectId={projectId} />
-                ) : (
-                    <div className="no-project-selected">
-                        <p>Vui lòng chọn dự án từ trang Dashboard</p>
-                    </div>
-                )}
+                <div className='content'>
+                    {selectedSubProjectId !== null ? (
+                        // Hiển thị bảng dự án thành phần nếu selectedSubProjectId khác null
+                        <SubProjectTable duAnThanhPhanId={selectedSubProjectId} />
+                    ) : selectedProjectId !== null ? (
+                        // Hiển thị bảng dự án tổng nếu selectedProjectId khác null
+                        <WorkTable projectId={selectedProjectId} />
+                    ) : (
+                        // Hiển thị thông báo nếu cả hai đều null
+                        <div className="no-project-selected">
+                            <p>Vui lòng chọn dự án từ trang Dashboard</p>
+                        </div>
+                    )}
+                </div>
             </div>
             {showAddPopup && (
                 <div className="popup" onClick={() => setShowAddPopup(false)}>
