@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import downIcon from '../../assets/img/down.png';
 import axios from 'axios';
+import { FaPlus, FaTrash } from 'react-icons/fa';
 
 
 const SubProjectTable = ({ duAnThanhPhanId }) => {
@@ -258,7 +259,9 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
               <tr onContextMenu={(e) => handleContextMenu(e, plan)} key={`plan-${plan.keHoachId}`} className="bg-white hover:bg-gray-50 border-t">
                 <td className="px-3 py-2 whitespace-nowrap pl-20">{`${packageIndex + 1}.${itemIndex + 1}.${planIndex + 1}`}</td>
                 <td className="px-3 py-2 whitespace-nowrap">KH-{plan.keHoachId}</td>
-                <td className="px-3 py-2 whitespace-nowrap pl-4">{plan.tenCongTac}</td>
+                <td className="px-3 py-2 whitespace-nowrap pl-4">{plan.tenCongTac}
+                  
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
                 <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>

@@ -9,7 +9,7 @@ const ConstructionVolume = ({ data }) => {
           <FaCubes className="text-gray-500 mr-2" size={14} />
           <h2 className="text-base font-semibold text-gray-800">KHỐI LƯỢNG THI CÔNG YÊU CẦU</h2>
         </div>
-        <div className="p-3 h-40 overflow-y-auto">
+        <div className="p-3 h-60 overflow-y-auto"> {/* Tăng từ h-40 lên h-60 */}
           <p className="text-sm text-gray-800 text-left">Không có dữ liệu</p>
         </div>
       </div>
@@ -22,7 +22,7 @@ const ConstructionVolume = ({ data }) => {
         <FaCubes className="text-gray-500 mr-2" size={14} />
         <h2 className="text-base font-semibold text-gray-800">KHỐI LƯỢNG THI CÔNG YÊU CẦU</h2>
       </div>
-      <div className="p-3 h-40 overflow-y-auto">
+      <div className="p-3 h-48 overflow-y-auto"> {/* Tăng từ h-40 lên h-60 */}
         <ul className="list-disc pl-4 space-y-2">
           {data.khoiLuongThiCong.map((item, index) => (
             <li

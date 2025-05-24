@@ -51,7 +51,7 @@ const List = ({ subProjectId, onPackageSelect }) => {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <div className="content-wrapper">
+    <div className="bg-white content-wrapper">
       <div className="column">
         <div className="card bid-package-card">
           <div className="bid-package-header">
@@ -69,7 +69,7 @@ const List = ({ subProjectId, onPackageSelect }) => {
                 <div className="bid-code">
                   <FaHashtag className="bid-icon" /> {item.GoiThau_ID}
                 </div>
-                <div className="bid-content">
+                <div className="font-bold bid-content">
                   {item.TenGoiThau}
                 </div>
               </div>

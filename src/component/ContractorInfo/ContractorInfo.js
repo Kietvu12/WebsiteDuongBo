@@ -17,13 +17,13 @@ const ContractorInfo = ({ data }) => {
   const getRiskBorder = (risk) => {
     switch (risk) {
       case 'Rủi ro cao':
-        return 'border-red-600 text-red-600';
+        return 'border-red-600 text-red-600 bg-red-50 rounded-full';
       case 'Rủi ro trung bình':
-        return 'border-yellow-600 text-yellow-600';
+        return 'border-yellow-600 text-yellow-600 bg-yellow-50 rounded-full';
       case 'Rủi ro thấp':
-        return 'border-green-600 text-green-600';
+        return 'border-green-600 text-green-600 bg-green-50 rounded-full';
       default:
-        return 'border-gray-600 text-gray-600';
+        return 'border-gray-600 text-gray-600 bg-gray-50 rounded-full';
     }
   };
 
@@ -40,15 +40,19 @@ const ContractorInfo = ({ data }) => {
         <div className="grid grid-cols-3 gap-4 justify-items-center">
           <div className="w-full text-center">
             <span className="block text-sm font-medium text-gray-500">Ngày bắt đầu</span>
-            <span className="text-sm text-gray-800">{formatDate(NgayKhoiCong)}</span>
+            <span className="text-sm font-bold text-blue-600 bg-blue-50 rounded-full px-2 py-1">
+              {formatDate(NgayKhoiCong)}
+            </span>
           </div>
           <div className="w-full text-center">
             <span className="block text-sm font-medium text-gray-500">Ngày kết thúc</span>
-            <span className="text-sm text-gray-800">{formatDate(NgayHoanThanh)}</span>
+            <span className="text-sm font-bold text-red-600 bg-red-50 rounded-full px-2 py-1">
+              {formatDate(NgayHoanThanh)}
+            </span>
           </div>
           <div className="w-full text-center">
             <span className="block text-sm font-medium text-gray-500">Tình trạng</span>
-            <span className={`text-sm border rounded-sm px-2 py-0.5 ${getRiskBorder(danhGiaRuiRo || TrangThai)}`}>
+            <span className={`text-sm font-bold border rounded-full px-3 py-1 ${getRiskBorder(danhGiaRuiRo || TrangThai)}`}>
               {danhGiaRuiRo || TrangThai || '---'}
             </span>
           </div>

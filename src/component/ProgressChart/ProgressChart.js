@@ -52,7 +52,7 @@ const ProgressChart = ({ data }) => {
         </div>
 
         {/* Chú thích phân bố lại */}
-        <div className="mt-4 md:mt-0 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="mt-4 md:mt-0 md:ml-6 flex flex-col gap-2 w-full">
           <LegendItem color="#2E86C1" label="Kế hoạch" value={`${data.keHoach}%`} />
           <LegendItem color="#F5B041" label="Đang làm" value={`${data.dangLam}%`} />
           <LegendItem color="#E74C3C" label="Tạm dừng" value={`${data.tamDung}%`} />
@@ -64,10 +64,15 @@ const ProgressChart = ({ data }) => {
 };
 
 const LegendItem = ({ color, label, value }) => (
-  <div className="flex items-center">
-    <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: color }}></div>
-    <span className="text-sm text-gray-600 mr-2">{label}:</span>
-    <span className="text-sm font-bold text-gray-800">{value}</span>
+  <div className="flex ml-8 items-center">
+    <div
+      className="w-3 h-3 mr-2 flex-shrink-0 "
+      style={{ backgroundColor: color }}
+    ></div>
+    <div className="flex items-baseline">
+      <span className="text-xm font-bold text-gray-600 mr-1">{label}:</span>
+      <span className="text-xm font-bold text-gray-800">{value}</span>
+    </div>
   </div>
 );
 

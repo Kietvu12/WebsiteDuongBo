@@ -1,57 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { SpreadsheetComponent } from '@syncfusion/ej2-react-spreadsheet';
-import menuIcon from '../../assets/img/menu-icon.png';
-import helpIcon from '../../assets/img/help-icon.png';
-import userIcon from '../../assets/img/user-icon.png';
-import { saveAs } from "file-saver";
-import htmlDocx from 'html-docx-js/dist/html-docx';
-function ProjectReport() {
-  const editorRef = useRef();
-
-  const exportToWord = (e) => {
-    e.preventDefault();
-    
-    // Lấy nội dung HTML từ div contentEditable
-    const htmlContent = editorRef.current.innerHTML;
-    
-    const html = `
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial; max-width: 56rem; margin: 0 auto; padding: 2.5rem; }
-            img { max-width: 100%; height: auto; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #ddd; padding: 8px; }
-          </style>
-        </head>
-        <body>${htmlContent}</body>
-      </html>
-    `;
-    
-    const blob = htmlDocx.asBlob(html, {
-      orientation: 'portrait',
-      margins: { top: 1000, right: 1000, bottom: 1000, left: 1000 }
-    });
-    saveAs(blob, "baocao.docx");
-  };
-  return (
-    <div className="max-w-4xl mx-auto">
-    <button
-      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-      onClick={exportToWord}
-    >
-      Xuất ra file Word
-    </button>
-
-    <div  className="max-w-4xl mx-auto p-10 font-sans max-h-[1000px] overflow-y-auto bg-white"
-        contentEditable
-        suppressContentEditableWarning
-        ref={editorRef}>
-
+export const data = `
+    <div className="max-w-4xl mx-auto p-10 font-sans">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold uppercase">BÁO CÁO</h1>
       </div>
+
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-2">
           Tình hình triển khai Dự án thành phần đoạn Vũng Ăng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025
@@ -60,6 +12,7 @@ function ProjectReport() {
           (Kèm theo Báo cáo số .../BC-BQLD46 ngày /04/2025 của Ban QLDA 6)
         </p>
       </div>
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">1. Thông tin chung dự án</h3>
 
@@ -98,6 +51,8 @@ function ProjectReport() {
           </li>
         </ul>
       </div>
+
+
       <div>
         <h3 className="text-lg font-semibold mb-2">2. Công tác GPMB và hạ tầng kỹ thuật</h3>
         {/*  */}
@@ -180,12 +135,14 @@ function ProjectReport() {
           </table>
         </div>
       </div>
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">2.2. Xây dựng khu TĐC:</h3>
         <p>
           Các địa phương đã hoàn thành 15/15 Khu tái định cư, với diện tích 22,91ha cho 229 hộ dân.
         </p>
       </div>
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">2.3. Di dời hạ tầng kỹ thuật, công cộng:</h3>
         <ul className="list-disc pl-6 space-y-2">
@@ -203,6 +160,7 @@ function ProjectReport() {
           </li>
         </ul>
       </div>
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">3. Công tác tổ chức thi công</h3>
         <h4 className="font-medium mb-2">a) Công tác lập tiến độ thi công; lập, phê duyệt thiết kế bản vẽ thi công; xây dựng nhà điều hành, phòng thi nghiệm</h4>
@@ -222,6 +180,7 @@ function ProjectReport() {
           </li>
         </ul>
       </div>
+
       <div className="mb-6">
         <h4 className="font-medium mb-2">b) Tình hình thi công</h4>
         <p className="mb-4">Dự án được chia làm 02 gói thầu xây lắp, gồm:</p>
@@ -599,275 +558,4 @@ function ProjectReport() {
         </div>
 
       </div>
-      <div className="mb-6">
-        <ul className="list-[+] pl-6 space-y-1">
-          <li>
-            Đào hầm: 1.544/1.556m (trong đó: 
-            <ul className="list-[•] pl-6 mt-1 space-y-1">
-              <li>nhánh trái hầm: 704/716m</li>
-              <li>nhánh phải: 840/840 m) đạt 99,0%</li>
-            </ul>
-          </li>
-          <li>Đào đất, đá cửa hầm: 521.448/577.504m3 đạt 90,29%</li>
-          <li>Nẹp đá, neo dẫn trước: 53.924/56.833 bộ đạt 94,88%</li>
-          <li>Cọc khoan nhồi tường chân cửa Nam: 28/117 cọc, đạt 23,9%</li>
-          <li>BT dầm mũ, dầm neo, dầm chân 30MPa: 320/1.803 m3 đạt 17,75%</li>
-          <li>Bê tông phun: 66.096/65.940m2 đạt 100%</li>
-          <li>Lưới thép: 94.432/94.623m2 đạt 99,80%</li>
-          <li>Khung chống đỡ bằng thép: 2.242/2.277 dàn đạt 98,44%</li>
-        </ul>
-
-        <h5 className="font-medium mt-4 mb-2">+ Kế hoạch thực hiện một số hạng mục còn lại:</h5>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-300 text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">STT</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Hạng mục</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Đơn vị</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Khối lượng còn lại</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Kế hoạch hoàn thành</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Section I */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">I. Tuyến chính</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 16 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">6,059</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">30/04/2025</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">2</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 19 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">5,396</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">30/04/2025</td>
-              </tr>
-              {/* More rows for Section I... */}
-
-              {/* Section II */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">II. Tuyến nhánh nút giao</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 16 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">2,540</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">28/04/2025</td>
-              </tr>
-              {/* More rows for Section II... */}
-
-              {/* Section III */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">III. Hệ thống an toàn giao thông</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Lắp đặt dải phân cách giữa</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">7,470</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">30/05/2025</td>
-              </tr>
-              {/* More rows for Section III... */}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-4">
-          <p className="font-medium">- Công tác giải ngân:</p>
-          <p>Giá trị khối lượng hoàn thành: 3.776,8 tỷ đồng; Lũy kế giá trị thực hiện đã giải ngân đến nay: 3.389,855 tỷ đồng.</p>
-        </div>
-
-        <h4 className="font-medium mt-6 mb-2">6.2. Gói thầu xây lắp XL02</h4>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>
-            <span className="font-medium">Hạng mục thi công:</span> Tổng cộng 10 mũi thi công, 203 máy móc thiết bị, 527 nhân lực.
-          </li>
-        </ul>
-      </div>
-      <div className="mb-6">
-        <ul className="list-disc pl-6 space-y-2">
-          <li>
-            <span className="font-medium">Nền đường tuyến chính, hầm chui dân sinh, cống các loại</span> (số mũi thi công: 5; số máy móc, thiết bị: 122; nhân lực: 340);
-          </li>
-          <li>
-            <span className="font-medium">Cầu</span> (số mũi thi công: 5; số máy móc, thiết bị: 81; nhân lực: 187);
-          </li>
-        </ul>
-
-        <p className="mt-2 mb-4 font-medium">
-          Đánh giá huy động so với kế hoạch được chấp thuận: Cơ bản đáp ứng.
-        </p>
-
-        <h4 className="font-medium mb-2">- Khối lượng thi công một số hạng mục chính:</h4>
-        
-        <div className="ml-4">
-          <h5 className="font-medium mt-3 mb-1">+ Phần đường:</h5>
-          <ul className="list-[+] pl-6 space-y-1">
-            <li>
-              Đào nền đường: 8.285.452/8.285.452m3, đạt 100% trong đó:
-              <ul className="list-[•] pl-6 mt-1 space-y-1">
-                <li>Đào và vận chuyển ra bãi thải: 697.558/805.910 m3, đạt 86,56%</li>
-                <li>Đào, vận chuyển bãi trừ: 3.621.215/3.809.302, đạt 95,06%</li>
-              </ul>
-            </li>
-            <li>
-              Đắp nền đường: 3.450.409/3.486.239 m3, đạt 98,97% trong đó các hạng mục chính:
-              <ul className="list-[•] pl-6 mt-1 space-y-1">
-                <li>nền đường K90: 91.492/153.938 m3, đạt 59,43%</li>
-                <li>nền đường K95: 2.962.769/2.921.087 m3, đạt 101,43%</li>
-                <li>nền đường K98: 85.000/87.968m3, đạt 96,63%</li>
-                <li>Đắp vật liệu dạng hạt thoát nước K98 tuyến chính: 188.553/138.843 m3, đạt 135,8%</li>
-                <li>Trụ đất gia cố xi măng D800: 606.382/481.834 md, đạt 125,8%</li>
-              </ul>
-            </li>
-          </ul>
-
-          <h5 className="font-medium mt-3 mb-1">+ Vật liệu mặt đường:</h5>
-          <ul className="list-[+] pl-6 space-y-1">
-            <li>Cấp phối đá dăm loại 1: 85.497/108.968m3, đạt 78,46%</li>
-            <li>Cấp phối đá dăm gia cố xi măng: 34.343/48.691 m3, đạt 70,53%</li>
-            <li>Hỗn hợp BTN rỗng C25 dày 10cm: 205.146/301.910 m2, đạt 67,95%</li>
-            <li>BTN chặt 19 dày 6cm: 206.984/318.226m2, đạt 65,04%</li>
-            <li>BTN chặt 16 dày 6cm: 214.623/321.915 m2, đạt 66,67%</li>
-          </ul>
-
-          <h5 className="font-medium mt-3 mb-1">+ ATGT:</h5>
-          <ul className="list-[+] pl-6 space-y-1">
-            <li>Lan can tôn lượn sóng: 13.540/34.939md, đạt 38,75%</li>
-            <li>Hàng rào bảo vệ: 13.897/38.307md, đạt 36,28%</li>
-          </ul>
-
-          <h5 className="font-medium mt-3 mb-1">+ Phần cống, HCDS:</h5>
-          <ul className="list-[+] pl-6 space-y-1">
-            <li>Hoàn thành 112/134 cống các loại đạt 83,58% (Cống trên tuyến chính cơ bản hoàn thành)</li>
-            <li>Hầm chui dân sinh đã/đang thi công: 17/17 cái, đạt 100%</li>
-          </ul>
-
-          <h5 className="font-medium mt-3 mb-1">+ Phần cầu:</h5>
-          <ul className="list-[+] pl-6 space-y-1">
-            <li>Đang thi công 18/18 cầu, trong đó:
-              <ul className="list-[•] pl-6 mt-1 space-y-1">
-                <li>Cọc khoan nhồi (CKN): 1.865/1.865 CKN</li>
-                <li>Công tác sản xuất dầm đạt 100%</li>
-              </ul>
-            </li>
-          </ul>
-
-          <h5 className="font-medium mt-4 mb-2">+ Kế hoạch thực hiện một số hạng mục còn lại:</h5>
-        </div>
-      </div>
-      <div className="mb-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full border border-gray-300 text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">STT</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Hạng mục</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Đơn vị</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Khối lượng</th>
-                <th className="border border-gray-300 px-3 py-2 font-medium text-center">Kế hoạch hoàn thành</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Section I */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">I. Tuyến chính</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 16 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">Km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">6,91</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">10/06/2025</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">2</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 19 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">Km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">4,78</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">09/06/2025</td>
-              </tr>
-              {/* More rows for Section I... */}
-
-              {/* Section II */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">II. Tuyến nhánh nút giao</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Bê tông nhựa chặt 16 dày 6cm</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">Km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">3,08</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">15/05/2025</td>
-              </tr>
-              {/* More rows for Section II... */}
-
-              {/* Section III */}
-              <tr className="bg-gray-50">
-                <td className="border border-gray-300 px-3 py-2 font-medium text-center" colSpan="5">III. Hệ thống ATGT</td>
-              </tr>
-              <tr>
-                <td className="border border-gray-300 px-3 py-2 text-center">1</td>
-                <td className="border border-gray-300 px-3 py-2">Dải phân cách giữa</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">km</td>
-                <td className="border border-gray-300 px-3 py-2 text-right">13,52</td>
-                <td className="border border-gray-300 px-3 py-2 text-center">15/06/2025</td>
-              </tr>
-              {/* More rows for Section III... */}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-4">
-          <p className="font-medium">- Công tác giải ngân:</p>
-          <p>Giá trị khối lượng hoàn thành: 3.915,0 tỷ đồng; Lũy kế giá trị đã giải ngân đến nay: 3.491,355 tỷ đồng.</p>
-        </div>
-
-        <h4 className="text-lg font-semibold mt-6 mb-2">7. Đánh giá công tác quản lý chất lượng, tiến độ, an toàn lao động, an toàn giao thông, vệ sinh môi trường cho từng gói thầu và cả dự án</h4>
-        <p className="mb-4">(nhà thầu nào chậm, lý do, giải pháp khắc phục): Đáp ứng yêu cầu.</p>
-
-        <h4 className="text-lg font-semibold mt-6 mb-2">8. Khó khăn, vướng mắc và kiến nghị:</h4>
-        <p className="mb-4">
-          Kính đề nghị Bộ Xây dựng, UBND tỉnh Quảng Bình chỉ đạo các cấp các ngành cùng các địa phương quan tâm giải quyết các tồn tại vướng mắc để bàn giao mặt bằng trong tháng 4/2025 cụ thể:
-        </p>
-
-        <h5 className="font-medium mt-3 mb-1">- Huyện Quảng Trạch:</h5>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Còn vướng 22 hộ, ảnh hưởng thi công hàng rào bảo vệ, đường gom và đường vuốt nối hầm chui.</li>
-          <li>Vướng 02 đường dây điện 500kV tại đường dẫn đầu cầu vượt ngang số 1 km583+00.</li>
-        </ul>
-      </div>
-      <div className="mb-6">
-        <h5 className="font-medium mt-3 mb-1">- Thị xã Ba Đồn:</h5>
-        <ul className="list-disc pl-6 space-y-2">
-          <li>Km608+600-Km609+160 còn vướng 03 hộ, ảnh hưởng thi công hàng rào bảo vệ.</li>
-          <li>
-            Km609+500-Km609+600; Km609+900-Km610+00 xã Quảng Hoà chưa hoàn thành công tác GPMB 
-            cho 26 hộ phạm vi bổ sung mở rộng bệ phân áp.
-          </li>
-        </ul>
-
-        <div className="mt-6">
-          <p className="mb-4">Ban QLDA 6 xin trân trọng cảm ơn.</p>
-
-        </div>
-        <div className="mt-6">
-        <div className="mr-10 pt-4 mt-6 mw-64 mx-auto">
-            <p className="font-bold uppercase">BAN QUẢN LÝ DỰ ÁN 6</p>
-          </div>
-        </div>
-      </div>
-    </div>
-</div>
-  )
-}
-
-export default ProjectReport;
+    </div>`
