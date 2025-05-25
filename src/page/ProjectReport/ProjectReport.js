@@ -44,10 +44,11 @@ function ProjectReport() {
       Xuất ra file Word
     </button>
 
-    <div  className="max-w-4xl mx-auto p-10 font-sans max-h-[1000px] overflow-y-auto bg-white"
+    <div className="max-w-4xl mx-auto p-10 font-sans max-h-[1000px] overflow-y-auto bg-white"
         contentEditable
         suppressContentEditableWarning
-        ref={editorRef}>
+        ref={editorRef}
+        spellCheck="false">
 
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold uppercase">BÁO CÁO</h1>

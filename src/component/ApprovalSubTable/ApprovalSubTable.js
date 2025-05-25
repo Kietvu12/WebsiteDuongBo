@@ -45,12 +45,11 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
 
   const handleAdd = (parentId, type) => {
     console.log(`Thêm mới vào ${type} với ID: ${parentId}`);
-    // Xử lý thêm mới ở đây
+
   };
 
   const handleDelete = (vuongMacId) => {
     console.log(`Xóa vướng mắc với ID: ${vuongMacId}`);
-    // Xử lý xóa ở đây
   };
 
   if (loading) return <div className="p-4">Đang tải dữ liệu...</div>;
