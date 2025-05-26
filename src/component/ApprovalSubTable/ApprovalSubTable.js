@@ -86,14 +86,29 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
             {/* Level 2 */}
             {data.duAnThanhPhan.danhSachGoiThau.map((goiThau, indexGT) => (
               <React.Fragment key={`goithau-${goiThau.goiThauId}`}>
-                <tr className="bg-yellow-50 hover:bg-yellow-100">
+                <tr className="group bg-yellow-50 hover:bg-yellow-100">
                   <td className="px-4 py-2">{indexGT + 1}</td>
                   <td className="px-4 py-2">GT-{goiThau.goiThauId}</td>
-                  <td className="px-4 py-2 font-medium">
+                  <td className="px-4 py-2 font-medium relative">
                     <button onClick={() => toggleItem('goiThau', goiThau.goiThauId)} className="flex items-center focus:outline-none">
                       <span className={`transform ${expandedItems.goiThau[goiThau.goiThauId] ? 'rotate-90' : ''}`}>▸</span>
                       <span className="ml-1">{goiThau.tenGoiThau}</span>
                     </button>
+                    {/* Nút thêm/xóa hiển thị ngay dưới tên gói thầu */}
+                    <div className="absolute left-0 mt-1 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <button
+                        className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                        title="Thêm vướng mắc"
+                      >
+                        <FaPlus size={14} />
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                        title="Xóa vướng mắc"
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    </div>
                   </td>
                   <td colSpan="5" className="px-4 py-2">
                     Vướng mắc: {goiThau.tongVuongMac} (Đã phê duyệt: {goiThau.tongDaPheDuyet} | Chưa phê duyệt: {goiThau.tongChuaPheDuyet})
@@ -103,14 +118,28 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                 {/* Level 3 */}
                 {expandedItems.goiThau[goiThau.goiThauId] && goiThau.danhSachHangMuc?.map((hangMuc, indexHM) => (
                   <React.Fragment key={`hangmuc-${hangMuc.hangMucId}`}>
-                    <tr className="bg-white hover:bg-gray-50">
+                    <tr className="group bg-white hover:bg-gray-50">  {/* Added 'group' here */}
                       <td className="px-4 py-2 pl-8">{`${indexGT + 1}.${indexHM + 1}`}</td>
                       <td className="px-4 py-2">HM-{hangMuc.hangMucId}</td>
-                      <td className="px-4 py-2 font-medium">
+                      <td className="px-4 py-2 font-medium relative">
                         <button onClick={() => toggleItem('hangMuc', hangMuc.hangMucId)} className="flex items-center focus:outline-none">
                           <span className={`transform ${expandedItems.hangMuc[hangMuc.hangMucId] ? 'rotate-90' : ''}`}>▸</span>
                           <span className="ml-1">{hangMuc.tenHangMuc}</span>
                         </button>
+                        <div className="transform opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
+                          <button
+                            className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                            title="Thêm vướng mắc"
+                          >
+                            <FaPlus size={14} />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                            title="Xóa vướng mắc"
+                          >
+                            <FaTrash size={14} />
+                          </button>
+                        </div>
                       </td>
                       <td colSpan="5" className="px-4 py-2">
                         Vướng mắc: {hangMuc.tongVuongMac} (Đã phê duyệt: {hangMuc.soVuongMacDaPheDuyet} | Chưa phê duyệt: {hangMuc.soVuongMacChuaPheDuyet})
@@ -127,18 +156,9 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                         >
                           <td className="px-4 py-2 pl-12">{`${indexGT + 1}.${indexHM + 1}.${indexVM + 1}`}</td>
                           <td className="px-4 py-2">VM-{vuongMac.vuongMacId}</td>
-                          <td className="px-4 py-2">{vuongMac.tenCongTac} (KH-{vuongMac.keHoachId})</td>
-                          <td className="px-4 py-2 relative">
-                            {vuongMac.moTaChiTiet}
-                            <div className=" transform opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
-                              <button 
-                                onClick={() => handleAdd(hangMuc.hangMucId, 'hangMuc')}
-                                className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                                title="Thêm vướng mắc"
-                              >
-                                <FaPlus size={14} />
-                              </button>
-                              <button 
+                          <td className="px-4 py-2 relative">{vuongMac.tenCongTac} (KH-{vuongMac.keHoachId})
+                          <div className=" transform opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
+                              <button
                                 onClick={() => handleDelete(vuongMac.vuongMacId)}
                                 className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
                                 title="Xóa vướng mắc"
@@ -146,6 +166,9 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                                 <FaTrash size={14} />
                               </button>
                             </div>
+                          </td>
+                          <td className="px-4 py-2 relative">
+                            {vuongMac.moTaChiTiet}
                           </td>
                           <td className="px-4 py-2">{vuongMac.bienPhapXuLy || 'Chưa có'}</td>
                           <td className="px-4 py-2">{formatDate(vuongMac.ngayPhatSinh)}</td>
