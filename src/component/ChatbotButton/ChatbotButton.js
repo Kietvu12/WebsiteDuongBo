@@ -59,7 +59,7 @@ const ChatbotButton = () => {
     let finalResponseReceived = false;
 
     try {
-      const response = await fetch('https://4f56-113-23-50-13.ngrok-free.app/api/stream', {
+      const response = await fetch('https://2dad-113-23-52-34.ngrok-free.app/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userInput , conversation_id: "Kiet"}),
