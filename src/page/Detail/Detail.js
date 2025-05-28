@@ -1,6 +1,6 @@
 import './Detail.css';
 import React, { useEffect, useState } from 'react';
-import { FaExpand, FaCompress } from 'react-icons/fa';
+import { FaExpand, FaCompress, FaFileWord } from 'react-icons/fa';
 import menuIcon from '../../assets/img/menu-icon.png';
 import helpIcon from '../../assets/img/help-icon.png';
 import userIcon from '../../assets/img/user-icon.png';
@@ -11,11 +11,11 @@ import ConstructionProgress from '../../component/ConstructionProgress/Construct
 import ContractorInfo from '../../component/ContractorInfo/ContractorInfo';
 import ConstructionVolume from '../../component/ConstructionVolume/ConstructionVolume';
 import MapView from '../../component/MapView/MapView';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
-
 const Detail = () => {
+    const navigate = useNavigate();
     const location = useLocation();
     const { state } = location;
     const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -32,7 +32,7 @@ const Detail = () => {
                 setLoading(true);
                 const response = await axios.get(`http://localhost:5000/goiThau/chiTiet/${selectedPackageId}`);
                 setPackageData(response.data.data);
-                setSelectedProject(response.data.data); 
+                setSelectedProject(response.data.data);
             } catch (error) {
                 console.error('Error fetching package details:', error);
             } finally {
@@ -56,28 +56,44 @@ const Detail = () => {
     const handlePackageSelect = (packageId) => {
         setSelectedPackageId(packageId);
     };
-
+    const handleReport = () => navigate(`/project-report/${projectId}`)
     return (
         <div className="detail">
-            <div className="header">
-                <div className="top-nav">
-                    <button className="icon-btn">
-                        <img src={menuIcon} alt="Menu" className="small-icon" />
+            <div className="bg-white shadow-sm">
+                {/* Top Navigation */}
+                <div className="flex justify-between items-center px-5 py-3">
+                    {/* Menu Button */}
+                    <button className="p-1 rounded-md hover:bg-gray-100">
+                        <img src={menuIcon} alt="Menu" className="w-5 h-5" />
                     </button>
 
-                    <div className="nav-icons">
-                        <button className="icon-btn">
-                            <img src={helpIcon} alt="Help" className="small-icon" />
+                    {/* Right-side buttons */}
+                    <div className="flex items-center space-x-3">
+                        {/* Export Report Button */}
+                        <button
+                            onClick={handleReport}
+                            className="flex items-center px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
+                        >
+                            <FaFileWord className="w-4 h-4 mr-2" />
+                            Xuất báo cáo Word
                         </button>
-                        <button className="icon-btn">
-                            <img src={userIcon} alt="User" className="small-icon" />
+
+                        {/* Help Button */}
+                        <button className="p-1 rounded-md hover:bg-gray-100">
+                            <img src={helpIcon} alt="Help" className="w-5 h-5" />
+                        </button>
+
+                        {/* User Button */}
+                        <button className="p-1 rounded-md hover:bg-gray-100">
+                            <img src={userIcon} alt="User" className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
 
-                <div className="header-title">
-                    <h1 className="main-title">{projectName}</h1>
-                    <span className="sub-title">{subProjectName}</span>
+                {/* Title Section */}
+                <div className="px-5 py-4 border-t border-gray-100">
+                    <h1 className="text-2xl font-bold text-gray-800">{projectName}</h1>
+                    <p className="text-sm text-gray-500 mt-1">{subProjectName}</p>
                 </div>
             </div>
 
@@ -107,7 +123,7 @@ const Detail = () => {
                                 )}
                                 {packageData?.tienDo.chiTiet && (
                                     <div className="wrapper">
-                                        <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={projectId}/>
+                                        <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={projectId} />
                                     </div>
                                 )}
                             </>
