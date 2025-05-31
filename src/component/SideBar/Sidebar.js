@@ -10,11 +10,15 @@ import settingIcon from '../../assets/img/setting-icon.png';
 import backgroundSidebar from '../../assets/img/background_sidebar.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
-import { useParams} from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import avatarIcon from '../../assets/img/user-icon.png'
+import bg from '../../assets/img/background_sidebar.png'
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedProjectId } = useProject();
+
+  // Menu mở rộng
   const [openMenus, setOpenMenus] = useState({
     project: true,
     progress: false,
@@ -23,16 +27,30 @@ const Sidebar = () => {
     setting: false
   });
 
+  // trạng thái sidebar mở (mobile)
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const isDashboard = ['/home', '/'].includes(location.pathname);
+
   const handleNavigation = (path) => {
     if (path === '/home') {
-      return navigate('/home');
+      navigate('/home');
+      setSidebarOpen(false);
+      return;
     }
     const finalPath = selectedProjectId ? `${path}/${selectedProjectId}` : path;
     navigate(finalPath);
+    setSidebarOpen(false);
   };
+
   const handleDashboard = () => {
     navigate('/home');
+    setSidebarOpen(false);
+  };
+
+  const handleMapboard = () => {
+    navigate('/map-views');
+    setSidebarOpen(false);
   };
 
   const toggleMenu = (menu) => {
@@ -42,131 +60,244 @@ const Sidebar = () => {
       [menu]: !prev[menu]
     }));
   };
+
   const isMenuItemDisabled = (menu) => {
     return isDashboard && menu !== 'project';
   };
+
   return (
-    <div className="sidebar">
-      <div className="sidebar-header" style={{ backgroundImage: `url(${backgroundSidebar})` }}>
-        <div className="logo-container">
-          <img src={logoSidebar} alt="Logo Bộ Xây Dựng" className="logo" />
-          <div className="search-box">
-            <input type="text" placeholder="Tìm kiếm..." />
+    <>
+    {/* Header mobile */}
+    <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 h-[56px] shadow-md" style={{ backgroundImage: `url(${bg})` }}>
+      <button
+        aria-label="Toggle Menu"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        className="w-12 h-12 flex items-center justify-center text-white hover:bg-[#00509e] rounded-md focus:outline-none transition"
+      >
+        {sidebarOpen ? (
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M3 12h18M3 6h18M3 18h18" />
+          </svg>
+        )}
+      </button>
+
+      {/* Logo chính giữa */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
+        <img
+          src={logoSidebar}
+          alt="Logo Bộ Xây Dựng"
+          className="h-10 w-auto"
+          draggable={false}
+        />
+      </div>
+
+      {/* Icon avatar bên phải */}
+      {/* <button
+        aria-label="User Account"
+        onClick={() => navigate('/account-info')}
+        className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md flex items-center justify-center cursor-pointer"
+      >
+        <img
+          src={avatarIcon}
+          alt="Avatar"
+          className="object-cover w-full h-full"
+          draggable={false}
+        />
+      </button> */}
+    </header>
+
+    {/* Overlay đen khi mở sidebar mobile */}
+    {sidebarOpen && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden"
+        onClick={() => setSidebarOpen(false)}
+      />
+    )}
+
+    {/* Sidebar chính */}
+    <aside
+      className={`
+        fixed top-0 left-0 bottom-0 z-40 bg-gray-100 shadow-md font-sans
+        w-[300px] h-screen
+        transform transition-transform duration-300 ease-in-out
+        md:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:static md:h-auto
+      `}
+    >
+      {/* Phần trên sidebar */}
+      <div
+        className="relative bg-center bg-cover p-5 rounded-b-xl"
+        style={{ backgroundImage: `url(${backgroundSidebar})` }}
+      >
+        <div className="flex flex-col items-center relative z-10">
+          <img
+            src={logoSidebar}
+            alt="Logo Bộ Xây Dựng"
+            className="w-4/5 max-w-[180px] mb-4"
+          />
+          <div className="w-[250px] flex justify-center items-center rounded-full">
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-full bg-white bg-opacity-90 text-sm outline-none transition
+                focus:border-blue-600 focus:ring-2 focus:ring-blue-300"
+            />
           </div>
         </div>
+        <div
+          className="absolute inset-0 rounded-b-xl bg-black bg-opacity-20 pointer-events-none"
+          aria-hidden="true"
+        />
       </div>
-      
-      <div className="menu-section">
-        <div className="menu-item" onClick={() => toggleMenu('project')}>
-          <img src={projectIcon} width="20" alt="Project Icon" />
-          <span>Quản lý dự án</span>
-          <img 
-            src={downIcon} 
-            width="16" 
-            alt="Dropdown Icon" 
-            className={`dropdown-icon ${openMenus.project ? 'open' : ''}`} 
-          />
+
+      {/* Các phần menu */}
+      <div className="flex flex-col flex-grow overflow-auto mt-2 md:mt-0">
+        {/* Project menu */}
+        <div className="py-1">
+          <div
+            className="flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-sm hover:bg-gray-200 transition"
+            onClick={() => toggleMenu('project')}
+          >
+            <img src={projectIcon} width={20} alt="Project Icon" className="mr-2" />
+            <span>Quản lý dự án</span>
+            <img
+              src={downIcon}
+              width={16}
+              alt="Dropdown Icon"
+              className={`ml-auto transition-transform duration-300 ${
+                openMenus.project ? 'rotate-180' : ''
+              }`}
+            />
+          </div>
+          <div
+            className={`overflow-hidden text-sm text-gray-600 transition-max-height duration-300 ease-out
+            ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
+          >
+            <div
+              className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900"
+              onClick={handleDashboard}
+            >
+              Danh sách dự án
+            </div>
+            <div
+              className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900"
+              onClick={handleMapboard}
+            >
+              Dự án dạng bản đồ
+            </div>
+            <div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
+              Thêm dự án mới
+            </div>
+            <div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
+              Phân loại dự án
+            </div>
+          </div>
         </div>
-        
-        <div className={`submenu ${openMenus.project ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={handleDashboard}>Danh sách dự án</div>
-          <div className="submenu-item">Thêm dự án mới</div>
-          <div className="submenu-item">Phân loại dự án</div>
-        </div>
+
+        {/* Các menu khác */}
+        {[
+          {
+            key: 'progress',
+            icon: progressIcon,
+            label: 'Quản lý tiến độ',
+            submenu: [
+              { label: 'Hạng mục công việc', onClick: () => handleNavigation(`/work-items`) },
+              { label: 'Đề xuất & phê duyệt', onClick: () => handleNavigation('/approvals') },
+              { label: 'Báo cáo tiến độ', onClick: () => handleNavigation(`/project-progress`) },
+            ],
+          },
+          {
+            key: 'requirements',
+            icon: requirementsIcon,
+            label: 'Nhà thầu thi công',
+            submenu: [
+              { label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
+              { label: 'Tiến độ hoàn thành', onClick: () => handleNavigation('/completion-progress') },
+            ],
+          },
+          {
+            key: 'report',
+            icon: reportIcon,
+            label: 'Báo cáo',
+            submenu: [
+              { label: 'Báo cáo chi tiết theo dự án', onClick: () => handleNavigation('/project-report') },
+              { label: 'Báo cáo theo các nhà thầu', onClick: () => handleNavigation('/contractor-report') },
+              { label: 'Xuất báo cáo Excel', onClick: () => handleNavigation('/export-excel') },
+            ],
+          },
+          {
+            key: 'setting',
+            icon: settingIcon,
+            label: 'Cài đặt',
+            submenu: [
+              { label: 'Cài đặt tài khoản', onClick: () => handleNavigation('/account-settings') },
+              { label: 'Đổi mật khẩu', onClick: () => handleNavigation('/change-password') },
+            ],
+          },
+        ].map(({ key, icon, label, submenu }) => (
+          <div key={key} className="py-1">
+            <div
+              className={`flex items-center px-5 py-2 cursor-pointer text-gray-600 font-semibold text-sm
+                hover:bg-gray-200 transition
+                ${isMenuItemDisabled(key) ? 'cursor-not-allowed opacity-50' : 'text-gray-700'}`}
+              onClick={() => {
+                if (!isMenuItemDisabled(key)) toggleMenu(key);
+              }}
+            >
+              <img src={icon} width={20} alt={`${label} Icon`} className="mr-2" />
+              <span>{label}</span>
+              <img
+                src={downIcon}
+                width={16}
+                alt="Dropdown Icon"
+                className={`ml-auto transition-transform duration-300 ${
+                  openMenus[key] ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+            <div
+              className={`overflow-hidden text-sm text-gray-600 transition-max-height duration-300 ease-out
+              ${openMenus[key] ? 'max-h-[400px]' : 'max-h-0'}`}
+            >
+              {submenu.map(({ label: subLabel, onClick }, idx) => (
+                <div
+                  key={idx}
+                  className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                  ${isMenuItemDisabled(key) ? 'cursor-not-allowed' : ''}`}
+                  onClick={() => {
+                    if (!isMenuItemDisabled(key)) onClick();
+                  }}
+                >
+                  {subLabel}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('progress') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('progress') && toggleMenu('progress')}
-        >
-          <img src={progressIcon} width="20" alt="Progress Icon" />
-          <span>Quản lý tiến độ</span>
-          <img 
-            src={downIcon} 
-            width="16" 
-            alt="Dropdown Icon" 
-            className={`dropdown-icon ${openMenus.progress ? 'open' : ''}`} 
-          />
-        </div>  
-        <div className={`submenu ${openMenus.progress ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={() => handleNavigation(`/work-items`)}>Hạng mục công việc</div>
-          <div className="submenu-item" onClick={() => handleNavigation('/approvals')}>Đề xuất & phê duyệt</div>
-          {/* <div className="submenu-item" onClick={() => handleNavigation('/plan')}>Kế hoạch thi công</div> */}
-          <div className="submenu-item" onClick={() => handleNavigation(`/project-progress`)}>Báo cáo tiến độ</div>
-        </div>
-      </div>
-      
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('requirements') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('requirements') && toggleMenu('requirements')}
-        >
-          <img src={requirementsIcon} width="20" alt="Requirements Icon" />
-          <span>Nhà thầu thi công</span>
-          <img 
-            src={downIcon} 
-            width="16" 
-            alt="Dropdown Icon" 
-            className={`dropdown-icon ${openMenus.requirements ? 'open' : ''}`} 
-          />
-        </div>
-        <div className={`submenu ${openMenus.requirements ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={() => handleNavigation('/construction-areas')}>Khu vực thi công</div>
-          <div className="submenu-item" onClick={() => handleNavigation('/completion-progress')}>Tiến độ hoàn thành</div>
-        </div>
-      </div>
-      
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('report') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('report') && toggleMenu('report')}
-        >
-          <img src={reportIcon} width="20" alt="Report Icon" />
-          <span>Báo cáo</span>
-          <img 
-            src={downIcon} 
-            width="16" 
-            alt="Dropdown Icon" 
-            className={`dropdown-icon ${openMenus.report ? 'open' : ''}`} 
-          />
-        </div>
-        <div className={`submenu ${openMenus.report ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={() => handleNavigation('/project-report')}>Báo cáo chi tiết theo dự án</div>
-          <div className="submenu-item" onClick={() => handleNavigation('/contractor-report')}>Báo cáo theo các nhà thầu</div>
-          <div className="submenu-item" onClick={() => handleNavigation('/export-excel')}>Xuất báo cáo Excel</div>
-        </div>
-      </div>
-      
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('setting') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('setting') && toggleMenu('setting')}
-        >
-          <img src={settingIcon} width="20" alt="Settings Icon" />
-          <span>Cài đặt hệ thống</span>
-          <img 
-            src={downIcon} 
-            width="16" 
-            alt="Dropdown Icon" 
-            className={`dropdown-icon ${openMenus.setting ? 'open' : ''}`} 
-          />
-        </div>
-        <div className={`submenu ${openMenus.setting ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={() => navigate('/account-info')}>Thông tin tài khoản</div>
-          <div className="submenu-item" onClick={() => navigate('/system-permissions')}>Phân quyền hệ thống</div>
-          <div className="submenu-item" onClick={() => navigate('/logout')}>Đăng xuất</div>
-        </div>
-      </div>
-      
-      <div className="sidebar-footer">
-        <div className="version-info">Phiên bản 1.0.0</div>
-        <div className="footer-links">
-          <a href="#">Bảo mật</a>
-          <a href="#">Điều khoản</a>
-          <a href="#">Giấy phép</a>
-        </div>
-      </div>
-    </div>
+    </aside>
+  </>
   );
 };
 

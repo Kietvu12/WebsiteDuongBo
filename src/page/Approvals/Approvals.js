@@ -57,82 +57,70 @@ const Approvals = () => {
 
   return (
     <div className='plan'>
-      <div className="w-full bg-white shadow-md px-4 py-3">
+      <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3">
+        {/* Top Nav */}
         <div className="flex justify-between items-center">
-          <div>
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded"
-            >
-              <FaArrowLeft className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-          <div className="flex items-center space-x-3">
-            <img src={menuIcon} alt="Menu" className="w-5 h-5" />
-            <img src={helpIcon} alt="Help" className="w-6 h-6 rounded-full" />
-            <img src={userIcon} alt="User" className="w-6 h-6 rounded-full" />
+          <button onClick={() => navigate(-1)} className="p-1 sm:p-2 hover:bg-gray-100 rounded">
+            <FaArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+          </button>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <img src={menuIcon} alt="Menu" className="w-4 h-4 sm:w-5 sm:h-5" />
+            <img src={helpIcon} alt="Help" className="w-4 h-4 sm:w-6 sm:h-6 rounded-full" />
+            <img src={userIcon} alt="User" className="w-4 h-4 sm:w-6 sm:h-6 rounded-full" />
           </div>
         </div>
 
         {/* Title */}
-        <div className="mt-4">
-          <h1 className="text-[22px] text-gray-800 font-semibold m-0">
-            {renderTitle()}
-          </h1>
+        <div className="mt-3 sm:mt-4">
+          <h1 className="mt-8 text-xs md:text-xl text-gray-800 font-semibold">{renderTitle()}</h1>
         </div>
 
-        {/* Search and Filter */}
-        <div className="mt-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
-            {/* Search Box */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowAddPopup(true)}
-                className="flex items-center space-x-2 bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
-              >
-                <img src={addIcon} alt="Add" className="w-4 h-4" />
-                <span>Thêm mới</span>
-              </button>
-              <input
-                type="text"
-                placeholder="Tìm kiếm..."
-                className="border border-gray-300 rounded px-3 py-1.5 w-52 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-              <button className="bg-gray-200 px-3 py-1.5 rounded hover:bg-gray-300">
-                Tìm kiếm
-              </button>
+        {/* Search + Filter */}
+        <div className="mt-3 sm:mt-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+
+            {/* Search */}
+            <div className="flex-1">
+              <div className="flex gap-2 w-full">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm..."
+                  className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                />
+                <button className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 text-sm whitespace-nowrap">
+                  Tìm
+                </button>
+              </div>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col lg:flex-row lg:items-center space-y-3 lg:space-y-0 lg:space-x-6">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
+
               {/* Date Filter */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Lọc theo khoảng thời gian:</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Thời gian:</span>
                 <input
                   type="date"
-                  name="from_date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm w-[130px]"
                 />
-                <span className="text-sm text-gray-700">đến</span>
+                <span className="text-xs sm:text-sm text-gray-700">đến</span>
                 <input
                   type="date"
-                  name="to_date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm w-[130px]"
                 />
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Lọc theo trạng thái:</span>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
                 <select
-                  name="status"
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm min-w-[140px] flex-1 sm:flex-none"
                 >
                   <option value="all">Tất cả</option>
                   <option value="Chậm tiến độ">Chậm tiến độ</option>
@@ -140,10 +128,14 @@ const Approvals = () => {
                   <option value="Đã hoàn thành">Đã hoàn thành</option>
                 </select>
               </div>
+
             </div>
           </div>
         </div>
       </div>
+
+
+
 
       <div className='content'>
         <div className='content'>

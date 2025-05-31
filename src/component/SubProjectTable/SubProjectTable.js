@@ -297,7 +297,9 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
 
   return (
     <div className="w-full overflow-x-auto p-2">
-      <table className="divide-y divide-gray-200 border text-sm">
+      <div className="hidden md:block">
+    <div className="w-full overflow-x-auto">
+    <table className="divide-y divide-gray-200 border text-sm">
         <thead className="bg-gray-50">
           <tr>
             <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
@@ -316,7 +318,7 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
         <tbody className="bg-white divide-y divide-gray-200">
           {data.duAnThanhPhan.danhSachGoiThau?.map((packageItem, packageIndex) => (
             <React.Fragment key={`package-${packageItem.goiThauId}`}>
-              <tr className="group bg-green-50 hover:bg-green-100">
+              <tr className="group bg-blue-50 hover:bg-blue-100">
                 <td className="px-3 py-2 whitespace-nowrap pl-8">{`${packageIndex + 1}`}</td>
                 <td className="px-3 py-2 whitespace-nowrap">GT-{packageItem.goiThauId}</td>
                 <td className="px-3 py-2 whitespace-nowrap font-medium">
@@ -471,7 +473,201 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
           ))}
         </tbody>
       </table>
+    </div>
+  </div>
+  <div className="md:hidden space-y-3">
+    {data.duAnThanhPhan.danhSachGoiThau?.map((packageItem, packageIndex) => (
+      <React.Fragment key={`mobile-package-${packageItem.goiThauId}`}>
+        {/* Package Card */}
+        <div className="bg-blue-50 p-3 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-medium text-gray-900">
+                <button
+                  onClick={() => toggleItem('packages', packageItem.goiThauId)}
+                  className="flex items-center focus:outline-none"
+                >
+                  <img
+                    src={downIcon}
+                    alt="Toggle"
+                    className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
+                  />
+                  <span className='text-xs font-bold'>{packageItem.tenGoiThau}</span>
+                </button>
+              </div>
+              <div className="text-sm text-gray-500 mt-1">GT-{packageItem.goiThauId}</div>
+            </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+            <div>
+              <div className="text-gray-500">Khối lượng TH</div>
+              <div>{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Khối lượng KH</div>
+              <div>{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Bắt đầu</div>
+              <div>{formatDate(packageItem.ngayKhoiCong)}</div>
+            </div>
+            <div>
+              <div className="text-gray-500">Kết thúc</div>
+              <div>{formatDate(packageItem.ngayHoanThanh)}</div>
+            </div>
+          </div>
+
+          <div className="mt-2 flex justify-end">
+            <button
+              className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+              title="Thêm hạng mục"
+            >
+              <FaPlus size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Items (only show if expanded) */}
+        {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
+          const progress = item.tongKhoiLuongKeHoach
+            ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
+            : 0;
+
+          const bgColor =
+            progress >= 100
+              ? 'bg-green-100'
+              : progress >= 40
+              ? 'bg-yellow-100'
+              : 'bg-red-100';
+
+          return (
+            <React.Fragment key={`mobile-item-${item.hangMucId}`}>
+              <div className={`${bgColor} p-3 rounded-lg shadow-sm border border-gray-200 ml-4`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-medium">
+                      <button
+                        onClick={() => toggleItem('items', item.hangMucId)}
+                        className="flex items-center focus:outline-none"
+                      >
+                        <img
+                          src={downIcon}
+                          alt="Toggle"
+                          className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
+                        />
+                        <span className='font-bold text-xs'>Hạng mục: {item.tenHangMuc}</span>
+                      </button>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">HM-{item.hangMucId}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Khối lượng TH</div>
+                    <div>{item.tongKhoiLuongThucHien?.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Khối lượng KH</div>
+                    <div>{item.tongKhoiLuongKeHoach?.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Đơn vị</div>
+                    <div>{item.danhSachKeHoach?.[0]?.donViTinh || ''}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Tiến độ</div>
+                    <div className="font-medium">{progress.toFixed(0)}%</div>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex justify-end space-x-2">
+                  <button
+                    className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                    title="Thêm kế hoạch"
+                  >
+                    <FaPlus size={14} />
+                  </button>
+                  <button
+                    className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                    title="Xóa"
+                  >
+                    <FaTrash size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Plans (only show if expanded) */}
+              {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
+                <div key={`mobile-plan-${plan.keHoachId}`} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 ml-8 group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-xs">{plan.tenCongTac}</div>
+                      <div className="text-sm text-gray-500 mt-1">KH-{plan.keHoachId}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                    <div>
+                      <div className="text-gray-500">Khối lượng TH</div>
+                      <div>{plan.tongKhoiLuongThucHien?.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Khối lượng KH</div>
+                      <div>{plan.khoiLuongKeHoach?.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Đơn vị</div>
+                      <div>{plan.donViTinh}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Tiến độ</div>
+                      <div>
+                        {plan.khoiLuongKeHoach
+                          ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
+                          : '0%'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Thời gian</div>
+                      <div>{calculateDays(plan.ngayBatDau, plan.ngayKetThuc)} ngày</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Bắt đầu</div>
+                      <div>{formatDate(plan.ngayBatDau)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Kết thúc</div>
+                      <div>{formatDate(plan.ngayKetThuc)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
+                    <button
+                      onClick={() => handleViewDetails(plan)}
+                      className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                    >
+                      Chi tiết tiến độ
+                    </button>
+                    <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                      Khó khăn vướng mắc
+                    </button>
+                    <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                      Cập nhật tiến độ
+                    </button>
+                    <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                      Chỉnh sửa
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </React.Fragment>
+          );
+        })}
+      </React.Fragment>
+    ))}
+  </div>
       <ProgressPopup
         visible={progressPopup.visible}
         plan={progressPopup.plan}

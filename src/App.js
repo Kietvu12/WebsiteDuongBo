@@ -13,8 +13,10 @@ import { ProjectProvider } from './contexts/ProjectContext';
 import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
 import Approvals from './page/Approvals/Approvals';
+import MapBoard from './page/MapBoard/MapBoard';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
+  
   return (
     <div style={{ display: 'flex' }}>
       <Sidebar />
@@ -36,6 +38,11 @@ function App() {
         <Route path='/home' element={
           <LayoutWithSidebar>
             <DashBoard />
+          </LayoutWithSidebar>
+        } />
+        <Route path='/map-views' element={
+          <LayoutWithSidebar>
+            <MapBoard />
           </LayoutWithSidebar>
         } />
         <Route path='/detail' element={

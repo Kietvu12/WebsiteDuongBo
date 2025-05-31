@@ -61,21 +61,23 @@ const Detail = () => {
         <div className="detail">
             <div className="bg-white shadow-sm">
                 {/* Top Navigation */}
-                <div className="flex justify-between items-center px-5 py-3">
-                    {/* Menu Button */}
-                    <button className="p-1 rounded-md hover:bg-gray-100">
-                        <img src={menuIcon} alt="Menu" className="w-5 h-5" />
-                    </button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-5 py-3 gap-3 sm:gap-0">
+                    {/* Left side - Menu Button (only show on mobile) */}
+                    <div className="sm:hidden">
+                        <button className="p-1 rounded-md hover:bg-gray-100">
+                            <img src={menuIcon} alt="Menu" className="w-5 h-5" />
+                        </button>
+                    </div>
 
                     {/* Right-side buttons */}
-                    <div className="flex items-center space-x-3">
-                        {/* Export Report Button */}
+                    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-normal">
+                        {/* Export Report Button - Full text on desktop, icon only on mobile */}
                         <button
                             onClick={handleReport}
-                            className="flex items-center px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
+                            className="flex items-center px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-500 text-white text-sm font-medium rounded-md hover:bg-blue-600 transition-colors"
                         >
-                            <FaFileWord className="w-4 h-4 mr-2" />
-                            Xuất báo cáo Word
+                            <FaFileWord className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Xuất báo cáo Word</span>
                         </button>
 
                         {/* Help Button */}
@@ -91,9 +93,9 @@ const Detail = () => {
                 </div>
 
                 {/* Title Section */}
-                <div className="px-5 py-4 border-t border-gray-100">
-                    <h1 className="text-2xl font-bold text-gray-800">{projectName}</h1>
-                    <p className="text-sm text-gray-500 mt-1">{subProjectName}</p>
+                <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-gray-100">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{projectName}</h1>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">{subProjectName}</p>
                 </div>
             </div>
 
@@ -144,11 +146,6 @@ const Detail = () => {
                         )}
                         {packageData?.thongTinChung && (
                             <div className="wrapper">
-
-                                <MapView
-                                    selectedProject={packageData.thongTinChung}
-                                    isExpanded={isExpanded}
-                                />
                                 <button className="expand-map-btn" onClick={toggleExpand}>
                                     {isExpanded ? (
                                         <>
@@ -161,6 +158,11 @@ const Detail = () => {
 
                                     )}
                                 </button>
+                                <MapView
+                                    selectedProject={packageData.thongTinChung}
+                                    isExpanded={isExpanded}
+                                />
+
                             </div>
                         )}
                     </div>

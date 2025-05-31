@@ -1,5 +1,5 @@
 /* Base styles */
-.dashboard {
+.MapBoard {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
@@ -444,7 +444,6 @@
     font-weight: bold;
     display: inline-block;
     font-size: 14px;
-    height:  ;
   }
   
   .progress-item {

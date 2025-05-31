@@ -104,6 +104,7 @@
 }
 
 .floating-card {
+  
   pointer-events: auto;
   animation: slideInFromRight 0.4s ease forwards;
   width: 400px;

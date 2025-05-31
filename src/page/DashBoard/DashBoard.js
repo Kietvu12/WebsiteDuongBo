@@ -13,9 +13,14 @@ import { useNavigate } from 'react-router-dom';
 import MapComponent from '../../component/MapComponent/MapComponent';
 import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
+import { FaTrash, FaFileImport } from "react-icons/fa";
+import pin from '../../assets/img/pin.png'
+import attachment from '../../assets/img/attachment.png'
+import trash from '../../assets/img/file.png'
 
 const DashBoard = () => {
   const { setSelectedProjectId } = useProject();
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedDuAnIds, setSelectedDuAnIds] = useState([]);
   const [selectedDuAnId, setSelectedDuAnId] = useState(null);
   const navigate = useNavigate();
@@ -90,13 +95,13 @@ const DashBoard = () => {
       result = result.filter(project => {
         const completion = parseFloat(project.phanTramHoanThanh || '0');
         console.log(completion);
-        
+
         return completion >= minCompletion;
       });
     }
     setFilteredProjects(result);
   };
-  
+
   const handleProvinceChange = (e) => {
     setSelectedProvince(e.target.value);
   };
@@ -133,7 +138,7 @@ const DashBoard = () => {
       try {
         setLoading(true);
         const [projectsRes, provincesRes, contractorRes] = await Promise.all([
-          axios.get('http://localhost:5000/duAnTongList'),
+          axios.get('http://localhost:5000/duAnTong'),
           axios.get('https://provinces.open-api.vn/api/?depth=1'),
           axios.get('http://localhost:5000/nhaThauList')
         ]);
@@ -142,7 +147,7 @@ const DashBoard = () => {
         setFilteredProjects(projectsRes.data.data);
         setContractorList(contractorRes.data.data);
         setProvinces(provincesRes.data);
-        
+
         setLoading(false);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
@@ -158,17 +163,17 @@ const DashBoard = () => {
         let fetchedData = [];
         console.log("selectedDuAnIds:", selectedDuAnIds);
         console.log("selectedDuAnId:", selectedDuAnId);
-        
+
         // Xử lý nhiều ID 
         if (selectedDuAnIds.length > 0) {
           // Tạo mảng các promises cho các request API
-          const promises = selectedDuAnIds.map(id => 
+          const promises = selectedDuAnIds.map(id =>
             axios.get(`http://localhost:5000/duAn/${id}`)
           );
-          
+
           // Chạy tất cả các requests cùng lúc
           const results = await Promise.all(promises);
-          
+
           // Tổng hợp kết quả
           fetchedData = results.map((res, index) => ({
             ...res.data.data,
@@ -182,12 +187,12 @@ const DashBoard = () => {
             ...response.data.data,
             DuAnID: selectedDuAnId
           }];
-          
+
           setSelectedDuAnId(null);
         }
         // Trường hợp không có ID nào, lấy tất cả dự án
         else {
-          const response = await axios.get('http://localhost:5000/duAnTongList');
+          const response = await axios.get('http://localhost:5000/duAnTong');
           fetchedData = response.data.data;
         }
 
@@ -200,7 +205,7 @@ const DashBoard = () => {
         setLoading(false);
       }
     };
-    
+
     fetchProjects();
   }, [selectedDuAnIds, selectedDuAnId]);
   useEffect(() => {
@@ -214,7 +219,26 @@ const DashBoard = () => {
   const toggleView = () => {
     setIsMapView(!isMapView);
   };
+  const [pinnedProjects, setPinnedProjects] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pinnedProjects');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
 
+  // Hàm xử lý ghim/bỏ ghim
+  const handlePinProject = (projectId) => {
+    setPinnedProjects(prev => {
+      const newPinned = prev.includes(projectId)
+        ? prev.filter(id => id !== projectId) 
+        : [projectId, ...prev]; 
+
+      // Lưu vào localStorage
+      localStorage.setItem('pinnedProjects', JSON.stringify(newPinned));
+      return newPinned;
+    });
+  };
   const getStatusStyle = (status) => {
     switch (status) {
       case 'Đang tiến hành':
@@ -245,43 +269,45 @@ const DashBoard = () => {
         <div className="flex justify-between items-center px-4 py-2 border-b">
           <div>
             <button className="p-2 rounded hover:bg-gray-200" aria-label="Navigation menu">
-              {/* Icon hoặc menu toggle button */}
             </button>
           </div>
 
           <div className="flex items-center gap-3">
-            <img src={menuIcon} alt="Menu" className="w-6 h-6 cursor-pointer" />
-            <img src={helpIcon} alt="Help" className="w-6 h-6 cursor-pointer" />
-            <img src={userIcon} alt="User profile" className="w-6 h-6 cursor-pointer" />
+            <img src={menuIcon} alt="Menu" className="w-5 h-5 cursor-pointer" />
+            <img src={helpIcon} alt="Help" className="w-5 h-5 cursor-pointer" />
+            <img src={userIcon} alt="User profile" className="w-5 h-5 cursor-pointer" />
           </div>
         </div>
 
-        {/* Header Main Content */}
-        <div className="px-6 py-4">
-          <h1 className="text-2xl font-semibold text-gray-800 mb-4">Danh sách dự án đường bộ</h1>
+        <div className="px-4 py-3">
+          <h1 className="md:text-xl text-xs mt-6 font-semibold text-gray-800 mb-3"><span className='md:hidden text-xs text-blue-700'>Trang chủ > </span>Danh sách dự án đường bộ</h1>
+          <div className="md:hidden mb-3">
+            <button
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="px-3 py-1.5 text-xs bg-gray-100 rounded border border-gray-300"
+            >
+              {showMobileFilters ? 'Ẩn bộ lọc ▲' : 'Hiện bộ lọc ▼'}
+            </button>
+          </div>
 
-          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {/* Search */}
+          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="col-span-1 md:col-span-2">
-              <label htmlFor="project-search" className="block text-sm font-medium text-gray-700 mb-1">
-                Tìm kiếm dự án
-              </label>
               <div className="relative">
                 <input
                   id="project-search"
                   type="text"
-                  placeholder="Nhập tên dự án..."
+                  placeholder="Tìm dự án..."
                   value={searchTerm}
                   onChange={handleSearchChange}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {showSuggestions && searchSuggestions.length > 0 && (
-                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
                     {searchSuggestions.map((suggestion, index) => (
                       <li
                         key={index}
                         onClick={() => selectSuggestion(suggestion)}
-                        className="px-3 py-2 text-sm hover:bg-blue-50 cursor-pointer"
+                        className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
                       >
                         {suggestion}
                       </li>
@@ -290,221 +316,202 @@ const DashBoard = () => {
                 )}
               </div>
             </div>
-
-            {/* Date Range */}
-            <div>
-              <span className="block text-sm font-medium text-gray-700 mb-1">Khoảng thời gian</span>
-              <div className="grid grid-cols-5 gap-2">
-                <div className="col-span-2">
+            <div className={`contents md:contents ${showMobileFilters ? '' : 'hidden md:grid'}`}>
+              <div className="col-span-1">
+                <div className="flex items-center gap-1">
                   <input
                     type="date"
                     value={fromDate}
                     onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    aria-label="Từ ngày"
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
-                </div>
-                <div className="col-span-1 flex items-center justify-center">
-                  <span className="text-sm text-gray-500">đến</span>
-                </div>
-                <div className="col-span-2">
+                  <span className="text-xs text-gray-500 whitespace-nowrap">đến</span>
                   <input
                     type="date"
                     value={toDate}
                     onChange={(e) => setToDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    aria-label="Đến ngày"
+                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
-            </div>
-
-            {/* Province */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh thành</label>
-              <select
-                value={selectedProvince}
-                onChange={handleProvinceChange}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Tất cả tỉnh thành</option>
-                {provinces.map(province => (
-                  <option key={province.code} value={province.name}>
-                    {province.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Trạng thái
-              </label>
-              <select
-                id="status-filter"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Tất cả</option>
-                <option value="Chậm tiến độ">Chậm tiến độ</option>
-                <option value="Đang tiến hành">Đang tiến hành</option>
-                <option value="Đã hoàn thành">Đã hoàn thành</option>
-                <option value="Đang triển khai">Đang triển khai</option>
-                <option value="Đã phê duyệt – chờ khởi công">Đã phê duyệt – chờ khởi công</option>
-              </select>
-            </div>
-
-            {/* Contractor Filter - New */}
-            <div>
-              <label htmlFor="contractor-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Nhà thầu
-              </label>
-              <select
-                id="contractor-filter"
-                value={contractor}
-                onChange={(e) => setContractor(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                disabled={loading}
-              >
-                <option value="all">Tất cả nhà thầu</option>
-                {loading ? (
-                  <option disabled>Đang tải danh sách nhà thầu...</option>
-                ) : (
-                  contractorList.map((nhathau) => (
+              <div className="col-span-1">
+                <select
+                  value={selectedProvince}
+                  onChange={handleProvinceChange}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Tất cả tỉnh</option>
+                  {provinces.map((province) => (
+                    <option key={province.code} value={province.name}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-1">
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="Chậm tiến độ">Chậm tiến độ</option>
+                  <option value="Đang triển khai">Đang triển khai</option>
+                  <option value="Đang tiến hành">Đang tiến hành</option>
+                  <option value="Đã hoàn thành">Đã hoàn thành</option>
+                  <option value="Đã phê duyệt - chờ khởi công">Đã phê duyệt-chờ khởi công</option>
+                  <option value="Đã phê duyệt - chậm tiến độ">Đã phê duyệt-chậm tiến độ</option>
+                  <option value="Dự kiến khởi công">Dự kiến khởi công</option>
+                </select>
+              </div>
+              <div className="col-span-1">
+                <select
+                  value={contractor}
+                  onChange={(e) => setContractor(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Tất cả nhà thầu</option>
+                  {contractorList.map((nhathau) => (
                     <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
                       {nhathau.TenNhaThau}
                     </option>
-                  ))
-                )}
-              </select>
-            </div>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-1">
+                <select
+                  value={completionLevel}
+                  onChange={(e) => setCompletionLevel(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="all">Mọi tiến độ</option>
+                  <option value="20">&gt;20%</option>
+                  <option value="50">&gt;50%</option>
+                  <option value="80">&gt;80%</option>
+                  <option value="100">100%</option>
+                </select>
+              </div>
 
-            {/* Completion Level Filter - New */}
-            <div>
-              <label htmlFor="completion-filter" className="block text-sm font-medium text-gray-700 mb-1">
-                Mức độ hoàn thành
-              </label>
-              <select
-                id="completion-filter"
-                value={completionLevel}
-                onChange={(e) => setCompletionLevel(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Tất cả</option>
-                <option value="20">Trên 20%</option>
-                <option value="50">Trên 50%</option>
-                <option value="80">Trên 80%</option>
-                <option value="100">Hoàn thành 100%</option>
-              </select>
-            </div>
-
-            {/* Reset Button */}
-            <div className="flex items-end col-span-1 md:col-span-2 lg:col-span-1">
-              <button
-                type="button"
-                className="w-full bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm rounded-md transition-colors duration-200"
-                onClick={resetFilters}
-              >
-                Xóa lọc
-              </button>
+              {/* Reset Button */}
+              <div className="col-span-1">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1.5 text-xs rounded transition-colors"
+                >
+                  Xóa lọc
+                </button>
+              </div>
             </div>
           </form>
         </div>
       </div>
-
-      <div className="table-container">
-        <div className="table-header">
-          <h2>Danh sách dự án</h2>
-          <div className="button-group">
-            <button className="add-btn" onClick={() => setShowAddPopup(true)}>
-              <img src={addIcon} width="16" alt="Add" /> Thêm mới
-            </button>
-            <button className="toggle-view-btn" onClick={toggleView}>
-              {isMapView ? 'Xem dạng bảng' : 'Xem dạng bản đồ'}
-            </button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="loading">Đang tải dữ liệu...</div>
-        ) : isMapView ? (
-          <div className="map-view-container">
-            <div className="map-app-container">
-              <MapComponent projects={filteredProjects} />
-            </div>
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table>
-              <thead>
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className=" hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] md:min-w-full">
+              <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th>STT</th>
-                  <th>Dự án</th>
-                  <th>Dải tuyến</th>
-                  <th>DA Thành phần</th>
-                  <th>Gói thầu</th>
-                  <th>Trạng thái</th>
-                  <th>Tiến độ</th>
-                  <th>Thao tác</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">STT</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Thao tác</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dự án</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dải tuyến</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">DA Thành phần</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Gói thầu</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Trạng thái</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Tiến độ</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {filteredProjects.length > 0 ? (
-                  filteredProjects.map((project, index) => (
-                    <tr key={project.DuAnID}>
-                      <td>{index + 1}</td>
-                      <td>{project.TenDuAn}</td>
-                      <td>{project.TongChieuDai} Km</td>
-                      <td>{project.soLuongDuAnThanhPhan} Dự án thành phần</td>
-                      <td>{project.soLuongGoiThau} gói thầu xây lắp</td>
-                      <td>
-                        <span
-                          className="status-badge"
-                          style={getStatusStyle(project.TrangThai)}
-                        >
-                          {project.TrangThai}
-                        </span>
-                      </td>
-                      <td className="progress-cell">
-                        <div className="scrollable-progress">
-                          {project.duAnThanhPhan?.flatMap(duAnTP =>
-                            duAnTP.goiThau?.flatMap(goiThau =>
-                              goiThau.hangMuc?.map((hangMuc, idx) => (
-                                <div key={`${hangMuc.HangMucID}-${idx}`} className="progress-item">
-                                  <img
-                                    src={parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? actualIcon :
-                                      parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? delayIcon : planIcon}
-                                    width="18"
-                                    alt="Progress"
-                                  />
-                                  <span>
-                                    {hangMuc.TenHangMuc}: <strong>{hangMuc.tienDo?.phanTramHoanThanh || 0}%</strong>
-                                  </span>
-                                </div>
-                              ))
-                            )
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          className="action-btn"
-                          title="Xem chi tiết dự án"
-                          onClick={() => handleDetail(project.DuAnID)}
-                        >
-                          <img src={editIcon} width="24" alt="Edit" />
-                        </button>
-                        <button className="action-btn" title="Xoá dự án">
-                          <img src={deleteIcon} width="24" alt="Delete" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  [...filteredProjects]
+                    .sort((a, b) => {
+                      const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                      const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                      if (aIsPinned && !bIsPinned) return -1;
+                      if (!aIsPinned && bIsPinned) return 1;
+                      return 0;
+                    })
+                    .map((project, index) => (
+                      <tr
+                        key={project.DuAnID}
+                        onClick={() => handleDetail(project.DuAnID)}
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                      >
+                        {/* Các ô dữ liệu giữ nguyên như trước */}
+                        <td className="p-2 text-sm text-gray-800 whitespace-nowrap">{index + 1}</td>
+                        <td className="p-2 whitespace-nowrap">
+                          <div className="flex space-x-2">
+                            <button
+                              className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                              title="Tệp đính kèm"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
+                            </button>
+                            <button
+                              className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                              title="Xoá"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <img src={trash} alt="Xoá" className="w-5 h-5" />
+                            </button>
+                            <button
+                              className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
+                                }`}
+                              title="Ghim"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePinProject(project.DuAnID);
+                              }}
+                            >
+                              <img src={pin} alt="Ghim" className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="p-2 text-sm text-gray-800 whitespace-nowrap">{project.TenDuAn}</td>
+                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">{project.TongChieuDai} Km</td>
+                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">
+                          {project.soLuongDuAnThanhPhan} Dự án thành phần
+                        </td>
+                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">
+                          {project.soLuongGoiThau} gói thầu xây lắp
+                        </td>
+                        <td className="p-2 whitespace-nowrap">
+                          <span
+                            className="inline-block px-2 py-1 rounded-full text-xs font-medium"
+                            style={getStatusStyle(project.TrangThai)}
+                          >
+                            {project.TrangThai}
+                          </span>
+                        </td>
+                        <td className="p-2 whitespace-nowrap">
+                          <div className="grid grid-rows-3 gap-2">
+                            <div className="flex items-center gap-2">
+                              <img src={planIcon} width="16" height="16" alt="Kế hoạch" className="flex-shrink-0" />
+                              <span className="text-xs text-gray-600">
+                                Kế hoạch: <strong className="font-medium">{project.phanTramKeHoach || '0'}%</strong>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <img src={actualIcon} width="16" height="16" alt="Hoàn thành" className="flex-shrink-0" />
+                              <span className="text-xs text-gray-600">
+                                Hoàn thành: <strong className="font-medium">{project.phanTramHoanThanh || '0'}%</strong>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <img src={delayIcon} width="16" height="16" alt="Chậm tiến độ" className="flex-shrink-0" />
+                              <span className="text-xs text-gray-600">
+                                Chậm tiến độ: <strong className="font-medium">{project.phanTramChamTienDo || '0'}%</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                 ) : (
                   <tr>
-                    <td colSpan="8" className="no-data">
+                    <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
                       Không tìm thấy dự án nào phù hợp
                     </td>
                   </tr>
@@ -512,7 +519,93 @@ const DashBoard = () => {
               </tbody>
             </table>
           </div>
-        )}
+        </div>
+        <div className="md:hidden">
+          <div className="space-y-3 p-3">
+            {filteredProjects.length > 0 ? (
+              [...filteredProjects]
+                .sort((a, b) => {
+                  const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                  const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                  if (aIsPinned && !bIsPinned) return -1;
+                  if (!aIsPinned && bIsPinned) return 1;
+                  return 0;
+                })
+                .map((project, index) => (
+                  <div
+                    key={project.DuAnID}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer"
+                    onClick={() => handleDetail(project.DuAnID)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-gray-800">{project.TenDuAn}</div>
+                      <div className="flex space-x-2">
+                        <button
+                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <img src={attachment} alt="Tệp" className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <img src={trash} alt="Xoá" className="w-4 h-4" />
+                        </button>
+                        <button
+                          className={`w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePinProject(project.DuAnID);
+                          }}
+                        >
+                          <img src={pin} alt="Ghim" className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                      <div>
+                        <span className="text-gray-500">STT:</span>
+                        <span className="ml-1 font-medium">{index + 1}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Dải tuyến:</span>
+                        <span className="ml-1 font-medium">{project.TongChieuDai} Km</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">DA Thành phần:</span>
+                        <span className="ml-1 font-medium">{project.soLuongDuAnThanhPhan}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Gói thầu:</span>
+                        <span className="ml-1 font-medium">{project.soLuongGoiThau}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2">
+                      <span
+                        className="inline-block px-2 py-1 rounded text-xs font-medium"
+                        style={getStatusStyle(project.TrangThai)}
+                      >
+                        {project.TrangThai}
+                      </span>
+
+                      <div className="flex items-center text-xs text-gray-600">
+                        <img src={actualIcon} width="14" alt="Hoàn thành" className="mr-1" />
+                        <span>{project.phanTramHoanThanh || '0'}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                Không tìm thấy dự án nào phù hợp
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Popup thêm mới */}

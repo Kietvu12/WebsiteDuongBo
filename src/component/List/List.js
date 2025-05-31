@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { FaListOl, FaHashtag } from 'react-icons/fa';
-import './List.css';
 import axios from 'axios';
 
 const List = ({ subProjectId, onPackageSelect }) => {
@@ -26,7 +25,6 @@ const List = ({ subProjectId, onPackageSelect }) => {
           const fetchedPackages = response.data.data;
           setPackages(fetchedPackages);
 
-          // ✅ Chọn phần tử đầu tiên nếu có
           if (fetchedPackages.length > 0) {
             handlePackageClick(fetchedPackages[0].GoiThau_ID);
           }
@@ -47,29 +45,34 @@ const List = ({ subProjectId, onPackageSelect }) => {
     }
   }, [subProjectId]);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="bg-white content-wrapper">
-      <div className="column">
-        <div className="card bid-package-card">
-          <div className="bid-package-header">
-            <FaListOl className="header-icon" />
-            DANH SÁCH GÓI THẦU
+    <div className="w-full h-full bg-white flex flex-col md:flex-row">
+      <div className="flex-1 p-2 md:p-3">
+        <div className="h-full min-h-[300px] max-h-[840px] rounded shadow overflow-hidden flex flex-col border border-gray-200">
+          {/* Header */}
+          <div className="bg-[#006591] text-white p-3 md:p-4 flex items-center shrink-0">
+            <FaListOl className="mr-3 text-lg md:text-xl" />
+            <span className="text-base md:text-lg lg:text-xl font-bold">DANH SÁCH GÓI THẦU</span>
           </div>
 
-          <div className="bid-list">
+          {/* List */}
+          <div className="p-2 overflow-y-auto flex-1">
             {packages.map((item) => (
               <div 
                 key={item.GoiThau_ID}
-                className={`bid-item ${selectedProject?.GoiThau_ID === item.GoiThau_ID ? 'selected' : ''}`}
+                className={`p-3 border-b border-gray-200 cursor-pointer flex items-center gap-3 hover:bg-gray-100 transition-colors ${
+                  selectedProject?.GoiThau_ID === item.GoiThau_ID ? 'bg-blue-50' : ''
+                }`}
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
               >
-                <div className="bid-code">
-                  <FaHashtag className="bid-icon" /> {item.GoiThau_ID}
+                <div className="font-bold text-[#006591] flex items-center text-sm md:text-base min-w-[80px]">
+                  <FaHashtag className="mr-2 text-xs md:text-sm" /> 
+                  {item.GoiThau_ID}
                 </div>
-                <div className="font-bold bid-content">
+                <div className="font-bold text-gray-800 flex-1 text-sm md:text-base">
                   {item.TenGoiThau}
                 </div>
               </div>

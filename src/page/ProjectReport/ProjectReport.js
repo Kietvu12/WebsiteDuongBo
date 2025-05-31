@@ -1,13 +1,52 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { SpreadsheetComponent } from '@syncfusion/ej2-react-spreadsheet';
-import menuIcon from '../../assets/img/menu-icon.png';
-import helpIcon from '../../assets/img/help-icon.png';
-import userIcon from '../../assets/img/user-icon.png';
 import { saveAs } from "file-saver";
+import { FaBold, FaItalic, FaUnderline, FaAlignLeft, FaAlignCenter, FaAlignRight, FaListUl, FaListOl, FaIndent, FaOutdent } from 'react-icons/fa';
 import htmlDocx from 'html-docx-js/dist/html-docx';
 function ProjectReport() {
-  const editorRef = useRef();
+  const editorRef = useRef(null);
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
+  const [isUnderline, setIsUnderline] = useState(false);
+  const [alignment, setAlignment] = useState('left');
+  const [fontSize, setFontSize] = useState('16px');
+  const formatText = (command, value = null) => {
+    document.execCommand(command, false, value);
+    updateToolbarState();
+  };
 
+  // Update toolbar state based on selection
+  const updateToolbarState = () => {
+    setIsBold(document.queryCommandState('bold'));
+    setIsItalic(document.queryCommandState('italic'));
+    setIsUnderline(document.queryCommandState('underline'));
+    
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const parentElement = selection.getRangeAt(0).startContainer.parentElement;
+      const textAlign = window.getComputedStyle(parentElement).textAlign;
+      setAlignment(textAlign || 'left');
+    }
+  };
+
+  // Handle paste event to clean formatting
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const selection = window.getSelection();
+    
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
   const exportToWord = (e) => {
     e.preventDefault();
     
@@ -36,19 +75,128 @@ function ProjectReport() {
     saveAs(blob, "baocao.docx");
   };
   return (
-    <div className="max-w-4xl mx-auto">
-    <button
-      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-      onClick={exportToWord}
-    >
-      Xuất ra file Word
-    </button>
+     <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+      {/* Toolbar */}
+      <div className="bg-gray-100 p-2 border-b flex flex-wrap items-center gap-1 sm:gap-2">
+    {/* Font Style */}
+    <div className="flex items-center gap-1 sm:gap-2">
+      <button
+        className={`p-1 sm:p-2 rounded ${isBold ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('bold')}
+        title="Bold"
+      >
+        <FaBold className="text-sm sm:text-base" />
+      </button>
+      <button
+        className={`p-1 sm:p-2 rounded ${isItalic ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('italic')}
+        title="Italic"
+      >
+        <FaItalic className="text-sm sm:text-base" />
+      </button>
+      <button
+        className={`p-1 sm:p-2 rounded ${isUnderline ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('underline')}
+        title="Underline"
+      >
+        <FaUnderline className="text-sm sm:text-base" />
+      </button>
+    </div>
 
-    <div className="max-w-4xl mx-auto p-10 font-sans max-h-[1000px] overflow-y-auto bg-white"
-        contentEditable
-        suppressContentEditableWarning
-        ref={editorRef}
-        spellCheck="false">
+    {/* Alignment */}
+    <div className="h-6 border-l border-gray-300 mx-1"></div>
+    <div className="flex items-center gap-1 sm:gap-2">
+      <button
+        className={`p-1 sm:p-2 rounded ${alignment === 'left' ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('justifyLeft')}
+        title="Align Left"
+      >
+        <FaAlignLeft className="text-sm sm:text-base" />
+      </button>
+      <button
+        className={`p-1 sm:p-2 rounded ${alignment === 'center' ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('justifyCenter')}
+        title="Align Center"
+      >
+        <FaAlignCenter className="text-sm sm:text-base" />
+      </button>
+      <button
+        className={`p-1 sm:p-2 rounded ${alignment === 'right' ? 'bg-blue-200' : 'hover:bg-gray-200'}`}
+        onClick={() => formatText('justifyRight')}
+        title="Align Right"
+      >
+        <FaAlignRight className="text-sm sm:text-base" />
+      </button>
+    </div>
+
+    {/* Lists */}
+    <div className="h-6 border-l border-gray-300 mx-1"></div>
+    <div className="flex items-center gap-1 sm:gap-2">
+      <button
+        className="p-1 sm:p-2 rounded hover:bg-gray-200"
+        onClick={() => formatText('insertUnorderedList')}
+        title="Bullet List"
+      >
+        <FaListUl className="text-sm sm:text-base" />
+      </button>
+      <button
+        className="p-1 sm:p-2 rounded hover:bg-gray-200"
+        onClick={() => formatText('insertOrderedList')}
+        title="Numbered List"
+      >
+        <FaListOl className="text-sm sm:text-base" />
+      </button>
+    </div>
+
+    {/* Indentation */}
+    <div className="h-6 border-l border-gray-300 mx-1"></div>
+    <div className="flex items-center gap-1 sm:gap-2">
+      <button
+        className="p-1 sm:p-2 rounded hover:bg-gray-200"
+        onClick={() => formatText('indent')}
+        title="Indent"
+      >
+        <FaIndent className="text-sm sm:text-base" />
+      </button>
+      <button
+        className="p-1 sm:p-2 rounded hover:bg-gray-200"
+        onClick={() => formatText('outdent')}
+        title="Outdent"
+      >
+        <FaOutdent className="text-sm sm:text-base" />
+      </button>
+    </div>
+
+    {/* Font Size */}
+    <div className="h-6 border-l border-gray-300 mx-1"></div>
+    <select
+      className="p-1 rounded border border-gray-300 text-sm sm:text-base"
+      value={fontSize}
+      onChange={(e) => {
+        setFontSize(e.target.value);
+        formatText('fontSize', e.target.value);
+      }}
+    >
+      <option value="1">Small</option>
+      <option value="3">Normal</option>
+      <option value="5">Large</option>
+      <option value="7">Extra Large</option>
+    </select>
+  </div>
+
+
+      {/* Editor */}
+      <div
+    className="p-4 sm:p-6 min-h-[300px] sm:min-h-[500px] outline-none"
+    contentEditable
+    suppressContentEditableWarning
+    ref={editorRef}
+    onInput={updateToolbarState}
+    onPaste={handlePaste}
+    onMouseUp={updateToolbarState}
+    onKeyUp={updateToolbarState}
+    spellCheck="false"
+  >
 
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold uppercase">BÁO CÁO</h1>
