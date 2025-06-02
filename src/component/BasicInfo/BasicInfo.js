@@ -3,7 +3,7 @@ import { FaInfoCircle } from 'react-icons/fa';
 
 const BasicInfo = ({ data }) => {
   return (
-    <div className="bg-white rounded-lg mt-2 shadow-md overflow-hidden border border-gray-200">
+    <div className="bg-white w-full rounded-lg mt-2 shadow-md overflow-hidden border border-gray-200">
       <div className="flex items-center px-4 py-3 border-b border-gray-200">
         <FaInfoCircle className="h-5 w-5 mr-2 text-gray-500" />
         <div className="text-gray-800 font-bold text-lg">
