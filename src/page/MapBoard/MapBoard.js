@@ -127,15 +127,16 @@ const MapBoard = () => {
     setSearchSuggestions([]);
     setShowSuggestions(false);
   };
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const [projectsRes, provincesRes, contractorRes] = await Promise.all([
-          axios.get('http://localhost:5000/duAnTong'),
+          axios.get(`${API_BASE_URL}/duAnTong`),
           axios.get('https://provinces.open-api.vn/api/?depth=1'),
-          axios.get('http://localhost:5000/nhaThauList')
+          axios.get(`${API_BASE_URL}/nhaThauList`)
         ]);
 
         setProjects(projectsRes.data.data);
@@ -163,7 +164,7 @@ const MapBoard = () => {
         if (selectedDuAnIds.length > 0) {
           // Tạo mảng các promises cho các request API
           const promises = selectedDuAnIds.map(id => 
-            axios.get(`http://localhost:5000/duAn/${id}`)
+            axios.get(`${API_BASE_URL}/duAn/${id}`)
           );
           
           // Chạy tất cả các requests cùng lúc
@@ -177,7 +178,7 @@ const MapBoard = () => {
         }
         // Xử lý một ID
         else if (selectedDuAnId) {
-          const response = await axios.get(`http://localhost:5000/duAn/${selectedDuAnId}`);
+          const response = await axios.get(`${API_BASE_URL}/duAn/${selectedDuAnId}`);
           fetchedData = [{
             ...response.data.data,
             DuAnID: selectedDuAnId
@@ -187,7 +188,7 @@ const MapBoard = () => {
         }
         // Trường hợp không có ID nào, lấy tất cả dự án
         else {
-          const response = await axios.get('http://localhost:5000/duAnTong');
+          const response = await axios.get(`${API_BASE_URL}/duAnTong`);
           fetchedData = response.data.data;
         }
 

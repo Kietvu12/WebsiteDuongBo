@@ -52,7 +52,7 @@ const ProjectManagement = ({ projectId }) => {
       [name]: value
     }));
   };
-
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const handleSubmitProgress = async (e) => {
     e.preventDefault();
     if (!selectedPlan || !formData.khoiLuongThucHien) return;
@@ -60,7 +60,7 @@ const ProjectManagement = ({ projectId }) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        `http://localhost:5000/kehoach/them-tiendo/${selectedPlan.KeHoachID}`,
+        `${API_BASE_URL}/kehoach/them-tiendo/${selectedPlan.KeHoachID}`,
         {
           ...formData,
           khoiLuongThucHien: parseFloat(formData.khoiLuongThucHien)

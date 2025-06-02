@@ -24,13 +24,14 @@ const Detail = () => {
     const [selectedProject, setSelectedProject] = useState(null);
     const [isExpanded, setIsExpanded] = useState(false);
     const projectId = state.projectId
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     useEffect(() => {
         const fetchPackageDetails = async () => {
             if (!selectedPackageId) return;
 
             try {
                 setLoading(true);
-                const response = await axios.get(`http://localhost:5000/goiThau/chiTiet/${selectedPackageId}`);
+                const response = await axios.get(`${API_BASE_URL}/goiThau/chiTiet/${selectedPackageId}`);
                 setPackageData(response.data.data);
                 setSelectedProject(response.data.data);
             } catch (error) {

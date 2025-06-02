@@ -93,6 +93,7 @@ const SideProject = () => {
     setSearchSuggestions([]);
     setShowSuggestions(false);
   };
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchProjectData = async () => {
       if (!DuAnID) {
@@ -101,7 +102,7 @@ const SideProject = () => {
       }
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${DuAnID}`);
+        const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${DuAnID}`);
         setProject(response.data.data.duAnTong);
         setSubProjects(response.data.data.duAnThanhPhan);
         setFilteredProjects(response.data.data.duAnThanhPhan)
@@ -149,7 +150,7 @@ const SideProject = () => {
 
           // Tạo mảng các promises cho các request API
           const promises = selectedDuAnConIds.map(conId =>
-            axios.get(`http://localhost:5000/duAntp/${conId}`)
+            axios.get(`${API_BASE_URL}/duAntp/${conId}`)
           );
 
           // Chạy tất cả các requests cùng lúc
@@ -173,7 +174,7 @@ const SideProject = () => {
         else if (selectedDuAnConId) {
           console.log("Đang xử lý một dự án con:", selectedDuAnConId);
 
-          const response = await axios.get(`http://localhost:5000/duAntp/${selectedDuAnConId}`);
+          const response = await axios.get(`${API_BASE_URL}/duAntp/${selectedDuAnConId}`);
           const duAnConData = [{
             ...response.data.data,
             DuAnID: selectedDuAnConId
@@ -192,7 +193,7 @@ const SideProject = () => {
           console.log("Đang tải tất cả dự án con của dự án cha:", DuAnID);
 
           // Tải dữ liệu dự án cha và danh sách dự án con
-          const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${DuAnID}`);
+          const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${DuAnID}`);
           if (response.data.data) {
             setProject(response.data.data.duAnTong);
             setSubProjects(response.data.data.duAnThanhPhan);

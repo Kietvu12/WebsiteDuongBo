@@ -19,11 +19,11 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
     plan: null,
     progressData: []
   });
-
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/hangMuc/${duAnThanhPhanId}/detail`);
+        const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
         const result = await response.json();
         setData(result.data);
         setLoading(false);
@@ -62,7 +62,7 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
 
   const fetchProgressData = async (keHoachId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/tien-do/${keHoachId}`);
+      const response = await axios.get(`${API_BASE_URL}/tien-do/${keHoachId}`);
       return response.data.data;
     } catch (error) {
       console.error('Error fetching progress data:', error);

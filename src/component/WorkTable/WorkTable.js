@@ -10,11 +10,11 @@ const WorkTable = ({ projectId }) => {
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  console.log('Đây 0 là dự án thành phần');
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/duAn/${projectId}/detail`);
+        const response = await fetch(`${API_BASE_URL}/duAn/${projectId}/detail`);
         const result = await response.json();
         setData(result.data);
         setLoading(false);

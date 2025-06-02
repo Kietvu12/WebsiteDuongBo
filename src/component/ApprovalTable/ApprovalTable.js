@@ -12,12 +12,12 @@ const ApprovalTable = ({ duAnId }) => {
     });
     console.log(duAnId);
     
-
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const response = await axios.get(`http://localhost:5000/duAn/${duAnId}/vuongMac`);
+                const response = await axios.get(`${API_BASE_URL}/duAn/${duAnId}/vuongMac`);
                 setData(response.data.data);
                 setLoading(false);
             } catch (error) {

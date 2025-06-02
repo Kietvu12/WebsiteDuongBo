@@ -21,12 +21,12 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
       if (onMobileListToggle) onMobileListToggle(false);
     }
   };
-
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchPackages = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/duAn/goiThau/${subProjectId}`);
+        const response = await axios.get(`${API_BASE_URL}/duAn/goiThau/${subProjectId}`);
         if (response.data && Array.isArray(response.data.data)) {
           const fetchedPackages = response.data.data;
           setPackages(fetchedPackages);

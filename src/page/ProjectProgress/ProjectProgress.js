@@ -19,16 +19,17 @@ const ProjectProgress = () => {
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
   const [subProject, setSubProject] = useState(null);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
         if (selectedSubProjectId) {
-          const response = await axios.get(`http://localhost:5000/hangMuc/${selectedSubProjectId}/detail`);
+          const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedSubProjectId}/detail`);
           setSubProject(response.data.data.duAnThanhPhan);
         } else if (selectedProjectId) {
-          const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${selectedProjectId}`);
+          const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${selectedProjectId}`);
           setProject(response.data.data.duAnTong);
         }
 

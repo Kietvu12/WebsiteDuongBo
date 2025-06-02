@@ -25,13 +25,13 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
   });
   const [selectedItem, setSelectedItem] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:5000/duAnThanhPhan/${selectedSubProjectId}/detail`);
+        const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${selectedSubProjectId}/detail`);
         setProjectData(response.data.data);
         
         // Auto-expand the project by default
