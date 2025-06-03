@@ -341,109 +341,127 @@ const ChatbotButton = () => {
   }, []);
 
   return (
-    <>
-      {/* Nút mở/đóng chatbot */}
-      <div
-        className={`chatbot-button ${isOpen ? 'active' : ''}`}
-        onClick={toggleChatbot}
-        aria-label={isOpen ? 'Đóng chatbot' : 'Mở chatbot'}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleChatbot()}
-      >
-        {isOpen ? <FaTimes />: <img src={aiLogo} alt="AI Logo" className="chatbot-icon" />}
+<>
+  <div
+    className={`fixed bottom-5 right-5 w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-md z-50 transition-all duration-300 ${
+      isOpen ? 'bg-red-500' : 'bg-blue-600'
+    }`}
+    onClick={toggleChatbot}
+    aria-label={isOpen ? 'Đóng chatbot' : 'Mở chatbot'}
+    role="button"
+    tabIndex={0}
+    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleChatbot()}
+  >
+    {isOpen ? (
+      <FaTimes className="text-white text-xl" />
+    ) : (
+      <img src={aiLogo} alt="AI Logo" className="w-10 h-10 object-contain" />
+    )}
+  </div>
+
+  {/* Chatbot panel */}
+  {isOpen && (
+    <div className="fixed bottom-20 right-5 w-80 h-[70vh] bg-white rounded-lg shadow-xl flex flex-col z-50 overflow-hidden md:w-96 sm:right-2 sm:bottom-16 sm:w-[calc(100%-16px)]">
+      {/* Header */}
+      <div className="bg-blue-600 text-white p-4 text-center relative">
+        <h3 className="text-lg font-medium">Trợ lý ảo</h3>
+        <button
+          onClick={toggleChatbot}
+          className="absolute right-2 top-2 bg-transparent border-none text-white text-xl p-1 cursor-pointer"
+          aria-label="Đóng chatbot"
+        >
+          <FaTimes />
+        </button>
       </div>
 
-      {/* Panel chatbot */}
-      {isOpen && (
-        <div className="chatbot-panel">
-          <div className="chatbot-header">
-            <h3>Trợ lý ảo</h3>
-            <button
-              onClick={toggleChatbot}
-              style={{
-                position: 'absolute',
-                right: '10px',
-                top: '10px',
-                background: 'none',
-                border: 'none',
-                color: 'white',
-                fontSize: '1.2em',
-                cursor: 'pointer',
-              }}
-              aria-label="Đóng chatbot"
-            >
-              <FaTimes />
-            </button>
-          </div>
-
-          <div className="chatbot-messages">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={msg.type === 'bot' ? 'bot-message' : 'user-message'}
-              >
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    p: ({ children }) => (
-                      <p style={{ whiteSpace: 'pre-wrap', marginBottom: '0px' }}>
-                        {children}
-                      </p>
-                    ),
-                    strong: ({ children }) => (
-                      <strong style={{ fontWeight: 600 }}>{children}</strong>
-                    ),
-                    li: ({ children }) => (
-                      <li style={{ marginLeft: '1.5rem', listStyleType: 'disc' }}>
-                        {children}
-                      </li>
-                    ),
-                  }}
-                >
-                  {normalizeMarkdown(msg.text)}
-                </ReactMarkdown>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="chatbot-input">
-            <input
-              type="text"
-              placeholder="Nhập câu hỏi của bạn..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            />
-
-            <button
-              className="show-data-button"
-              onClick={handleShowData}
-              title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
-            >
-              <FaDatabase />
-            </button>
-            <button onClick={handleSend}>Gửi</button>
-          </div>
-        </div>
-      )}
-      {isMcpModalOpen && (
-        <div className="mcp-modal-overlay" onClick={handleCloseModal}>
+      {/* Messages area */}
+      <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+        {messages.map((msg) => (
           <div
-            className="mcp-modal-content"
-            onClick={(e) => e.stopPropagation() }
+            key={msg.id}
+            className={`mb-3 p-3 rounded-2xl max-w-[80%] break-words ${
+              msg.type === 'bot'
+                ? 'bg-gray-200 mr-auto rounded-bl-none'
+                : 'bg-blue-600 text-white ml-auto rounded-br-none'
+            }`}
           >
-            <div className="mcp-modal-header">
-              <button onClick={handleCloseModal} aria-label="Đóng">
-                <FaTimes />
-              </button>
-              <span>Thông tin MCP Data</span>
-            </div>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => (
+                  <p className="whitespace-pre-wrap mb-0">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold">{children}</strong>
+                ),
+                li: ({ children }) => (
+                  <li className="ml-6 list-disc">{children}</li>
+                ),
+              }}
+            >
+              {normalizeMarkdown(msg.text)}
+            </ReactMarkdown>
           </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input area */}
+      <div className="p-3 bg-white border-t border-gray-200">
+  <div className="flex gap-2 items-stretch">
+    <input
+      type="text"
+      placeholder="Nhập câu hỏi của bạn..."
+      value={userInput}
+      onChange={(e) => setUserInput(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+      className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+    <button
+      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+      onClick={handleShowData}
+      title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
+      aria-label="Hiển thị dữ liệu"
+    >
+      <FaDatabase />
+    </button>
+    <button
+      onClick={handleSend}
+      className="flex-shrink-0 px-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors whitespace-nowrap"
+    >
+      Gửi
+    </button>
+  </div>
+</div>
+
+    </div>
+  )}
+
+  {/* MCP Modal */}
+  {isMcpModalOpen && (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={handleCloseModal}
+    >
+      <div
+        className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-auto mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <button
+            onClick={handleCloseModal}
+            className="text-gray-500 hover:text-gray-700"
+            aria-label="Đóng"
+          >
+            <FaTimes />
+          </button>
+          <span className="font-semibold">Thông tin MCP Data</span>
         </div>
-      )}
-    </>
+        {/* Modal content would go here */}
+      </div>
+    </div>
+  )}
+</>
   );
 };
 
