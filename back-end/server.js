@@ -9,8 +9,8 @@ const port = 5000;
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
-  password: '123456',
-  database: 'dulieuduongbo',
+  password: '',
+  database: 'dadb',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

@@ -14,6 +14,8 @@ import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
 import Approvals from './page/Approvals/Approvals';
 import MapBoard from './page/MapBoard/MapBoard';
+import BaoCaoTong from './page/BaoCao/BaoCaoTong';
+
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   
@@ -80,6 +82,13 @@ function App() {
             <Approvals/>
           </LayoutWithSidebar>
         } />
+
+        <Route path='/bao-cao-tong' element={
+          <LayoutWithSidebar>
+            <BaoCaoTong />
+          </LayoutWithSidebar>
+        } />
+
       </Routes>
     </Router>
     </ProjectProvider>

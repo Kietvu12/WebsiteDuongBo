@@ -262,6 +262,11 @@ const DashBoard = () => {
     setContractor('all')
   };
 
+
+  const handleExportReport = () => {
+    navigate('/bao-cao-tong')
+  };
+
   return (
     <div className="dashboard">
       <div className="w-full bg-white shadow-md">
@@ -280,7 +285,18 @@ const DashBoard = () => {
         </div>
 
         <div className="px-4 py-3">
-          <h1 className="md:text-xl text-xs mt-6 font-semibold text-gray-800 mb-3"><span className='md:hidden text-xs text-blue-700'>Trang chủ > </span>Danh sách dự án đường bộ</h1>
+          <div className="flex items-center justify-between mb-3">
+  <h1 className="md:text-xl text-xs font-semibold text-gray-800">
+    <span className="md:hidden text-xs text-blue-700">Trang chủ </span>
+    Danh sách dự án đường bộ
+  </h1>
+  <button
+    className="hidden md:inline-block text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700"
+    onClick={handleExportReport}
+  >
+    Xuất báo cáo
+  </button>
+</div>
           <div className="md:hidden mb-3">
             <button
               onClick={() => setShowMobileFilters(!showMobileFilters)}
