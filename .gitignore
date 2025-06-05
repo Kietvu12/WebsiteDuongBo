@@ -1,0 +1,5 @@
+# Thư mục node_modules - không bao giờ đẩy lên Git
+node_modules/
+
+# File môi trường (chứa API key, DB config, v.v.)
+.env
