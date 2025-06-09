@@ -54,7 +54,7 @@ const AddNewSubProject = () => {
 
     const fetchLoaiHinh = async () => {
         try {
-            const response = await fetch('http://localhost:5000/loaihinh');
+            const response = await fetch(`${API_BASE_URL}loaihinh`);
             const data = await response.json();
             if (data.success) {
                 setLoaiHinhList(data.data);
@@ -72,7 +72,7 @@ const AddNewSubProject = () => {
         setRemovedThuocTinh([]);
 
         try {
-            const response = await fetch(`http://localhost:5000/loaihinh/${value}/thuoctinh`);
+            const response = await fetch(`${API_BASE_URL}loaihinh/${value}/thuoctinh`);
             const data = await response.json();
             if (data.success) {
                 setThuocTinhList(data.data.thuocTinh);
@@ -137,7 +137,7 @@ const AddNewSubProject = () => {
         };
 
         try {
-            const response = await fetch('http://localhost:5000/duan/tao-moi', {
+            const response = await fetch(`${API_BASE_URL}duan/tao-moi`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formattedValues),

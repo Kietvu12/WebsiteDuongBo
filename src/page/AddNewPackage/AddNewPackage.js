@@ -72,7 +72,7 @@ const AddNewPackage = () => {
 
   const fetchNhaThauList = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/nhaThauList');
+      const response = await axios.get(`${API_BASE_URL}nhaThauList`);
       setNhaThauList(response.data.data);
     } catch (error) {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
@@ -81,7 +81,7 @@ const AddNewPackage = () => {
 
   const fetchLoaiHinhList = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/loaihinh');
+      const response = await axios.get(`${API_BASE_URL}loaihinh`);
       if (response.data.success) {
         setLoaiHinhList(response.data.data);
       }
@@ -98,7 +98,7 @@ const AddNewPackage = () => {
     setRemovedThuocTinh([]);
 
     try {
-      const response = await axios.get(`http://localhost:5000/loaihinh/${value}/thuoctinh`);
+      const response = await axios.get(`${API_BASE_URL}loaihinh/${value}/thuoctinh`);
       if (response.data.success) {
         setThuocTinhList(response.data.data.thuocTinh);
       }
@@ -266,7 +266,7 @@ const AddNewPackage = () => {
     e.preventDefault();
     
     try {
-      const response = await axios.post('http://localhost:5000/goithau/tao-moi', formData);
+      const response = await axios.post(`${API_BASE_URL}goithau/tao-moi`, formData);
       alert('Tạo gói thầu thành công!');
       // Reset form hoặc chuyển hướng
     } catch (error) {
