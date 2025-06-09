@@ -2396,6 +2396,288 @@ app.get('/duAn/:duAnId', async (req, res) => {
     });
   }
 });
+app.post('/duan/tao-moi', async (req, res) => {
+  try {
+    const {
+      TenDuAn,
+      TinhThanh,
+      ChuDauTu,
+      NgayKhoiCong,
+      TrangThai,
+      NguonVon,
+      TongChieuDai,
+      KeHoachHoanThanh,
+      MoTaChung,
+      ParentID,
+      LoaiHinh_ID,
+      ThuocTinhValues // Object containing attribute values { ThuocTinh_ID: value }
+    } = req.body;
+
+    // Validate required fields
+    if (!TenDuAn || !LoaiHinh_ID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (TenDuAn, LoaiHinh_ID)'
+      });
+    }
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // 1. Insert main project info (không bao gồm DuAnID trong câu lệnh INSERT)
+    const [result] = await db.query(
+      `INSERT INTO duan (
+        TenDuAn, TinhThanh, ChuDauTu, NgayKhoiCong,
+        TrangThai, NguonVon, TongChieuDai, KeHoachHoanThanh,
+        MoTaChung, ParentID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        TenDuAn, TinhThanh, ChuDauTu, NgayKhoiCong,
+        TrangThai, NguonVon, TongChieuDai, KeHoachHoanThanh,
+        MoTaChung, ParentID
+      ]
+    );
+
+    // Lấy ID vừa được tạo
+    const DuAnID = result.insertId;
+
+    // 2. Link project to its type
+    await db.query(
+      'INSERT INTO DoiTuongLoaiHinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "duan", ?)',
+      [DuAnID, LoaiHinh_ID]
+    );
+
+    // 3. Insert attribute values if provided
+    if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
+      for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
+        await db.query(
+          `INSERT INTO GiaTriThuocTinh 
+          (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+          VALUES (?, ?, "duan", ?)`,
+          [ThuocTinh_ID, DuAnID, GiaTri]
+        );
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Tạo dự án mới thành công',
+      data: {
+        DuAnID,
+        LoaiHinh_ID,
+        ThuocTinhValues
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error creating project:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo dự án',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/goithau/tao-moi', async (req, res) => {
+  try {
+    const {
+      TenGoiThau,
+      DuAn_ID,
+      GiaTriHĐ,
+      Km_BatDau,
+      Km_KetThuc,
+      ToaDo_BatDau_X,
+      ToaDo_BatDau_Y,
+      ToaDo_KetThuc_X,
+      ToaDo_KetThuc_Y,
+      NgayKhoiCong,
+      NgayHoanThanh,
+      TrangThai,
+      NhaThauID,
+      LoaiHinh_ID,
+      ThuocTinhValues
+    } = req.body;
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // 1. Insert main tender package info
+    const [goiThauResult] = await db.query(
+      `INSERT INTO goithau (
+        TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+        ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+        ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+      ]
+    );
+
+    const GoiThau_ID = goiThauResult.insertId;
+
+    // 2. Link tender package to its type
+    if (LoaiHinh_ID) {
+      await db.query(
+        'INSERT INTO DoiTuongLoaiHinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
+        [GoiThau_ID, LoaiHinh_ID]
+      );
+
+      // 3. Insert attribute values if provided
+      if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
+        for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
+          await db.query(
+            `INSERT INTO GiaTriThuocTinh 
+            (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+            VALUES (?, ?, "goithau", ?)`,
+            [ThuocTinh_ID, GoiThau_ID, GiaTri]
+          );
+        }
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Tạo gói thầu mới thành công',
+      data: {
+        GoiThau_ID,
+        LoaiHinh_ID,
+        ThuocTinhValues
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error creating tender package:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo gói thầu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/loaihinh/them-thuoctinh', async (req, res) => {
+  try {
+    const {
+      LoaiHinh_ID,
+      TenThuocTinh,
+      KieuDuLieu = 'varchar',
+      DonVi,
+      BatBuoc = 0
+    } = req.body;
+
+    // Validate required fields
+    if (!LoaiHinh_ID || !TenThuocTinh) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (LoaiHinh_ID, TenThuocTinh)'
+      });
+    }
+
+    // Check if type exists
+    const [loaiHinh] = await db.query(
+      'SELECT * FROM LoaiHinh WHERE LoaiHinh_ID = ?',
+      [LoaiHinh_ID]
+    );
+
+    if (loaiHinh.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy loại hình với ID này'
+      });
+    }
+
+    // Insert new attribute
+    const [result] = await db.query(
+      `INSERT INTO ThuocTinhLoaiHinh 
+      (LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc)
+      VALUES (?, ?, ?, ?, ?)`,
+      [LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc]
+    );
+
+    res.json({
+      success: true,
+      message: 'Thêm thuộc tính mới thành công',
+      data: {
+        ThuocTinh_ID: result.insertId,
+        LoaiHinh_ID,
+        TenThuocTinh,
+        KieuDuLieu,
+        DonVi,
+        BatBuoc
+      }
+    });
+
+  } catch (error) {
+    console.error('Error adding attribute:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi thêm thuộc tính',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/loaihinh', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM LoaiHinh');
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error fetching LoaiHinh:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy danh sách loại hình',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
+  try {
+    const loaiHinhId = req.params.id;
+
+    // Kiểm tra loại hình có tồn tại
+    const [loaiHinh] = await db.query('SELECT * FROM LoaiHinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
+    if (loaiHinh.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy loại hình với ID này'
+      });
+    }
+
+    // Lấy thuộc tính của loại hình
+    const [thuocTinh] = await db.query(
+      'SELECT * FROM ThuocTinhLoaiHinh WHERE LoaiHinh_ID = ?',
+      [loaiHinhId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        loaiHinh: loaiHinh[0],
+        thuocTinh
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching thuoc tinh loai hinh:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy thuộc tính loại hình',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(500).json({
@@ -2403,6 +2685,7 @@ app.use((err, req, res, next) => {
     message: 'Đã xảy ra lỗi hệ thống'
   });
 });
+
 
 // Khởi động server
 app.listen(port, () => {

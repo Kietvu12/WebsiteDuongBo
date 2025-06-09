@@ -53,6 +53,11 @@ const Sidebar = () => {
     setSidebarOpen(false);
   };
 
+  const handleAddNew = () => {
+    navigate('/add-new');
+    setSidebarOpen(false);
+  };
+
   const toggleMenu = (menu) => {
     if (isDashboard && menu !== 'project') return;
     setOpenMenus(prev => ({
@@ -142,7 +147,7 @@ const Sidebar = () => {
         transform transition-transform duration-300 ease-in-out
         md:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:static md:h-auto
+        md:static 
       `}
     >
       {/* Phần trên sidebar */}
@@ -206,7 +211,7 @@ const Sidebar = () => {
             >
               Dự án dạng bản đồ
             </div>
-            <div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
+            <div onClick= {handleAddNew} className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
               Thêm dự án mới
             </div>
             <div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">

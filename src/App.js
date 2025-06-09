@@ -14,15 +14,36 @@ import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
 import Approvals from './page/Approvals/Approvals';
 import MapBoard from './page/MapBoard/MapBoard';
+import AddNewProject from './page/AddNewProject/AddNewProject';
+import AddNewSubProject from './page/AddNewSubProject/AddNewSubProject';
+import AddNewPackage from './page/AddNewPackage/AddNewPackage';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
-  
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar />
-      <div style={{ flex: 1 }}>
-        {children}
-        <ChatbotButton />
+    <div style={{ 
+      display: 'flex', 
+      height: '100vh', 
+      overflow: 'hidden' 
+    }}>
+      {/* Sidebar cố định */}
+      <div style={{
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        overflowY: 'auto'
+      }}>
+        <Sidebar />
+      </div>
+      
+      {/* Content scrollable */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto'
+      }}>
+        <div style={{ minHeight: '100%' }}>
+          {children}
+          <ChatbotButton />
+        </div>
       </div>
     </div>
   );
@@ -78,6 +99,21 @@ function App() {
         <Route path='/approvals/:projectId' element={
           <LayoutWithSidebar>
             <Approvals/>
+          </LayoutWithSidebar>
+        } />
+        <Route path='/add-new' element={
+          <LayoutWithSidebar>
+            <AddNewProject/>
+          </LayoutWithSidebar>
+        } />
+        <Route path='/add-new/:projectId' element={
+          <LayoutWithSidebar>
+            <AddNewSubProject/>
+          </LayoutWithSidebar>
+        } />
+        <Route path='/add-new-package/:projectId' element={
+          <LayoutWithSidebar>
+            <AddNewPackage/>
           </LayoutWithSidebar>
         } />
       </Routes>
