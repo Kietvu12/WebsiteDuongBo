@@ -31,7 +31,7 @@ const AddNewAttribute = ({ loaiHinhId, onClose, onAddSuccess }) => {
         throw new Error('Tên thuộc tính là bắt buộc');
       }
 
-      const response = await fetch(`${API_BASE_URL}loaihinh/them-thuoctinh`, {
+      const response = await fetch(`${API_BASE_URL}/loaihinh/them-thuoctinh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -72,7 +72,7 @@ const AddNewPackage = () => {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const fetchNhaThauList = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}nhaThauList`);
+      const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
       setNhaThauList(response.data.data);
     } catch (error) {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
@@ -98,7 +98,7 @@ const AddNewPackage = () => {
     setRemovedThuocTinh([]);
 
     try {
-      const response = await axios.get(`${API_BASE_URL}loaihinh/${value}/thuoctinh`);
+      const response = await axios.get(`${API_BASE_URL}/loaihinh/${value}/thuoctinh`);
       if (response.data.success) {
         setThuocTinhList(response.data.data.thuocTinh);
       }
