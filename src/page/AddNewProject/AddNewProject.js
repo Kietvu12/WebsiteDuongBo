@@ -48,7 +48,7 @@ const AddNewProject = () => {
     useEffect(() => {
         fetchLoaiHinh();
     }, []);
-
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const fetchLoaiHinh = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}loaihinh`);

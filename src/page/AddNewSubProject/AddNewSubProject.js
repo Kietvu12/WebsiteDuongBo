@@ -126,6 +126,7 @@ const AddNewSubProject = () => {
     const handleAddAttributeSuccess = (newAttribute) => {
         setAvailableThuocTinh(prev => [...prev, newAttribute]);
     };
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const onFinish = async (e) => {
         e.preventDefault();
         setLoading(true);
