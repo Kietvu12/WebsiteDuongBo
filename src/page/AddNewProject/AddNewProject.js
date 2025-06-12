@@ -4,11 +4,7 @@ import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
-import menuIcon from '../../assets/img/menu-icon.png';
-import helpIcon from '../../assets/img/help-icon.png';
-import userIcon from '../../assets/img/user-icon.png';
-
-
+import cv from 'opencv.js';
 
 const AddNewProject = () => {
     const navigate = useNavigate();

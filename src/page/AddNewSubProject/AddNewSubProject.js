@@ -390,10 +390,10 @@ const AddNewSubProject = () => {
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
-                                <option value="ngan_sach">Ngân sách</option>
-                                <option value="tu_nguyen">Tự nguyện</option>
-                                <option value="hop_tac">Hợp tác</option>
-                                <option value="nuoc_ngoai">Nước ngoài</option>
+                                <option value="Ngân sách">Ngân sách</option>
+                                <option value="Tự nguyện">Tự nguyện</option>
+                                <option value="Hợp tác">Hợp tác</option>
+                                <option value="Nước ngoài">Nước ngoài</option>
                             </select>
                         </div>
 
