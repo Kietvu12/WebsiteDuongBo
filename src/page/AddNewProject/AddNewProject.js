@@ -4,7 +4,7 @@ import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
-import cv from 'opencv.js';
+import axios from 'axios';
 
 const AddNewProject = () => {
     const navigate = useNavigate();
@@ -20,6 +20,10 @@ const AddNewProject = () => {
     const [expandedInputs, setExpandedInputs] = useState({});
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
+
+    const [nhaThauList, setNhaThauList] = useState([]);
+    const [fetchingContractors, setFetchingContractors] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
 
     const toggleExpand = (id) => {
         setExpandedInputs(prev => ({
@@ -40,6 +44,12 @@ const AddNewProject = () => {
         LoaiHinh_ID: '',
         ThuocTinhValues: {}
     });
+    const [files, setFiles] = useState([]);
+
+    const handleFileChange = (e) => {
+        setFiles([...e.target.files]);
+    };
+
 
     useEffect(() => {
         fetchLoaiHinh();
@@ -56,7 +66,25 @@ const AddNewProject = () => {
             alert('Lỗi khi tải danh sách loại hình');
         }
     };
+    useEffect(() => {
+        const fetchContractors = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
+                if (response.data.success) {
+                    setNhaThauList(response.data.data);
+                } else {
+                    setFetchError('Không thể tải danh sách nhà thầu');
+                }
+            } catch (error) {
+                console.error('Error fetching contractors:', error);
+                setFetchError('Đã xảy ra lỗi khi tải danh sách nhà thầu');
+            } finally {
+                setFetchingContractors(false);
+            }
+        };
 
+        fetchContractors();
+    }, [API_BASE_URL]);
     const handleLoaiHinhChange = async (e) => {
         const value = e.target.value;
         const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
@@ -123,6 +151,13 @@ const AddNewProject = () => {
         e.preventDefault();
         setLoading(true);
 
+        // Kiểm tra dữ liệu bắt buộc trước khi gửi
+        if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
+            alert('Vui lòng điền tên dự án và chọn loại hình');
+            setLoading(false);
+            return;
+        }
+
         const formattedValues = {
             ...formData,
             NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
@@ -130,19 +165,48 @@ const AddNewProject = () => {
         };
 
         try {
+            const formDataToSend = new FormData();
+
+            // Thêm từng trường dữ liệu vào FormData
+            Object.entries(formattedValues).forEach(([key, value]) => {
+                if (key === 'ThuocTinhValues') {
+                    formDataToSend.append(key, JSON.stringify(value));
+                } else {
+                    formDataToSend.append(key, value);
+                }
+            });
+
+            // Thêm các file vào FormData
+            files.forEach(file => {
+                formDataToSend.append('files', file);
+            });
+
             const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formattedValues),
+                body: formDataToSend,
+                // KHÔNG đặt header Content-Type để browser tự thiết lập
             });
 
             const data = await response.json();
             if (data.success) {
                 setCreatedProjectId(data.data.DuAnID);
                 setShowSuccessModal(true);
-                setTimeout(() => {
-                    setShowSuccessModal(false);
-                }, 2000);
+                setTimeout(() => setShowSuccessModal(false), 2000);
+                // Reset form
+                setFormData({
+                    TenDuAn: '',
+                    TinhThanh: '',
+                    ChuDauTu: '',
+                    NgayKhoiCong: '',
+                    TrangThai: 'dang_chuan_bi',
+                    NguonVon: 'ngan_sach',
+                    TongChieuDai: '',
+                    KeHoachHoanThanh: '',
+                    MoTaChung: '',
+                    LoaiHinh_ID: '',
+                    ThuocTinhValues: {}
+                });
+                setFiles([]);
             } else {
                 alert(data.message || 'Lỗi khi tạo dự án');
             }
@@ -336,14 +400,22 @@ const AddNewProject = () => {
                                 <span className="w-2 mr-1">•</span>
                                 Chủ đầu tư
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 name="ChuDauTu"
                                 className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.ChuDauTu}
                                 onChange={handleInputChange}
-                            />
+                            >
+                                <option value="">-- Chọn nhà thầu --</option>
+                                {nhaThauList && nhaThauList.map(nhaThau => (
+                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
+                      {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
+                    </option>
+                  ))}
+                            </select>
+
                         </div>
+
                     </div>
 
                     {/* Right Column */}
@@ -527,8 +599,28 @@ const AddNewProject = () => {
                         </div>
                     </div>
                 </div>
-
-
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tài liệu đính kèm (có thể chọn nhiều file)
+                    </label>
+                    <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
+                    />
+                    {files.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
+                            <ul className="list-disc pl-5 text-sm text-gray-600">
+                                {files.map((file, index) => (
+                                    <li key={index}>{file.name}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
                 {/* Nút submit */}
                 <div className="flex justify-end space-x-2 mt-2">
                     <button

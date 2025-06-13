@@ -1,12 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import moment from 'moment';
-import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
-import menuIcon from '../../assets/img/menu-icon.png';
-import helpIcon from '../../assets/img/help-icon.png';
-import userIcon from '../../assets/img/user-icon.png';
 
 
 
@@ -26,7 +22,7 @@ const AddNewSubProject = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
     console.log("du an nay ne:", projectId);
-
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const toggleExpand = (id) => {
         setExpandedInputs(prev => ({
             ...prev,
@@ -47,6 +43,12 @@ const AddNewSubProject = () => {
         LoaiHinh_ID: '',
         ThuocTinhValues: {}
     });
+    const [files, setFiles] = useState([]);
+
+    const handleFileChange = (e) => {
+        setFiles([...e.target.files]);
+    };
+
 
     useEffect(() => {
         fetchLoaiHinh();
@@ -72,7 +74,7 @@ const AddNewSubProject = () => {
         setRemovedThuocTinh([]);
 
         try {
-            const response = await fetch(`${API_BASE_URL}loaihinh/${value}/thuoctinh`);
+            const response = await fetch(`${API_BASE_URL}/loaihinh/${value}/thuoctinh`);
             const data = await response.json();
             if (data.success) {
                 setThuocTinhList(data.data.thuocTinh);
@@ -126,45 +128,75 @@ const AddNewSubProject = () => {
     const handleAddAttributeSuccess = (newAttribute) => {
         setAvailableThuocTinh(prev => [...prev, newAttribute]);
     };
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const onFinish = async (e) => {
         e.preventDefault();
         setLoading(true);
-
-        const formattedValues = {
-            ...formData,
-            NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
-            KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
-        };
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formattedValues),
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                setShowSuccessModal(true);
-                setCreatedProjectId(data.data.DuAnID);
-                setTimeout(() => {
-                    setShowSuccessModal(false);
-                }, 2000);
-            } else {
-                alert(data.message || 'Lỗi khi tạo dự án');
-            }
-        } catch (error) {
-            alert('Lỗi kết nối đến server');
-        } finally {
-            setLoading(false);
+      
+        // Kiểm tra dữ liệu bắt buộc trước khi gửi
+        if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
+          alert('Vui lòng điền tên dự án và chọn loại hình');
+          setLoading(false);
+          return;
         }
-    };
-    const handleAddSubProject = () => {
-        setShowSuccessModal(false);
-        navigate('/duan/thanh-phan'); // nếu dùng react-router-dom
-    }
-
+      
+        const formattedValues = {
+          ...formData,
+          NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
+          KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
+        };
+      
+        try {
+          const formDataToSend = new FormData();
+          
+          // Thêm từng trường dữ liệu vào FormData
+          Object.entries(formattedValues).forEach(([key, value]) => {
+            if (key === 'ThuocTinhValues') {
+              formDataToSend.append(key, JSON.stringify(value));
+            } else {
+              formDataToSend.append(key, value);
+            }
+          });
+          
+          // Thêm các file vào FormData
+          files.forEach(file => {
+            formDataToSend.append('files', file);
+          });
+      
+          const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
+            method: 'POST',
+            body: formDataToSend,
+            // KHÔNG đặt header Content-Type để browser tự thiết lập
+          });
+      
+          const data = await response.json();
+          if (data.success) {
+            setCreatedProjectId(data.data.DuAnID);
+            setShowSuccessModal(true);
+            setTimeout(() => setShowSuccessModal(false), 2000);
+            // Reset form
+            setFormData({
+              TenDuAn: '',
+              TinhThanh: '',
+              ChuDauTu: '',
+              NgayKhoiCong: '',
+              TrangThai: 'dang_chuan_bi',
+              NguonVon: 'ngan_sach',
+              TongChieuDai: '',
+              KeHoachHoanThanh: '',
+              MoTaChung: '',
+              LoaiHinh_ID: '',
+              ThuocTinhValues: {}
+            });
+            setFiles([]);
+          } else {
+            alert(data.message || 'Lỗi khi tạo dự án');
+          }
+        } catch (error) {
+          alert('Lỗi kết nối đến server');
+        } finally {
+          setLoading(false);
+        }
+      };
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
 
@@ -535,6 +567,28 @@ const AddNewSubProject = () => {
                             )}
                         </div>
                     </div>
+                </div>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tài liệu đính kèm (có thể chọn nhiều file)
+                    </label>
+                    <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
+                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
+                    />
+                    {files.length > 0 && (
+                        <div className="mt-2">
+                            <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
+                            <ul className="list-disc pl-5 text-sm text-gray-600">
+                                {files.map((file, index) => (
+                                    <li key={index}>{file.name}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
 
 
