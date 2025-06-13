@@ -10,7 +10,11 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
+<<<<<<< Updated upstream
   database: 'dadb',
+=======
+  database: 'da_db',
+>>>>>>> Stashed changes
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
