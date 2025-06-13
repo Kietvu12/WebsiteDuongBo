@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import moment from 'moment';
+import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
-
-
+import axios from 'axios';
 
 const AddNewSubProject = () => {
     const navigate = useNavigate();
@@ -21,8 +21,11 @@ const AddNewSubProject = () => {
     const [expandedInputs, setExpandedInputs] = useState({});
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
-    console.log("du an nay ne:", projectId);
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+    const [nhaThauList, setNhaThauList] = useState([]);
+    const [fetchingContractors, setFetchingContractors] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
+
     const toggleExpand = (id) => {
         setExpandedInputs(prev => ({
             ...prev,
@@ -53,7 +56,7 @@ const AddNewSubProject = () => {
     useEffect(() => {
         fetchLoaiHinh();
     }, []);
-
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
     const fetchLoaiHinh = async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/loaihinh`);
@@ -65,7 +68,25 @@ const AddNewSubProject = () => {
             alert('Lỗi khi tải danh sách loại hình');
         }
     };
+    useEffect(() => {
+        const fetchContractors = async () => {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
+                if (response.data.success) {
+                    setNhaThauList(response.data.data);
+                } else {
+                    setFetchError('Không thể tải danh sách nhà thầu');
+                }
+            } catch (error) {
+                console.error('Error fetching contractors:', error);
+                setFetchError('Đã xảy ra lỗi khi tải danh sách nhà thầu');
+            } finally {
+                setFetchingContractors(false);
+            }
+        };
 
+        fetchContractors();
+    }, [API_BASE_URL]);
     const handleLoaiHinhChange = async (e) => {
         const value = e.target.value;
         const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
@@ -131,72 +152,77 @@ const AddNewSubProject = () => {
     const onFinish = async (e) => {
         e.preventDefault();
         setLoading(true);
-      
+
         // Kiểm tra dữ liệu bắt buộc trước khi gửi
         if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
-          alert('Vui lòng điền tên dự án và chọn loại hình');
-          setLoading(false);
-          return;
+            alert('Vui lòng điền tên dự án và chọn loại hình');
+            setLoading(false);
+            return;
         }
-      
+
         const formattedValues = {
-          ...formData,
-          NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
-          KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
+            ...formData,
+            NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
+            KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
         };
-      
+
         try {
-          const formDataToSend = new FormData();
-          
-          // Thêm từng trường dữ liệu vào FormData
-          Object.entries(formattedValues).forEach(([key, value]) => {
-            if (key === 'ThuocTinhValues') {
-              formDataToSend.append(key, JSON.stringify(value));
-            } else {
-              formDataToSend.append(key, value);
-            }
-          });
-          
-          // Thêm các file vào FormData
-          files.forEach(file => {
-            formDataToSend.append('files', file);
-          });
-      
-          const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
-            method: 'POST',
-            body: formDataToSend,
-            // KHÔNG đặt header Content-Type để browser tự thiết lập
-          });
-      
-          const data = await response.json();
-          if (data.success) {
-            setCreatedProjectId(data.data.DuAnID);
-            setShowSuccessModal(true);
-            setTimeout(() => setShowSuccessModal(false), 2000);
-            // Reset form
-            setFormData({
-              TenDuAn: '',
-              TinhThanh: '',
-              ChuDauTu: '',
-              NgayKhoiCong: '',
-              TrangThai: 'dang_chuan_bi',
-              NguonVon: 'ngan_sach',
-              TongChieuDai: '',
-              KeHoachHoanThanh: '',
-              MoTaChung: '',
-              LoaiHinh_ID: '',
-              ThuocTinhValues: {}
+            const formDataToSend = new FormData();
+
+            // Thêm từng trường dữ liệu vào FormData
+            Object.entries(formattedValues).forEach(([key, value]) => {
+                if (key === 'ThuocTinhValues') {
+                    formDataToSend.append(key, JSON.stringify(value));
+                } else {
+                    formDataToSend.append(key, value);
+                }
             });
-            setFiles([]);
-          } else {
-            alert(data.message || 'Lỗi khi tạo dự án');
-          }
+
+            // Thêm các file vào FormData
+            files.forEach(file => {
+                formDataToSend.append('files', file);
+            });
+
+            const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
+                method: 'POST',
+                body: formDataToSend,
+                // KHÔNG đặt header Content-Type để browser tự thiết lập
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setCreatedProjectId(data.data.DuAnID);
+                setShowSuccessModal(true);
+                setTimeout(() => setShowSuccessModal(false), 2000);
+                // Reset form
+                setFormData({
+                    TenDuAn: '',
+                    TinhThanh: '',
+                    ChuDauTu: '',
+                    NgayKhoiCong: '',
+                    TrangThai: 'dang_chuan_bi',
+                    NguonVon: 'ngan_sach',
+                    TongChieuDai: '',
+                    KeHoachHoanThanh: '',
+                    MoTaChung: '',
+                    LoaiHinh_ID: '',
+                    ThuocTinhValues: {}
+                });
+                setFiles([]);
+            } else {
+                alert(data.message || 'Lỗi khi tạo dự án');
+            }
         } catch (error) {
-          alert('Lỗi kết nối đến server');
+            alert('Lỗi kết nối đến server');
         } finally {
-          setLoading(false);
+            setLoading(false);
         }
-      };
+    };
+    const handleAddSubProject = () => {
+        setShowSuccessModal(false);
+        navigate('/duan/thanh-phan'); // nếu dùng react-router-dom
+    }
+
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
 
@@ -281,7 +307,7 @@ const AddNewSubProject = () => {
             </div>
 
             {/* Form chính - sử dụng grid để tối ưu không gian */}
-            <form onSubmit={onFinish} className="grid grid-cols-1 gap-2">
+            <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
                 {/* Chọn loại dự án */}
                 <div className="bg-white rounded p-2 border border-gray-200">
                     <div className="flex items-center space-x-2">
@@ -310,7 +336,6 @@ const AddNewSubProject = () => {
                     </div>
                 </div>
 
-                {/* Thông tin cơ bản - sử dụng grid 2 cột */}
                 {/* Thông tin cơ bản - sử dụng grid 2 cột */}
                 <div className="bg-white rounded p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="col-span-2">
@@ -377,14 +402,22 @@ const AddNewSubProject = () => {
                                 <span className="w-2 mr-1">•</span>
                                 Chủ đầu tư
                             </label>
-                            <input
-                                type="text"
+                            <select
                                 name="ChuDauTu"
                                 className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.ChuDauTu}
                                 onChange={handleInputChange}
-                            />
+                            >
+                                <option value="">-- Chọn nhà thầu --</option>
+                                {nhaThauList && nhaThauList.map(nhaThau => (
+                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
+                      {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
+                    </option>
+                  ))}
+                            </select>
+
                         </div>
+
                     </div>
 
                     {/* Right Column */}
@@ -422,10 +455,10 @@ const AddNewSubProject = () => {
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
-                                <option value="Ngân sách">Ngân sách</option>
-                                <option value="Tự nguyện">Tự nguyện</option>
-                                <option value="Hợp tác">Hợp tác</option>
-                                <option value="Nước ngoài">Nước ngoài</option>
+                                <option value="ngan_sach">Ngân sách</option>
+                                <option value="tu_nguyen">Tự nguyện</option>
+                                <option value="hop_tac">Hợp tác</option>
+                                <option value="nuoc_ngoai">Nước ngoài</option>
                             </select>
                         </div>
 
@@ -590,8 +623,6 @@ const AddNewSubProject = () => {
                         </div>
                     )}
                 </div>
-
-
                 {/* Nút submit */}
                 <div className="flex justify-end space-x-2 mt-2">
                     <button
@@ -650,11 +681,12 @@ const AddNewSubProject = () => {
                             <button
                                 onClick={() => {
                                     setShowSuccessModal(false);
-                                    navigate(`/add-new-package/${createdProjectId}`);
+                                    // Chuyển hướng đến trang thêm dự án thành phần
+                                    navigate(`/add-new/${createdProjectId}`);
                                 }}
                                 className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
                             >
-                                Thêm gói thầu
+                                Thêm dự án thành phần
                             </button>
                         </div>
                     </div>
