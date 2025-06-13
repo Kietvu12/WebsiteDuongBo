@@ -2773,7 +2773,7 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
 
     // Check if type exists
     const [loaiHinh] = await db.query(
-      'SELECT * FROM LoaiHinh WHERE LoaiHinh_ID = ?',
+      'SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?',
       [LoaiHinh_ID]
     );
 
@@ -2786,7 +2786,7 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
 
     // Insert new attribute
     const [result] = await db.query(
-      `INSERT INTO ThuocTinhLoaiHinh 
+      `INSERT INTO thuoctinhloaihinh 
       (LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc)
       VALUES (?, ?, ?, ?, ?)`,
       [LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc]
@@ -2816,14 +2816,14 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
 });
 app.get('/loaihinh', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM LoaiHinh');
+    const [rows] = await db.query('SELECT * FROM loaihinh');
 
     res.json({
       success: true,
       data: rows
     });
   } catch (error) {
-    console.error('Error fetching LoaiHinh:', error);
+    console.error('Error fetching loaihinh:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi lấy danh sách loại hình',
@@ -2836,7 +2836,7 @@ app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
     const loaiHinhId = req.params.id;
 
     // Kiểm tra loại hình có tồn tại
-    const [loaiHinh] = await db.query('SELECT * FROM LoaiHinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
+    const [loaiHinh] = await db.query('SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
     if (loaiHinh.length === 0) {
       return res.status(404).json({
         success: false,
@@ -2846,7 +2846,7 @@ app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
 
     // Lấy thuộc tính của loại hình
     const [thuocTinh] = await db.query(
-      'SELECT * FROM ThuocTinhLoaiHinh WHERE LoaiHinh_ID = ?',
+      'SELECT * FROM thuoctinhloaihinh WHERE LoaiHinh_ID = ?',
       [loaiHinhId]
     );
 
