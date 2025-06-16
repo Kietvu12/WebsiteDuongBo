@@ -1,16 +1,82 @@
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
 
 const app = express();
 const port = 5000;
+
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.post('/api/read-image', (req, res) => {
+  const contentType = req.headers['content-type'];
+  
+  if (!contentType || !contentType.includes('multipart/form-data')) {
+    return res.status(400).json({ error: 'Yêu cầu phải là multipart/form-data' });
+  }
+
+  let body = '';
+  req.setEncoding('binary');
+  
+  req.on('data', (chunk) => {
+    body += chunk;
+  });
+
+  req.on('end', () => {
+    try {
+      // Xác định boundary
+      const boundary = contentType.split('boundary=')[1];
+      const parts = body.split(`--${boundary}`);
+      
+      // Lấy phần chứa file
+      const filePart = parts.find(part => part.includes('filename="'));
+      
+      if (!filePart) {
+        return res.status(400).json({ error: 'Không tìm thấy file trong request' });
+      }
+
+      // Trích xuất thông tin file
+      const fileName = filePart.match(/filename="([^"]+)"/)[1];
+      const fileType = filePart.match(/Content-Type: ([^\r\n]+)/)[1];
+      const fileData = filePart.split('\r\n\r\n')[1].replace(/\r\n$/, '');
+
+      // Lưu file
+      const uploadPath = path.join(__dirname, 'uploads', fileName);
+      fs.writeFileSync(uploadPath, fileData, 'binary');
+
+      res.json({
+        status: 'success',
+        fileInfo: {
+          name: fileName,
+          type: fileType,
+          size: fileData.length
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+});
 
 // Kết nối với MySQL
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
+<<<<<<< Updated upstream
   database: 'dadb',
+=======
+  database: 'da_db',
+>>>>>>> Stashed changes
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

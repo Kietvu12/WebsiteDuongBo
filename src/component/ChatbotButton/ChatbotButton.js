@@ -18,7 +18,7 @@ const ChatbotButton = () => {
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const [selectedDuAnId, setSelectedDuAnId] = useState(null);
-
+  
   const toggleChatbot = () => {
     // Khi đóng chatbot, nếu modal đang mở, cũng đóng modal
     if (isMcpModalOpen) {
