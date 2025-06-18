@@ -228,7 +228,7 @@ const Sidebar = () => {
             label: 'Quản lý tiến độ',
             submenu: [
               { label: 'Hạng mục công việc', onClick: () => handleNavigation(`/work-items`) },
-              { label: 'Đề xuất & phê duyệt', onClick: () => handleNavigation('/approvals') },
+              { label: 'Khó khăn & vướng mắc', onClick: () => handleNavigation('/approvals') },
               { label: 'Báo cáo tiến độ', onClick: () => handleNavigation(`/project-progress`) },
             ],
           },

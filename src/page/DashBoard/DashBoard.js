@@ -211,9 +211,22 @@ const DashBoard = () => {
   useEffect(() => {
     filterProjects();
   }, [fromDate, toDate, status, searchTerm, selectedProvince, contractor, completionLevel, projects]);
-  const handleDetail = (DuAnID) => {
-    navigate(`/side-project/${DuAnID}`);
-    setSelectedProjectId(DuAnID)
+  const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan) => {
+    
+    if (soLuongDuAnThanhPhan > 0) {
+      navigate(`/side-project/${DuAnID}`);
+    } else {
+      navigate('/detail', {
+        state: {
+          projectId: DuAnID,
+          projectName: TenDuAn,
+          subProjectName: null,
+          subProjectId: DuAnID
+        }
+      });
+      console.log("hhe:", DuAnID, TenDuAn, typeof(soLuongDuAnThanhPhan)); 
+    }
+    setSelectedProjectId(DuAnID);
   };
 
   const toggleView = () => {
@@ -435,7 +448,7 @@ const DashBoard = () => {
                     .map((project, index) => (
                       <tr
                         key={project.DuAnID}
-                        onClick={() => handleDetail(project.DuAnID)}
+                        onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongGoiThau)}
                         className="hover:bg-blue-50 cursor-pointer transition-colors"
                       >
                         {/* Các ô dữ liệu giữ nguyên như trước */}
@@ -535,7 +548,7 @@ const DashBoard = () => {
                   <div
                     key={project.DuAnID}
                     className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer"
-                    onClick={() => handleDetail(project.DuAnID)}
+                    onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan)}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="font-medium text-gray-800">{project.TenDuAn}</div>

@@ -6,7 +6,7 @@ import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
 
-const AddNewSubProject = () => {
+const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
     const navigate = useNavigate();
     const { projectId } = useParams();
     const [showAddAttribute, setShowAddAttribute] = useState(false);
@@ -42,7 +42,7 @@ const AddNewSubProject = () => {
         TongChieuDai: '',
         KeHoachHoanThanh: '',
         MoTaChung: '',
-        ParentID: projectId,
+        ParentID: DuAnID,
         LoaiHinh_ID: '',
         ThuocTinhValues: {}
     });
@@ -155,13 +155,13 @@ const AddNewSubProject = () => {
 
         // Kiểm tra dữ liệu bắt buộc trước khi gửi
         if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
-            alert('Vui lòng điền tên dự án và chọn loại hình');
             setLoading(false);
             return;
         }
 
         const formattedValues = {
             ...formData,
+            ParentID: DuAnID, // Thêm trường ParentID
             NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
             KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
         };
@@ -171,10 +171,12 @@ const AddNewSubProject = () => {
 
             // Thêm từng trường dữ liệu vào FormData
             Object.entries(formattedValues).forEach(([key, value]) => {
-                if (key === 'ThuocTinhValues') {
-                    formDataToSend.append(key, JSON.stringify(value));
-                } else {
-                    formDataToSend.append(key, value);
+                if (value !== null && value !== undefined) {
+                    if (key === 'ThuocTinhValues') {
+                        formDataToSend.append(key, JSON.stringify(value));
+                    } else {
+                        formDataToSend.append(key, value);
+                    }
                 }
             });
 
@@ -183,45 +185,24 @@ const AddNewSubProject = () => {
                 formDataToSend.append('files', file);
             });
 
-            const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
-                method: 'POST',
-                body: formDataToSend,
-                // KHÔNG đặt header Content-Type để browser tự thiết lập
+            const response = await axios.post(`${API_BASE_URL}/duan/tao-moi`, formDataToSend, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
 
-            const data = await response.json();
-            if (data.success) {
-                setCreatedProjectId(data.data.DuAnID);
-                setShowSuccessModal(true);
-                setTimeout(() => setShowSuccessModal(false), 2000);
-                // Reset form
-                setFormData({
-                    TenDuAn: '',
-                    TinhThanh: '',
-                    ChuDauTu: '',
-                    NgayKhoiCong: '',
-                    TrangThai: 'dang_chuan_bi',
-                    NguonVon: 'ngan_sach',
-                    TongChieuDai: '',
-                    KeHoachHoanThanh: '',
-                    MoTaChung: '',
-                    LoaiHinh_ID: '',
-                    ThuocTinhValues: {}
-                });
-                setFiles([]);
+            if (response.data.success) {
+                onSuccess(response.data.data);
+                onClose();
             } else {
-                alert(data.message || 'Lỗi khi tạo dự án');
+                console.log("Lỗi");
             }
         } catch (error) {
-            alert('Lỗi kết nối đến server');
+            console.error('Error:', error);
         } finally {
             setLoading(false);
         }
     };
-    const handleAddSubProject = () => {
-        setShowSuccessModal(false);
-        navigate('/duan/thanh-phan'); // nếu dùng react-router-dom
-    }
 
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
@@ -288,22 +269,31 @@ const AddNewSubProject = () => {
     };
 
     return (
-        <div className="container mx-auto p-2 max-w-screen-2xl">
+        <div className="bg-white rounded-lg mx-auto p-2 max-w-screen-2xl">
             {/* Header gọn */}
             <div className="flex justify-between items-center mb-2">
                 <h1 className="text-lg font-semibold text-gray-800 flex items-center">
                     <FaRoad className="mr-1 text-blue-500 text-sm" />
                     Thêm dự án mới
                 </h1>
-                <button
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
-                >
-                    <span>Đọc thông minh</span>
-                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
-                        AI
-                    </span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
+                    >
+                        <span>Đọc thông minh</span>
+                        <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
+                            AI
+                        </span>
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                        aria-label="Đóng"
+                    >
+                        <FaTimes className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
             {/* Form chính - sử dụng grid để tối ưu không gian */}
@@ -410,10 +400,10 @@ const AddNewSubProject = () => {
                             >
                                 <option value="">-- Chọn nhà thầu --</option>
                                 {nhaThauList && nhaThauList.map(nhaThau => (
-                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
-                      {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
-                    </option>
-                  ))}
+                                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
+                                        {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
+                                    </option>
+                                ))}
                             </select>
 
                         </div>

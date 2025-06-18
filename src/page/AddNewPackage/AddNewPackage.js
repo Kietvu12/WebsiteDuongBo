@@ -7,14 +7,12 @@ import { FaCheckCircle, FaPlus, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 
 
-const AddNewPackage = () => {
-  const { projectId } = useParams();
-
+const AddNewPackage = (projectId, onClose, onSuccess) => {
 
   // State cho form
   const [formData, setFormData] = useState({
     TenGoiThau: '',
-    DuAn_ID: projectId,
+    DuAn_ID: projectId.projectId,
     GiaTriHĐ: '',
     Km_BatDau: '',
     Km_KetThuc: '',
@@ -29,6 +27,8 @@ const AddNewPackage = () => {
     LoaiHinh_ID: '',
     ThuocTinhValues: {}
   });
+  console.log("Dự án id:", projectId.projectId);
+  
   const [files, setFiles] = useState([]);
 
   const handleFileChange = (e) => {
@@ -322,6 +322,8 @@ const AddNewPackage = () => {
           ThuocTinhValues: {}
         });
         setFiles([]);
+        onSuccess(response.data.data);
+        onClose()
       }
     } catch (error) {
       console.error('Lỗi khi tạo gói thầu:', error);
@@ -330,9 +332,17 @@ const AddNewPackage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-xl font-bold mb-4">Tạo Mới Gói Thầu</h1>
-
+    <div className="container bg-white rounded-lg  mx-auto p-2 max-w-screen-2xl">
+      <div className="flex justify-between items-center mb-4"> {/* Thêm div wrapper với flex */}
+    <h1 className="text-xl font-bold">Tạo Mới Gói Thầu</h1>
+    <button
+      onClick={onClose}
+      className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+      aria-label="Đóng"
+    >
+      <FaTimes className="w-5 h-5" />
+    </button>
+  </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Phần form nhập liệu */}
         <div className="bg-white p-4 rounded-lg shadow">
@@ -391,123 +401,6 @@ const AddNewPackage = () => {
             </div>
 
             {/* Điểm đầu và điểm cuối */}
-            <div className="space-y-3">
-  <h2 className="text-lg font-semibold border-b pb-2">Vị trí công trình</h2>
-
-  <div className="space-y-2">
-    <label className="block text-sm font-medium text-gray-700">Điểm bắt đầu</label>
-
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-        className="w-full px-3 py-2 border rounded-md text-sm"
-        onChange={(e) => handleAddressSearch(e.target.value, 'start')}
-      />
-      <button
-        type="button"
-        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-        onClick={() => setSelectedAddressType('start')}
-      >
-        Chọn trên bản đồ
-      </button>
-    </div>
-
-    {selectedAddressType === 'start' && addressSuggestions.length > 0 && (
-      <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-        {addressSuggestions.map((result, index) => (
-          <li
-            key={index}
-            className="p-2 hover:bg-gray-100 cursor-pointer"
-            onClick={() => selectAddress(result, 'start')}
-          >
-            {result.label}
-          </li>
-        ))}
-      </ul>
-    )}
-
-    <div className="grid grid-cols-2 gap-2">
-      <input
-        type="text"
-        placeholder="Kinh độ"
-        className="px-3 py-2 border rounded-md text-sm"
-        value={formData.ToaDo_BatDau_X}
-        onChange={(e) => setFormData({
-          ...formData,
-          ToaDo_BatDau_X: e.target.value
-        })}
-      />
-      <input
-        type="text"
-        placeholder="Vĩ độ"
-        className="px-3 py-2 border rounded-md text-sm"
-        value={formData.ToaDo_BatDau_Y}
-        onChange={(e) => setFormData({
-          ...formData,
-          ToaDo_BatDau_Y: e.target.value
-        })}
-      />
-    </div>
-  </div>
-
-  <div className="space-y-2">
-    <label className="block text-sm font-medium text-gray-700">Điểm kết thúc</label>
-
-    <div className="relative">
-      <input
-        type="text"
-        placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-        className="w-full px-3 py-2 border rounded-md text-sm"
-        onChange={(e) => handleAddressSearch(e.target.value, 'end')}
-      />
-      <button
-        type="button"
-        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-        onClick={() => setSelectedAddressType('end')}
-      >
-        Chọn trên bản đồ
-      </button>
-    </div>
-
-    {selectedAddressType === 'end' && addressSuggestions.length > 0 && (
-      <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-        {addressSuggestions.map((result, index) => (
-          <li
-            key={index}
-            className="p-2 hover:bg-gray-100 cursor-pointer"
-            onClick={() => selectAddress(result, 'end')}
-          >
-            {result.label}
-          </li>
-        ))}
-      </ul>
-    )}
-
-    <div className="grid grid-cols-2 gap-2">
-      <input
-        type="text"
-        placeholder="Kinh độ"
-        className="px-3 py-2 border rounded-md text-sm"
-        value={formData.ToaDo_KetThuc_X}
-        onChange={(e) => setFormData({
-          ...formData,
-          ToaDo_KetThuc_X: e.target.value
-        })}
-      />
-      <input
-        type="text"
-        placeholder="Vĩ độ"
-        className="px-3 py-2 border rounded-md text-sm"
-        value={formData.ToaDo_KetThuc_Y}
-        onChange={(e) => setFormData({
-          ...formData,
-          ToaDo_KetThuc_Y: e.target.value
-        })}
-      />
-    </div>
-  </div>
-</div>
 
             {/* Thông tin thời gian */}
             <div className="space-y-3">
@@ -739,6 +632,123 @@ const AddNewPackage = () => {
               )}
             </div>
           </div>
+          <div className="space-y-3 mt-2">
+              <h2 className="text-lg font-semibold border-b pb-2">Vị trí công trình</h2>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Điểm bắt đầu</label>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    onChange={(e) => handleAddressSearch(e.target.value, 'start')}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
+                    onClick={() => setSelectedAddressType('start')}
+                  >
+                    Chọn trên bản đồ
+                  </button>
+                </div>
+
+                {selectedAddressType === 'start' && addressSuggestions.length > 0 && (
+                  <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
+                    {addressSuggestions.map((result, index) => (
+                      <li
+                        key={index}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectAddress(result, 'start')}
+                      >
+                        {result.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Kinh độ"
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={formData.ToaDo_BatDau_X}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ToaDo_BatDau_X: e.target.value
+                    })}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Vĩ độ"
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={formData.ToaDo_BatDau_Y}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ToaDo_BatDau_Y: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Điểm kết thúc</label>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
+                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    onChange={(e) => handleAddressSearch(e.target.value, 'end')}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
+                    onClick={() => setSelectedAddressType('end')}
+                  >
+                    Chọn trên bản đồ
+                  </button>
+                </div>
+
+                {selectedAddressType === 'end' && addressSuggestions.length > 0 && (
+                  <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
+                    {addressSuggestions.map((result, index) => (
+                      <li
+                        key={index}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectAddress(result, 'end')}
+                      >
+                        {result.label}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Kinh độ"
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={formData.ToaDo_KetThuc_X}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ToaDo_KetThuc_X: e.target.value
+                    })}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Vĩ độ"
+                    className="px-3 py-2 border rounded-md text-sm"
+                    value={formData.ToaDo_KetThuc_Y}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      ToaDo_KetThuc_Y: e.target.value
+                    })}
+                  />
+                </div>
+              </div>
+            </div>
         </div>
       </div>
     </div>

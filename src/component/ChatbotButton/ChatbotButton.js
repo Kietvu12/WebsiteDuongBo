@@ -59,7 +59,7 @@ const ChatbotButton = () => {
     let finalResponseReceived = false;
 
     try {
-      const response = await fetch('http://210.245.52.119/api_ai_dadb/api/stream', {
+      const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userInput , conversation_id: "Kiet"}),

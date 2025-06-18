@@ -17,6 +17,15 @@
   flex-wrap: wrap;
   gap: 1rem;
 }
+/* Thêm vào file CSS */
+.modal-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 .add-btn {
   padding: 0.5rem 1rem;

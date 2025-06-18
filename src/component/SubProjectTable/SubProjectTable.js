@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
 import AddNewPlan from '../AddNewPlan/AddNewPlan';
 import AddNewCategories from '../AddNewCategories/AddNewCategories';
-const SubProjectTable = ({ duAnThanhPhanId }) => {
+const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const { selectedProjectId, selectedSubProjectId } = useProject();
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -25,6 +25,8 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
     plan: null,
     progressData: []
   });
+  console.log("Gói thầu bên này:", packageId);
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchData = async () => {
@@ -337,12 +339,182 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.duAnThanhPhan.danhSachGoiThau?.map((packageItem, packageIndex) => (
-                <React.Fragment key={`package-${packageItem.goiThauId}`}>
-                  <tr className="group bg-blue-50 hover:bg-blue-100">
-                    <td className="px-3 py-2 whitespace-nowrap pl-8">{`${packageIndex + 1}`}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">GT-{packageItem.goiThauId}</td>
-                    <td className="px-3 py-2 whitespace-nowrap font-medium">
+            {data.duAnThanhPhan.danhSachGoiThau
+    ?.filter(packageItem => !packageId || packageItem.goiThauId === packageId)
+    ?.map((packageItem, packageIndex) => (
+                  <React.Fragment key={`package-${packageItem.goiThauId}`}>
+                    <tr className="group bg-blue-50 hover:bg-blue-100">
+                      <td className="px-3 py-2 whitespace-nowrap pl-8">{`${packageIndex + 1}`}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">GT-{packageItem.goiThauId}</td>
+                      <td className="px-3 py-2 whitespace-nowrap font-medium">
+                        <button
+                          onClick={() => toggleItem('packages', packageItem.goiThauId)}
+                          className="flex items-center focus:outline-none"
+                        >
+                          <img
+                            src={downIcon}
+                            alt="Toggle"
+                            className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
+                          />
+                          <span className="truncate">{packageItem.tenGoiThau}</span>
+                        </button>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                      <td className="px-3 py-2 whitespace-nowrap"></td>
+                      <td className="px-3 py-2 whitespace-nowrap"></td>
+                      <td className="px-3 py-2 whitespace-nowrap"></td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayKhoiCong)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayHoanThanh)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <div className="flex space-x-2">
+                          <button
+                            className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                            title="Thêm hạng mục"
+                            onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
+                          >
+                            <FaPlus size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+
+                    {/* Level 2: Items - Only show if expanded */}
+                    {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
+                      const progress = item.tongKhoiLuongKeHoach
+                        ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
+                        : 0;
+
+                      const bgColor =
+                        progress >= 100
+                          ? 'bg-green-100'
+                          : progress >= 40
+                            ? 'bg-yellow-100'
+                            : 'bg-red-100';
+
+                      return (
+                        <React.Fragment key={`item-${item.hangMucId}`}>
+                          <tr className={`group ${bgColor} hover:${bgColor.replace('100', '200')}`}>
+                            <td className="px-3 py-2 whitespace-nowrap pl-12">{`${packageIndex + 1}.${itemIndex + 1}`}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">HM-{item.hangMucId}</td>
+                            <td className="px-3 py-2 font-medium">
+                              <button
+                                onClick={() => toggleItem('items', item.hangMucId)}
+                                className="flex items-center focus:outline-none"
+                              >
+                                <img
+                                  src={downIcon}
+                                  alt="Toggle"
+                                  className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
+                                />
+                                <span className="truncate"> Hạng mục: {item.tenHangMuc}</span>
+                              </button>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              {item.danhSachKeHoach?.[0]?.donViTinh || ''}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap font-medium">
+                              {progress.toFixed(0)}%
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap"></td>
+                            <td className="px-3 py-2 whitespace-nowrap"></td>
+                            <td className="px-3 py-2 whitespace-nowrap"></td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <div className="flex space-x-2">
+                                <button
+                                  className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                                  title="Thêm kế hoạch"
+                                  onClick={() => handleAddPlanClick(item.hangMucId)}
+                                >
+                                  <FaPlus size={14} />
+                                </button>
+
+                                <button
+                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                                  title="Xóa"
+                                >
+                                  <FaTrash size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+
+
+                          {/* Level 3: Plans - Only show if expanded */}
+                          {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
+                            <tr
+                              key={`plan-${plan.keHoachId}`}
+                              className="group bg-white hover:bg-gray-50 border-t relative"
+                            >
+                              <td className="px-3 py-2 whitespace-nowrap pl-20">
+                                {`${packageIndex + 1}.${itemIndex + 1}.${planIndex + 1}`}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">KH-{plan.keHoachId}</td>
+
+                              <td className="px-3 py-4 pl-4 relative h-[80px]">
+                                <div className="flex flex-col space-y-2">
+                                  <div>{plan.tenCongTac}</div>
+                                  <div className="flex gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
+                                    <button
+                                      onClick={() => handleViewDetails(plan)}
+                                      className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                                    >
+                                      Chi tiết tiến độ
+                                    </button>
+                                    <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                                      Khó khăn vướng mắc
+                                    </button>
+                                    <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                                      Cập nhật tiến độ
+                                    </button>
+                                    <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                                      Chỉnh sửa
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+
+
+
+                              <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {plan.khoiLuongKeHoach
+                                  ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
+                                  : '0%'}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                                {calculateDays(plan.ngayBatDau, plan.ngayKetThuc)}
+                              </td>
+                              <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayBatDau)}</td>
+                              <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayKetThuc)}</td>
+                              <td className="px-3 py-2 whitespace-nowrap"></td>
+                            </tr>
+
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="md:hidden space-y-3">
+        {data.duAnThanhPhan.danhSachGoiThau
+          ?.filter(packageItem => packageItem.goiThauId === packageId)
+          ?.map((packageItem, packageIndex) => (
+            <React.Fragment key={`mobile-package-${packageItem.goiThauId}`}>
+              {/* Package Card */}
+              <div className="bg-blue-50 p-3 rounded-lg shadow-sm border border-gray-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-medium text-gray-900">
                       <button
                         onClick={() => toggleItem('packages', packageItem.goiThauId)}
                         className="flex items-center focus:outline-none"
@@ -352,49 +524,62 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
                           alt="Toggle"
                           className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
                         />
-                        <span className="truncate">{packageItem.tenGoiThau}</span>
+                        <span className='text-xs font-bold'>{packageItem.tenGoiThau}</span>
                       </button>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</td>
-                    <td className="px-3 py-2 whitespace-nowrap"></td>
-                    <td className="px-3 py-2 whitespace-nowrap"></td>
-                    <td className="px-3 py-2 whitespace-nowrap"></td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayKhoiCong)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayHoanThanh)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      <div className="flex space-x-2">
-                        <button
-                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                          title="Thêm hạng mục"
-                          onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
-                        >
-                          <FaPlus size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="text-sm text-gray-500 mt-1">GT-{packageItem.goiThauId}</div>
+                  </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                  <div>
+                    <div className="text-gray-500">Khối lượng TH</div>
+                    <div>{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Khối lượng KH</div>
+                    <div>{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Bắt đầu</div>
+                    <div>{formatDate(packageItem.ngayKhoiCong)}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-500">Kết thúc</div>
+                    <div>{formatDate(packageItem.ngayHoanThanh)}</div>
+                  </div>
+                </div>
 
-                  {/* Level 2: Items - Only show if expanded */}
-                  {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
-                    const progress = item.tongKhoiLuongKeHoach
-                      ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
-                      : 0;
+                <div className="mt-2 flex justify-end">
+                  <button
+                    className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                    title="Thêm hạng mục"
+                    onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
+                  >
+                    <FaPlus size={14} />
+                  </button>
+                </div>
+              </div>
 
-                    const bgColor =
-                      progress >= 100
-                        ? 'bg-green-100'
-                        : progress >= 40
-                          ? 'bg-yellow-100'
-                          : 'bg-red-100';
+              {/* Items (only show if expanded) */}
+              {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
+                const progress = item.tongKhoiLuongKeHoach
+                  ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
+                  : 0;
 
-                    return (
-                      <React.Fragment key={`item-${item.hangMucId}`}>
-                        <tr className={`group ${bgColor} hover:${bgColor.replace('100', '200')}`}>
-                          <td className="px-3 py-2 whitespace-nowrap pl-12">{`${packageIndex + 1}.${itemIndex + 1}`}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">HM-{item.hangMucId}</td>
-                          <td className="px-3 py-2 font-medium">
+                const bgColor =
+                  progress >= 100
+                    ? 'bg-green-100'
+                    : progress >= 40
+                      ? 'bg-yellow-100'
+                      : 'bg-red-100';
+
+                return (
+                  <React.Fragment key={`mobile-item-${item.hangMucId}`}>
+                    <div className={`${bgColor} p-3 rounded-lg shadow-sm border border-gray-200 ml-4`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">
                             <button
                               onClick={() => toggleItem('items', item.hangMucId)}
                               className="flex items-center focus:outline-none"
@@ -404,297 +589,118 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
                                 alt="Toggle"
                                 className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
                               />
-                              <span className="truncate"> Hạng mục: {item.tenHangMuc}</span>
+                              <span className='font-bold text-xs'>Hạng mục: {item.tenHangMuc}</span>
                             </button>
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            {item.danhSachKeHoach?.[0]?.donViTinh || ''}
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap font-medium">
-                            {progress.toFixed(0)}%
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap"></td>
-                          <td className="px-3 py-2 whitespace-nowrap"></td>
-                          <td className="px-3 py-2 whitespace-nowrap"></td>
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="flex space-x-2">
-                              <button
-                                className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                                title="Thêm kế hoạch"
-                                onClick={() => handleAddPlanClick(item.hangMucId)}
-                              >
-                                <FaPlus size={14} />
-                              </button>
-
-                              <button
-                                className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                title="Xóa"
-                              >
-                                <FaTrash size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-
-
-                        {/* Level 3: Plans - Only show if expanded */}
-                        {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
-                          <tr
-                            key={`plan-${plan.keHoachId}`}
-                            className="group bg-white hover:bg-gray-50 border-t relative"
-                          >
-                            <td className="px-3 py-2 whitespace-nowrap pl-20">
-                              {`${packageIndex + 1}.${itemIndex + 1}.${planIndex + 1}`}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">KH-{plan.keHoachId}</td>
-
-                            <td className="px-3 py-4 pl-4 relative h-[80px]">
-                              <div className="flex flex-col space-y-2">
-                                <div>{plan.tenCongTac}</div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
-                                  <button
-                                    onClick={() => handleViewDetails(plan)}
-                                    className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
-                                  >
-                                    Chi tiết tiến độ
-                                  </button>
-                                  <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                    Khó khăn vướng mắc
-                                  </button>
-                                  <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                    Cập nhật tiến độ
-                                  </button>
-                                  <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                    Chỉnh sửa
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
-
-
-
-                            <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {plan.khoiLuongKeHoach
-                                ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
-                                : '0%'}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {calculateDays(plan.ngayBatDau, plan.ngayKetThuc)}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayBatDau)}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayKetThuc)}</td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                          </tr>
-
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div className="md:hidden space-y-3">
-        {data.duAnThanhPhan.danhSachGoiThau?.map((packageItem, packageIndex) => (
-          <React.Fragment key={`mobile-package-${packageItem.goiThauId}`}>
-            {/* Package Card */}
-            <div className="bg-blue-50 p-3 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-medium text-gray-900">
-                    <button
-                      onClick={() => toggleItem('packages', packageItem.goiThauId)}
-                      className="flex items-center focus:outline-none"
-                    >
-                      <img
-                        src={downIcon}
-                        alt="Toggle"
-                        className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
-                      />
-                      <span className='text-xs font-bold'>{packageItem.tenGoiThau}</span>
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">GT-{packageItem.goiThauId}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                <div>
-                  <div className="text-gray-500">Khối lượng TH</div>
-                  <div>{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Khối lượng KH</div>
-                  <div>{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Bắt đầu</div>
-                  <div>{formatDate(packageItem.ngayKhoiCong)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500">Kết thúc</div>
-                  <div>{formatDate(packageItem.ngayHoanThanh)}</div>
-                </div>
-              </div>
-
-              <div className="mt-2 flex justify-end">
-                <button
-                  className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                  title="Thêm hạng mục"
-                  onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
-                >
-                  <FaPlus size={14} />
-                </button>
-              </div>
-            </div>
-
-            {/* Items (only show if expanded) */}
-            {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
-              const progress = item.tongKhoiLuongKeHoach
-                ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
-                : 0;
-
-              const bgColor =
-                progress >= 100
-                  ? 'bg-green-100'
-                  : progress >= 40
-                    ? 'bg-yellow-100'
-                    : 'bg-red-100';
-
-              return (
-                <React.Fragment key={`mobile-item-${item.hangMucId}`}>
-                  <div className={`${bgColor} p-3 rounded-lg shadow-sm border border-gray-200 ml-4`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium">
-                          <button
-                            onClick={() => toggleItem('items', item.hangMucId)}
-                            className="flex items-center focus:outline-none"
-                          >
-                            <img
-                              src={downIcon}
-                              alt="Toggle"
-                              className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
-                            />
-                            <span className='font-bold text-xs'>Hạng mục: {item.tenHangMuc}</span>
-                          </button>
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">HM-{item.hangMucId}</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
-                      <div>
-                        <div className="text-gray-500">Khối lượng TH</div>
-                        <div>{item.tongKhoiLuongThucHien?.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500">Khối lượng KH</div>
-                        <div>{item.tongKhoiLuongKeHoach?.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500">Đơn vị</div>
-                        <div>{item.danhSachKeHoach?.[0]?.donViTinh || ''}</div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500">Tiến độ</div>
-                        <div className="font-medium">{progress.toFixed(0)}%</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex justify-end space-x-2">
-                      <button
-                        className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                        title="Thêm kế hoạch"
-                        onClick={() => handleAddPlanClick(item.hangMucId)}
-                      >
-                        <FaPlus size={14} />
-                      </button>
-                      <button
-                        className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                        title="Xóa"
-                      >
-                        <FaTrash size={14} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Plans (only show if expanded) */}
-                  {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
-                    <div key={`mobile-plan-${plan.keHoachId}`} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 ml-8 group">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-bold text-xs">{plan.tenCongTac}</div>
-                          <div className="text-sm text-gray-500 mt-1">KH-{plan.keHoachId}</div>
+                          </div>
+                          <div className="text-sm text-gray-500 mt-1">HM-{item.hangMucId}</div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
                         <div>
                           <div className="text-gray-500">Khối lượng TH</div>
-                          <div>{plan.tongKhoiLuongThucHien?.toLocaleString()}</div>
+                          <div>{item.tongKhoiLuongThucHien?.toLocaleString()}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Khối lượng KH</div>
-                          <div>{plan.khoiLuongKeHoach?.toLocaleString()}</div>
+                          <div>{item.tongKhoiLuongKeHoach?.toLocaleString()}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Đơn vị</div>
-                          <div>{plan.donViTinh}</div>
+                          <div>{item.danhSachKeHoach?.[0]?.donViTinh || ''}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Tiến độ</div>
-                          <div>
-                            {plan.khoiLuongKeHoach
-                              ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
-                              : '0%'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Thời gian</div>
-                          <div>{calculateDays(plan.ngayBatDau, plan.ngayKetThuc)} ngày</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Bắt đầu</div>
-                          <div>{formatDate(plan.ngayBatDau)}</div>
-                        </div>
-                        <div>
-                          <div className="text-gray-500">Kết thúc</div>
-                          <div>{formatDate(plan.ngayKetThuc)}</div>
+                          <div className="font-medium">{progress.toFixed(0)}%</div>
                         </div>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
+                      <div className="mt-2 flex justify-end space-x-2">
                         <button
-                          onClick={() => handleViewDetails(plan)}
-                          className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                          title="Thêm kế hoạch"
+                          onClick={() => handleAddPlanClick(item.hangMucId)}
                         >
-                          Chi tiết tiến độ
+                          <FaPlus size={14} />
                         </button>
-                        <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                          Khó khăn vướng mắc
-                        </button>
-                        <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                          Cập nhật tiến độ
-                        </button>
-                        <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                          Chỉnh sửa
+                        <button
+                          className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                          title="Xóa"
+                        >
+                          <FaTrash size={14} />
                         </button>
                       </div>
                     </div>
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </React.Fragment>
-        ))}
+
+                    {/* Plans (only show if expanded) */}
+                    {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
+                      <div key={`mobile-plan-${plan.keHoachId}`} className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 ml-8 group">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-xs">{plan.tenCongTac}</div>
+                            <div className="text-sm text-gray-500 mt-1">KH-{plan.keHoachId}</div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                          <div>
+                            <div className="text-gray-500">Khối lượng TH</div>
+                            <div>{plan.tongKhoiLuongThucHien?.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Khối lượng KH</div>
+                            <div>{plan.khoiLuongKeHoach?.toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Đơn vị</div>
+                            <div>{plan.donViTinh}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Tiến độ</div>
+                            <div>
+                              {plan.khoiLuongKeHoach
+                                ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
+                                : '0%'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Thời gian</div>
+                            <div>{calculateDays(plan.ngayBatDau, plan.ngayKetThuc)} ngày</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Bắt đầu</div>
+                            <div>{formatDate(plan.ngayBatDau)}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-500">Kết thúc</div>
+                            <div>{formatDate(plan.ngayKetThuc)}</div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
+                          <button
+                            onClick={() => handleViewDetails(plan)}
+                            className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                          >
+                            Chi tiết tiến độ
+                          </button>
+                          <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                            Khó khăn vướng mắc
+                          </button>
+                          <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                            Cập nhật tiến độ
+                          </button>
+                          <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
+                            Chỉnh sửa
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </React.Fragment>
+          ))}
       </div>
       {showAddCategoryModal && (
         <AddNewCategories

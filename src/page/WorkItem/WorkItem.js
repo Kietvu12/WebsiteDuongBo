@@ -30,7 +30,7 @@ const WorkItem = () => {
                     const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedSubProjectId}/detail`);
                     setSubProject(response.data.data.duAnThanhPhan);
                 } else if (selectedProjectId) {
-                    const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${selectedProjectId}`);
+                    const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
                     setProject(response.data.data.duAnTong);
                 }
 
@@ -138,7 +138,7 @@ const WorkItem = () => {
                         <SubProjectTable duAnThanhPhanId={selectedSubProjectId} />
                     ) : selectedProjectId !== null ? (
                         // Hiển thị bảng dự án tổng nếu selectedProjectId khác null
-                        <WorkTable projectId={selectedProjectId} />
+                        <SubProjectTable duAnThanhPhanId={selectedProjectId} />
                     ) : (
                         // Hiển thị thông báo nếu cả hai đều null
                         <div className="no-project-selected">

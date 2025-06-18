@@ -15,6 +15,8 @@ import { useProject } from '../../contexts/ProjectContext';
 import pin from '../../assets/img/pin.png'
 import attachment from '../../assets/img/attachment.png'
 import trash from '../../assets/img/file.png'
+import { FiPlus, FiArrowLeft } from 'react-icons/fi';
+import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
 const SideProject = () => {
   const location = useLocation();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -35,6 +37,7 @@ const SideProject = () => {
   const [completionLevel, setCompletionLevel] = useState('all');
   const [filteredSubProjects, setFilteredProjects] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showAddProject, setShowAddProject] = useState(false);
 
   const filterProjects = () => {
     let result = [...subProjects];
@@ -238,25 +241,25 @@ const SideProject = () => {
         return { backgroundColor: '#3498db', color: 'white' };
     }
   };
-   const [pinnedProjects, setPinnedProjects] = useState(() => {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('pinnedProjects');
-        return saved ? JSON.parse(saved) : [];
-      }
-      return [];
+  const [pinnedProjects, setPinnedProjects] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pinnedProjects');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  const handlePinProject = (subProjectId) => {
+    setPinnedProjects(prev => {
+      const newPinned = prev.includes(subProjectId)
+        ? prev.filter(id => id !== subProjectId)
+        : [subProjectId, ...prev];
+
+      // Lưu vào localStorage
+      localStorage.setItem('pinnedProjects', JSON.stringify(newPinned));
+      return newPinned;
     });
-  
-    const handlePinProject = (subProjectId) => {
-      setPinnedProjects(prev => {
-        const newPinned = prev.includes(subProjectId)
-          ? prev.filter(id => id !== subProjectId) 
-          : [subProjectId, ...prev]; 
-  
-        // Lưu vào localStorage
-        localStorage.setItem('pinnedProjects', JSON.stringify(newPinned));
-        return newPinned;
-      });
-    };
+  };
   const resetFilters = () => {
     setFromDate('');
     setToDate('');
@@ -279,8 +282,22 @@ const SideProject = () => {
     <div className="SideProject">
       <div className="w-full bg-white shadow-sm">
         <div className="flex justify-between items-center px-3 py-2 border-b">
-          <div>
-            <button className="p-2 rounded hover:bg-gray-200" aria-label="Navigation menu">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded hover:bg-gray-200"
+              aria-label="Quay lại"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+            </button>
+
+            {/* Thêm nút Tạo dự án mới */}
+            <button
+              onClick={() => setShowAddProject(true)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
+            >
+              <FiPlus className="w-3 h-3" />
+              <span>Tạo dự án mới</span>
             </button>
           </div>
 
@@ -391,10 +408,10 @@ const SideProject = () => {
       </div>
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className=" hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] md:min-w-full">
-            <thead className="bg-gray-50 sticky top-0">
-            <tr>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px] md:min-w-full">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">STT</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dự án</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dải tuyến</th>
@@ -402,9 +419,9 @@ const SideProject = () => {
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Tiến độ</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Thao tác</th>
                 </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-            {filteredSubProjects.length > 0 ? (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredSubProjects.length > 0 ? (
                   [...filteredSubProjects]
                     .sort((a, b) => {
                       const aIsPinned = pinnedProjects.includes(a.DuAnID);
@@ -491,129 +508,94 @@ const SideProject = () => {
                     </td>
                   </tr>
                 )}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
           </div>
         </div>
-                <div className="md:hidden">
-                  <div className="space-y-3 p-3">
-                    {filteredSubProjects.length > 0 ? (
-                      [...filteredSubProjects]
-                        .sort((a, b) => {
-                          const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                          const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                          if (aIsPinned && !bIsPinned) return -1;
-                          if (!aIsPinned && bIsPinned) return 1;
-                          return 0;
-                        })
-                        .map((subProject, index) => (
-                          <div
-                            key={subProject.DuAnID}
-                            className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer"
-                            onClick={() => handleDetail(subProject.DuAnID)}
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="font-medium text-gray-800">{subProject.TenDuAn}</div>
-                              <div className="flex space-x-2">
-                                <button
-                                  className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <img src={attachment} alt="Tệp" className="w-4 h-4" />
-                                </button>
-                                <button
-                                  className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <img src={trash} alt="Xoá" className="w-4 h-4" />
-                                </button>
-                                <button
-                                  className={`w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
-                                    }`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePinProject(subProject.DuAnID);
-                                  }}
-                                >
-                                  <img src={pin} alt="Ghim" className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-        
-                            <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-                              <div>
-                                <span className="text-gray-500">Dải tuyến:</span>
-                                <span className="ml-1 font-medium">{subProject.TongChieuDai} Km</span>
-                              </div>
-                            </div>
-        
-                            <div className="flex justify-between items-center mt-2">
-                              <span
-                                className="inline-block px-2 py-1 rounded text-xs font-medium"
-                                style={getStatusStyle(subProject.TrangThai)}
-                              >
-                                {subProject.TrangThai}
-                              </span>
-        
-                              <div className="flex items-center text-xs text-gray-600">
-                                <img src={actualIcon} width="14" alt="Hoàn thành" className="mr-1" />
-                                <span>{subProject.phanTramHoanThanh || '0'}%</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <div className="text-center text-gray-500 py-4">
-                        Không tìm thấy dự án nào phù hợp
+        <div className="md:hidden">
+          <div className="space-y-3 p-3">
+            {filteredSubProjects.length > 0 ? (
+              [...filteredSubProjects]
+                .sort((a, b) => {
+                  const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                  const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                  if (aIsPinned && !bIsPinned) return -1;
+                  if (!aIsPinned && bIsPinned) return 1;
+                  return 0;
+                })
+                .map((subProject, index) => (
+                  <div
+                    key={subProject.DuAnID}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer"
+                    onClick={() => handleDetail(subProject.DuAnID)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-medium text-gray-800">{subProject.TenDuAn}</div>
+                      <div className="flex space-x-2">
+                        <button
+                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <img src={attachment} alt="Tệp" className="w-4 h-4" />
+                        </button>
+                        <button
+                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <img src={trash} alt="Xoá" className="w-4 h-4" />
+                        </button>
+                        <button
+                          className={`w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
+                            }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePinProject(subProject.DuAnID);
+                          }}
+                        >
+                          <img src={pin} alt="Ghim" className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm mb-2">
+                      <div>
+                        <span className="text-gray-500">Dải tuyến:</span>
+                        <span className="ml-1 font-medium">{subProject.TongChieuDai} Km</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2">
+                      <span
+                        className="inline-block px-2 py-1 rounded text-xs font-medium"
+                        style={getStatusStyle(subProject.TrangThai)}
+                      >
+                        {subProject.TrangThai}
+                      </span>
+
+                      <div className="flex items-center text-xs text-gray-600">
+                        <img src={actualIcon} width="14" alt="Hoàn thành" className="mr-1" />
+                        <span>{subProject.phanTramHoanThanh || '0'}%</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-      </div>
-
-      {showAddPopup && (
-        <div className="popup" onClick={() => setShowAddPopup(false)}>
-          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
-              <h3>Thêm dự án thành phần mới</h3>
-              <button className="close-btn" onClick={() => setShowAddPopup(false)}>×</button>
-            </div>
-
-            <div className="form-group">
-              <label>Tên dự án</label>
-              <input type="text" placeholder="Nhập tên dự án" />
-            </div>
-
-            <div className="form-group">
-              <label>Tỉnh/Thành</label>
-              <input type="text" placeholder="Nhập tỉnh/thành" />
-            </div>
-
-            <div className="form-group">
-              <label>Chiều dài (km)</label>
-              <input type="number" placeholder="Nhập chiều dài" />
-            </div>
-
-            <div className="form-group">
-              <label>Trạng thái</label>
-              <select>
-                <option>Chưa bắt đầu</option>
-                <option>Đang tiến hành</option>
-                <option>Đã hoàn thành</option>
-                <option>Chậm tiến độ</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Mô tả</label>
-              <textarea rows="3" placeholder="Nhập mô tả dự án"></textarea>
-            </div>
-
-            <div className="form-actions">
-              <button onClick={() => setShowAddPopup(false)}>Hủy bỏ</button>
-              <button className="btn-save">Lưu lại</button>
-            </div>
+                ))
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                Không tìm thấy dự án nào phù hợp
+              </div>
+            )}
           </div>
+        </div>
+      </div>
+      {showAddProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <AddNewSubProject
+            DuAnID={project.DuAnID}
+            onClose={() => setShowAddProject(false)}
+            onSuccess={(newProject) => {
+              // Xử lý khi thêm thành công
+            }}
+          />
         </div>
       )}
     </div>
