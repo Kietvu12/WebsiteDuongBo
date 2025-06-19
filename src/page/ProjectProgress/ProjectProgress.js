@@ -10,26 +10,46 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa'
 import axios from 'axios';
 const ProjectProgress = () => {
-  const { selectedProjectId, selectedSubProjectId } = useProject();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [fromDate, setFromDate] = useState('2023-02-26');
   const [toDate, setToDate] = useState('2023-09-26');
-  const [status, setStatus] = useState('all');
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [project, setProject] = useState(null);
-  const [subProject, setSubProject] = useState(null);
+  const [status, setStatus] = useState('all');
+  const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setIsLoadingProjects(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/duAnList`);
+        const data = await response.json();
+        if (data.success) {
+          setProjects(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+      } finally {
+        setIsLoadingProjects(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        if (selectedSubProjectId) {
-          const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedSubProjectId}/detail`);
-          setSubProject(response.data.data.duAnThanhPhan);
-        } else if (selectedProjectId) {
-          const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${selectedProjectId}`);
+        if (selectedProjectId) {
+          const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
           setProject(response.data.data.duAnTong);
         }
 
@@ -41,15 +61,44 @@ const ProjectProgress = () => {
     };
 
     fetchData();
-  }, [selectedProjectId, selectedSubProjectId, navigate]);
-  const renderTitle = () => {
-    if (selectedSubProjectId && subProject) {
-      return `Kế hoạch các hạng mục - ${subProject.tenDuAn}`;
-    } else if (project) {
-      return `Kế hoạch các hạng mục - ${project.TenDuAn}`;
+  }, [selectedProjectId, navigate]);
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredProjects([]);
+      return;
     }
-    return 'Kế hoạch các hạng mục';
+
+    const filtered = projects.filter(project =>
+      project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredProjects(filtered);
+  }, [searchTerm, projects]);
+
+  // Event handlers
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setShowSuggestions(true);
   };
+
+  const handleProjectSelect = (project) => {
+    setSearchTerm(project.TenDuAn);
+    setSelectedProjectId(project.DuAnID);
+    setShowSuggestions(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (filteredProjects.length > 0) {
+      handleProjectSelect(filteredProjects[0]);
+    }
+  };
+  const renderTitle = () => {
+    if (project) {
+      return `Tiến độ các hạng mục - ${project.tenDuAn}`;
+    }
+    return 'Tiến độ các hạng mục';
+  };
+
 
   return (
     <div className='plan'>
@@ -76,17 +125,51 @@ const ProjectProgress = () => {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
 
             {/* Search */}
-            <div className="flex-1">
-              <div className="flex gap-2 w-full">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm..."
-                  className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
-                />
-                <button className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 text-sm whitespace-nowrap">
-                  Tìm
+            <div className="flex-1 relative">
+              <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
+                <div className="relative flex-grow">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm dự án..."
+                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  />
+                  {showSuggestions && filteredProjects.length > 0 && (
+                    <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
+                      {filteredProjects.map(project => (
+                        <li
+                          key={project.DuAnID}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          onClick={() => handleProjectSelect(project)}
+                        >
+                          {project.TenDuAn}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 text-sm whitespace-nowrap"
+                  disabled={isLoadingProjects}
+                >
+                  {isLoadingProjects ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang tải...
+                    </span>
+                  ) : 'Tìm'}
                 </button>
-              </div>
+              </form>
+              {isLoadingProjects && (
+                <p className="text-xs text-gray-500 mt-1">Đang tải danh sách dự án...</p>
+              )}
             </div>
 
             {/* Filters */}

@@ -427,6 +427,190 @@ app.get('/duAnTong', async (req, res) => {
       return {
         ...duAnTong,
         ...mainProjectTotals,
+        soLuongDuAnThanhPhan: duAnThanhPhan.length,
+        soLuongGoiThau: soLuongGoiThau, 
+        phanTramHoanThanh: phanTramHoanThanh.toFixed(2),
+        phanTramChamTienDo: phanTramChamTienDo.toFixed(2),
+        phanTramKeHoach: phanTramKeHoach.toFixed(2),
+        coordinates: duAnThanhPhanWithDetails[0]?.coordinates || null,
+        duAnThanhPhan: duAnThanhPhanWithDetails
+      };
+    }));
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/duAnList', async (req, res) => {
+  try {
+    const [duAnTongList] = await db.query(
+      'SELECT * FROM duan'
+    );
+
+    if (duAnTongList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy dự án TỔNG nào'
+      });
+    }
+
+    const result = await Promise.all(duAnTongList.map(async (duAnTong) => {
+      const duAnId = duAnTong.DuAnID;
+      
+      // Get all sub-projects
+      const [duAnThanhPhan] = await db.query(
+        'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
+        [duAnId]
+      );
+
+      // Initialize totals
+      let tongKhoiLuongKeHoach = 0;
+      let tongKhoiLuongHoanThanh = 0;
+      let tongKhoiLuongChamTienDo = 0;
+      let soLuongGoiThau = 0;
+
+      // Process each sub-project
+      const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
+        // Get all contract packages for this sub-project
+        const [goiThauList] = await db.query(
+          'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
+          [duAnTP.DuAnID]
+        );
+
+        // Cập nhật tổng số gói thầu
+        soLuongGoiThau += goiThauList.length;
+
+        // Process each contract package
+        const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
+          // Get all work items for this contract package
+          const [hangMucList] = await db.query(
+            'SELECT * FROM hangmuc WHERE GoiThauID = ? ORDER BY HangMucID ASC',
+            [goiThau.GoiThau_ID]
+          );
+
+          // Process each work item
+          const hangMucWithDetails = await Promise.all(hangMucList.map(async (hangMuc) => {
+            // Get all plans for this work item
+            const [keHoachList] = await db.query(
+              'SELECT * FROM quanlykehoach WHERE HangMucID = ? ORDER BY KeHoachID ASC',
+              [hangMuc.HangMucID]
+            );
+
+            // Process each plan
+            const keHoachWithDetails = await Promise.all(keHoachList.map(async (keHoach) => {
+              // Get all progress records for this plan
+              const [tienDoList] = await db.query(
+                'SELECT * FROM tiendothuchien WHERE KeHoachID = ? ORDER BY NgayCapNhat ASC',
+                [keHoach.KeHoachID]
+              );
+
+              // Calculate total actual quantity for this plan
+              const tongThucHien = tienDoList.reduce((sum, td) => sum + td.KhoiLuongThucHien, 0);
+              
+              // Check if plan is completed (actual >= planned)
+              const isHoanThanh = tongThucHien >= keHoach.KhoiLuongKeHoach;
+              
+              // Check if plan is delayed (not completed and past end date)
+              const isChamTienDo = !isHoanThanh && new Date() > new Date(keHoach.NgayKetThuc);
+              
+              // Calculate quantities
+              const khoiLuongHoanThanh = isHoanThanh ? keHoach.KhoiLuongKeHoach : 0;
+              const khoiLuongChamTienDo = isChamTienDo ? (keHoach.KhoiLuongKeHoach - tongThucHien) : 0;
+
+              return {
+                keHoachId: keHoach.KeHoachID,
+                khoiLuongKeHoach: keHoach.KhoiLuongKeHoach,
+                khoiLuongHoanThanh,
+                khoiLuongChamTienDo,
+                ngayKetThuc: keHoach.NgayKetThuc
+              };
+            }));
+
+            // Aggregate quantities for work item
+            const hangMucKhoiLuong = keHoachWithDetails.reduce((acc, curr) => ({
+              khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+              khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+              khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+            }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+            return {
+              ...hangMuc,
+              ...hangMucKhoiLuong
+            };
+          }));
+
+          // Aggregate quantities for contract package
+          const goiThauKhoiLuong = hangMucWithDetails.reduce((acc, curr) => ({
+            khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+            khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+            khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+          }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+          return {
+            ...goiThau,
+            ...goiThauKhoiLuong,
+            hangMuc: hangMucWithDetails
+          };
+        }));
+
+        // Aggregate quantities for sub-project
+        const duAnTPKhoiLuong = goiThauWithDetails.reduce((acc, curr) => ({
+          khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+          khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+          khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+        }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+        // Get coordinates from first and last contract package
+        const coordinates = goiThauList.length > 0 ? {
+          start: {
+            lat: goiThauList[0].ToaDo_BatDau_Y,
+            lng: goiThauList[0].ToaDo_BatDau_X
+          },
+          end: {
+            lat: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_Y,
+            lng: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_X
+          }
+        } : null;
+
+        return {
+          ...duAnTP,
+          ...duAnTPKhoiLuong,
+          coordinates,
+          goiThau: goiThauWithDetails
+        };
+      }));
+
+      // Calculate totals for main project
+      const mainProjectTotals = duAnThanhPhanWithDetails.reduce((acc, curr) => ({
+        khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+        khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+        khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+      }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+      // Calculate percentages
+      const phanTramHoanThanh = mainProjectTotals.khoiLuongKeHoach > 0 
+        ? (mainProjectTotals.khoiLuongHoanThanh / mainProjectTotals.khoiLuongKeHoach) * 100 
+        : 0;
+      
+      const phanTramChamTienDo = mainProjectTotals.khoiLuongKeHoach > 0 
+        ? (mainProjectTotals.khoiLuongChamTienDo / mainProjectTotals.khoiLuongKeHoach) * 100 
+        : 0;
+      
+      const phanTramKeHoach = 100 - phanTramHoanThanh - phanTramChamTienDo;
+
+      return {
+        ...duAnTong,
+        ...mainProjectTotals,
         soLuongDuAnThanhPhan: duAnThanhPhan.length, // Thêm số lượng dự án thành phần
         soLuongGoiThau: soLuongGoiThau, // Thêm số lượng gói thầu
         phanTramHoanThanh: phanTramHoanThanh.toFixed(2),
@@ -1442,7 +1626,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
 
     const currentProject = duAn[0];
 
-    // 2. Hàm lấy chi tiết gói thầu, hạng mục, kế hoạch và tiến độ
+    // 2. Hàm lấy chi tiết gói thầu, hạng mục, kế hoạch và tiến độ (đã cập nhật)
     const getGoiThauDetails = async (duAnId) => {
       // Lấy các gói thầu thuộc dự án
       const [goiThauList] = await db.query(
@@ -1465,49 +1649,56 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
             [goiThau.GoiThau_ID]
           );
 
-          // Lấy thông tin kế hoạch và khối lượng thực thi cho từng hạng mục
+          // Lấy thông tin kế hoạch và khối lượng thực thi cho từng hạng mục (đã cập nhật)
           const hangMucWithKeHoach = await Promise.all(
             hangMucList.map(async (hangMuc) => {
-              const [keHoachWithTienDo] = await db.query(
-                `SELECT 
-                  kh.KeHoachID,
-                  kh.TenCongTac,
-                  kh.KhoiLuongKeHoach,
-                  kh.DonViTinh,
-                  kh.NgayBatDau,
-                  kh.NgayKetThuc,
-                  kh.GhiChu,
-                  COALESCE(SUM(td.KhoiLuongThucHien), 0) AS TongThucHien,
-                  MAX(td.NgayCapNhat) AS NgayCapNhatGanNhat
+              // Lấy danh sách kế hoạch với nhà thầu và tiến độ thực hiện
+              const [keHoachList] = await db.query(
+                `SELECT kh.*, nt.TenNhaThau 
                  FROM quanlykehoach kh
-                 LEFT JOIN tiendothuchien td ON kh.KeHoachID = td.KeHoachID
+                 JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
                  WHERE kh.HangMucID = ?
-                 GROUP BY kh.KeHoachID
                  ORDER BY kh.KeHoachID ASC`,
                 [hangMuc.HangMucID]
               );
 
-              // Format dữ liệu kế hoạch
-              const formattedKeHoach = keHoachWithTienDo.map(kh => ({
-                keHoachId: kh.KeHoachID,
-                tenCongTac: kh.TenCongTac,
-                khoiLuongKeHoach: kh.KhoiLuongKeHoach,
-                donViTinh: kh.DonViTinh,
-                ngayBatDau: kh.NgayBatDau,
-                ngayKetThuc: kh.NgayKetThuc,
-                ghiChu: kh.GhiChu,
-                tongKhoiLuongThucHien: kh.TongThucHien,
-                ngayCapNhatGanNhat: kh.NgayCapNhatGanNhat,
-                phanTramHoanThanh: kh.KhoiLuongKeHoach > 0 
-                  ? Math.min(100, (kh.TongThucHien / kh.KhoiLuongKeHoach * 100)).toFixed(2)
-                  : "0.00"
-              }));
+              // Lấy chi tiết tiến độ thực hiện cho từng kế hoạch
+              const keHoachWithTienDo = await Promise.all(
+                keHoachList.map(async (keHoach) => {
+                  const [tienDoList] = await db.query(
+                    `SELECT * FROM tiendothuchien 
+                     WHERE KeHoachID = ?
+                     ORDER BY NgayCapNhat DESC`,
+                    [keHoach.KeHoachID]
+                  );
+
+                  // Tính tổng khối lượng đã thực hiện
+                  const tongThucHien = tienDoList.reduce((sum, item) => sum + item.KhoiLuongThucHien, 0);
+
+                  return {
+                    keHoachId: keHoach.KeHoachID,
+                    tenCongTac: keHoach.TenCongTac,
+                    khoiLuongKeHoach: keHoach.KhoiLuongKeHoach,
+                    donViTinh: keHoach.DonViTinh,
+                    ngayBatDau: keHoach.NgayBatDau,
+                    ngayKetThuc: keHoach.NgayKetThuc,
+                    ghiChu: keHoach.GhiChu,
+                    tenNhaThau: keHoach.TenNhaThau,
+                    tienDoThucHien: tienDoList,
+                    tongKhoiLuongThucHien: tongThucHien,
+                    ngayCapNhatGanNhat: tienDoList[0]?.NgayCapNhat || null,
+                    phanTramHoanThanh: keHoach.KhoiLuongKeHoach > 0 
+                      ? Math.min(100, (tongThucHien / keHoach.KhoiLuongKeHoach * 100)).toFixed(2)
+                      : "0.00"
+                  };
+                })
+              );
 
               // Tính tổng cho hạng mục
-              const tongKhoiLuongKeHoach = formattedKeHoach.reduce(
+              const tongKhoiLuongKeHoach = keHoachWithTienDo.reduce(
                 (sum, item) => sum + (item.khoiLuongKeHoach || 0), 0
               );
-              const tongKhoiLuongThucHien = formattedKeHoach.reduce(
+              const tongKhoiLuongThucHien = keHoachWithTienDo.reduce(
                 (sum, item) => sum + (item.tongKhoiLuongThucHien || 0), 0
               );
 
@@ -1520,7 +1711,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
                 nhanLucThiCong: hangMuc.NhanLucThiCong,
                 thoiGianHoanThanh: hangMuc.ThoiGianHoanThanh,
                 ghiChu: hangMuc.GhiChu,
-                danhSachKeHoach: formattedKeHoach,
+                danhSachKeHoach: keHoachWithTienDo,
                 tongKhoiLuongKeHoach,
                 tongKhoiLuongThucHien,
                 phanTramHoanThanh: tongKhoiLuongKeHoach > 0 

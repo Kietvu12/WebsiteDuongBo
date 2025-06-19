@@ -21,10 +21,10 @@ const Sidebar = () => {
   // Menu mở rộng
   const [openMenus, setOpenMenus] = useState({
     project: true,
-    progress: false,
-    requirements: false,
-    report: false,
-    setting: false
+    progress: true,
+    requirements: true,
+    report: true,
+    setting: true
   });
 
   // trạng thái sidebar mở (mobile)
@@ -67,7 +67,7 @@ const Sidebar = () => {
   };
 
   const isMenuItemDisabled = (menu) => {
-    return isDashboard && menu !== 'project';
+    return;
   };
 
   return (

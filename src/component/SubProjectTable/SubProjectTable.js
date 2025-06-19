@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import downIcon from '../../assets/img/down.png';
 import axios from 'axios';
@@ -6,13 +7,43 @@ import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
 import AddNewPlan from '../AddNewPlan/AddNewPlan';
 import AddNewCategories from '../AddNewCategories/AddNewCategories';
+import UpdateProgress from '../UpdateProgress/UpdateProgress';
+import IssueList from '../IssueList/IssueList';
 const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
-  const { selectedProjectId, selectedSubProjectId } = useProject();
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const navigate = useNavigate();
+  const [showProgressPopup, setShowProgressPopup] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showIssuePopup, setShowIssuePopup] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+
+  const handleOpenIssuePopup = (plan, projectId) => {
+    setSelectedPlan(plan);
+    setSelectedProjectId(projectId);
+    setShowIssuePopup(true);
+  };
+
+  // Hàm đóng popup
+  const handleCloseIssuePopup = () => {
+    setShowIssuePopup(false);
+    setSelectedPlan(null);
+    setSelectedProjectId(null);
+  };
+
+  // Hàm mở popup cập nhật tiến độ
+  const handleOpenProgressPopup = (plan) => {
+    setSelectedPlan(plan);
+    setShowProgressPopup(true);
+  };
+
+  // Hàm đóng popup
+  const handleCloseProgressPopup = () => {
+    setShowProgressPopup(false);
+    setSelectedPlan(null);
+  };
   const [expandedItems, setExpandedItems] = useState({
     packages: {},
     categories: {},
@@ -34,12 +65,15 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
         const result = await response.json();
         setData(result.data);
+        console.log('json: ', result.data);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
+
+    console.log('data: ', data);
 
     fetchData();
   }, [duAnThanhPhanId]);
@@ -313,8 +347,8 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
     );
   };
-  const handleApproval = () => navigate(`/approvals/${selectedProjectId}`)
-  const handleProjectProgress = () => navigate(`/project-progress/${selectedProjectId}`)
+  const handleApproval = () => navigate(`/approvals/${duAnThanhPhanId}`)
+  const handleProjectProgress = () => navigate(`/project-progress/${duAnThanhPhanId}`)
   if (loading) return <div className="p-4">Loading...</div>;
   if (!data) return <div className="p-4">No data available</div>;
 
@@ -339,9 +373,14 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-            {data.duAnThanhPhan.danhSachGoiThau
-    ?.filter(packageItem => !packageId || packageItem.goiThauId === packageId)
-    ?.map((packageItem, packageIndex) => (
+              {([]).concat(
+                data?.duAnThanhPhan?.danhSachGoiThau || [],
+                data?.duAnTong?.danhSachGoiThauTrucTiep || [],
+                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+              )
+                .filter(packageItem => !packageId || packageItem.goiThauId === packageId)
+                .map((packageItem, packageIndex) => (
+
                   <React.Fragment key={`package-${packageItem.goiThauId}`}>
                     <tr className="group bg-blue-50 hover:bg-blue-100">
                       <td className="px-3 py-2 whitespace-nowrap pl-8">{`${packageIndex + 1}`}</td>
@@ -464,21 +503,24 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                                     >
                                       Chi tiết tiến độ
                                     </button>
-                                    <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                      Khó khăn vướng mắc
-                                    </button>
-                                    <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                      Cập nhật tiến độ
-                                    </button>
+                                    <button 
+                  onClick={() => handleOpenIssuePopup(plan, duAnThanhPhanId)} 
+                  className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                >
+                  Khó khăn vướng mắc
+                </button>
+                                    <button 
+                  onClick={() => handleOpenProgressPopup(plan)}
+                  className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                >
+                  Cập nhật tiến độ
+                </button>
                                     <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
                                       Chỉnh sửa
                                     </button>
                                   </div>
                                 </div>
                               </td>
-
-
-
                               <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
                               <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
                               <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>
@@ -506,9 +548,13 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         </div>
       </div>
       <div className="md:hidden space-y-3">
-        {data.duAnThanhPhan.danhSachGoiThau
-          ?.filter(packageItem => packageItem.goiThauId === packageId)
-          ?.map((packageItem, packageIndex) => (
+      {([]).concat(
+                data?.duAnThanhPhan?.danhSachGoiThau || [],
+                data?.duAnTong?.danhSachGoiThauTrucTiep || [],
+                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+              )
+                .filter(packageItem => !packageId || packageItem.goiThauId === packageId)
+                .map((packageItem, packageIndex) => (
             <React.Fragment key={`mobile-package-${packageItem.goiThauId}`}>
               {/* Package Card */}
               <div className="bg-blue-50 p-3 rounded-lg shadow-sm border border-gray-200">
@@ -684,9 +730,12 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                           >
                             Chi tiết tiến độ
                           </button>
-                          <button onClick={handleApproval} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                            Khó khăn vướng mắc
-                          </button>
+                          <button 
+                  onClick={() => handleOpenIssuePopup(plan, duAnThanhPhanId)} // Truyền cả projectId
+                  className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
+                >
+                  Khó khăn vướng mắc
+                </button>
                           <button onClick={handleProjectProgress} className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
                             Cập nhật tiến độ
                           </button>
@@ -723,6 +772,44 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         progressData={progressPopup.progressData}
         onClose={() => setProgressPopup({ ...progressPopup, visible: false })}
       />
+      {showProgressPopup && selectedPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b p-4">
+              <h3 className="text-lg font-semibold">Cập nhật tiến độ - KH-{selectedPlan.keHoachId}</h3>
+              <button 
+                onClick={handleCloseProgressPopup}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <UpdateProgress 
+              keHoachId={selectedPlan.keHoachId} 
+              DonViTinh={selectedPlan.donViTinh}
+              onClose={handleCloseProgressPopup}
+              onSuccess={() => {
+                // Thêm logic cập nhật dữ liệu sau khi gửi thành công nếu cần
+                handleCloseProgressPopup();
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+{showIssuePopup && selectedPlan && duAnThanhPhanId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <IssueList 
+              keHoachId={selectedPlan.keHoachId} 
+              duAnId={duAnThanhPhanId}
+              onClose={handleCloseIssuePopup}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

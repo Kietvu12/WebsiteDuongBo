@@ -303,7 +303,6 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
 
       if (response.data.success) {
         alert('Tạo gói thầu thành công!');
-        // Reset form
         setFormData({
           TenGoiThau: '',
           DuAn_ID: projectId,

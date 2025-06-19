@@ -207,7 +207,7 @@ const Detail = () => {
           projectId={subProjectId}
           onClose={() => setShowAddPackage(false)}
           onSuccess={(newPackage) => {
-            // Xử lý khi thêm thành công
+            
           }}
           className="bg-white rounded-lg shadow-xl overflow-hidden"
         />

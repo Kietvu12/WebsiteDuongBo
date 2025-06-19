@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
@@ -79,11 +80,31 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
           {/* Level 1 - Dự án */}
           <tr className="bg-green-50 hover:bg-green-100">
             <td className="px-2 sm:px-4 py-2">1</td>
-            <td className="px-2 sm:px-4 py-2">DA-{data.duAnThanhPhan.duAnId}</td>
-            <td className="px-2 sm:px-4 py-2 font-medium">{data.duAnThanhPhan.tenDuAn}</td>
+            <td className="px-2 sm:px-4 py-2">DA-{([]).concat(
+              data?.duAnThanhPhan?.duAnId || [],
+              data?.duAnTong?.duAnId || [],
+              data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.duAnId) || []
+            )}</td>
+            <td className="px-2 sm:px-4 py-2 font-medium">{([]).concat(
+              data?.duAnThanhPhan?.tenDuAn || [],
+              data?.duAnTong?.tenDuAn || [],
+              data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tenDuAn) || []
+            )}</td>
             <td colSpan="5" className="px-2 sm:px-4 py-2 text-sm">
-              Tổng số vướng mắc: {data.duAnThanhPhan.tongVuongMac}
-              (Đã phê duyệt: {data.duAnThanhPhan.tongDaPheDuyet} | Chưa phê duyệt: {data.duAnThanhPhan.tongChuaPheDuyet})
+              Tổng số vướng mắc: {([]).concat(
+                data?.duAnThanhPhan?.tongVuongMac || [],
+                data?.duAnTong?.tongVuongMac || [],
+                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongVuongMac) || []
+              )}
+              (Đã phê duyệt: {([]).concat(
+                data?.duAnThanhPhan?.tongDaPheDuyet || [],
+                data?.duAnTong?.tongDaPheDuyet || [],
+                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongDaPheDuyet) || []
+              )} | Chưa phê duyệt: {([]).concat(
+                data?.duAnThanhPhan?.tongChuaPheDuyet || [],
+                data?.duAnTong?.tongChuaPheDuyet || [],
+                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongChuaPheDuyet) || []
+              )})
             </td>
             <td className="px-2 sm:px-4 py-2">
               <button
@@ -96,7 +117,11 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
           </tr>
 
           {/* Level 2 - Gói thầu */}
-          {data.duAnThanhPhan.danhSachGoiThau.map((goiThau, indexGT) => (
+          {([]).concat(
+            data?.duAnThanhPhan?.danhSachGoiThau || [],
+            data?.duAnTong?.danhSachGoiThauTrucTiep || [],
+            data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+          ).map((goiThau, indexGT) => (
             <React.Fragment key={`goithau-${goiThau.goiThauId}`}>
               <tr className="bg-yellow-50 hover:bg-yellow-100">
                 <td className="px-2 sm:px-4 py-2">{indexGT + 1}</td>
@@ -227,16 +252,36 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
     <div className="bg-green-50 p-3 rounded-lg shadow-sm border border-gray-200">
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium text-gray-900">DA-{data.duAnThanhPhan.duAnId}</div>
-          <div className="text-sm text-gray-700 mt-1">{data.duAnThanhPhan.tenDuAn}</div>
+          <div className="font-medium text-gray-900">DA-{([]).concat(
+            data?.duAnThanhPhan?.duAnId || [],
+            data?.duAnTong?.duAnId || [],
+            data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.duAnId) || []
+          )}</div>
+          <div className="text-sm text-gray-700 mt-1">{([]).concat(
+            data?.duAnThanhPhan?.tenDuAn || [],
+            data?.duAnTong?.tenDuAn || [],
+            data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tenDuAn) || []
+          )}</div>
         </div>
         <div className="text-sm font-medium">1</div>
       </div>
       
       <div className="mt-2 text-sm">
-        <div className="text-gray-700">Tổng số vướng mắc: {data.duAnThanhPhan.tongVuongMac}</div>
-        <div className="text-gray-700">Đã phê duyệt: {data.duAnThanhPhan.tongDaPheDuyet}</div>
-        <div className="text-gray-700">Chưa phê duyệt: {data.duAnThanhPhan.tongChuaPheDuyet}</div>
+        <div className="text-gray-700">Tổng số vướng mắc: {([]).concat(
+          data?.duAnThanhPhan?.tongVuongMac || [],
+          data?.duAnTong?.tongVuongMac || [],
+          data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongVuongMac) || []
+        )}</div>
+        <div className="text-gray-700">Đã phê duyệt: {([]).concat(
+          data?.duAnThanhPhan?.tongDaPheDuyet || [],
+          data?.duAnTong?.tongDaPheDuyet || [],
+          data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongDaPheDuyet) || []
+        )}</div>
+        <div className="text-gray-700">Chưa phê duyệt: {([]).concat(
+          data?.duAnThanhPhan?.tongChuaPheDuyet || [],
+          data?.duAnTong?.tongChuaPheDuyet || [],
+          data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongChuaPheDuyet) || []
+        )}</div>
       </div>
       
       <div className="mt-2 flex justify-end">
@@ -247,7 +292,11 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
     </div>
 
     {/* Level 2 - Gói thầu */}
-    {data.duAnThanhPhan.danhSachGoiThau.map((goiThau, indexGT) => (
+    {([]).concat(
+      data?.duAnThanhPhan?.danhSachGoiThau || [],
+      data?.duAnTong?.danhSachGoiThauTrucTiep || [],
+      data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+    ).map((goiThau, indexGT) => (
       <React.Fragment key={`mobile-goithau-${goiThau.goiThauId}`}>
         <div className="bg-yellow-50 p-3 rounded-lg shadow-sm border border-gray-200 ml-3">
           <div className="flex justify-between items-start">

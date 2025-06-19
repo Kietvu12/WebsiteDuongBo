@@ -1,24 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import './DashBoard.css';
-import menuIcon from '../../assets/img/menu-icon.png';
-import helpIcon from '../../assets/img/help-icon.png';
-import userIcon from '../../assets/img/user-icon.png';
-import addIcon from '../../assets/img/add-icon.png';
-import editIcon from '../../assets/img/edit-icon.png';
-import deleteIcon from '../../assets/img/delete-icon.png';
-import planIcon from '../../assets/img/plan-icon.png';
-import actualIcon from '../../assets/img/actual-icon.png';
-import delayIcon from '../../assets/img/delay-icon.png';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MapComponent from '../../component/MapComponent/MapComponent';
-import axios from 'axios';
-import { useProject } from '../../contexts/ProjectContext';
-import { FaTrash, FaFileImport } from "react-icons/fa";
+import {
+  FaRegCalendarAlt,
+  FaRegBell
+} from "react-icons/fa";
 import pin from '../../assets/img/pin.png'
 import attachment from '../../assets/img/attachment.png'
 import trash from '../../assets/img/file.png'
+import planIcon from '../../assets/img/plan-icon.png';
+import actualIcon from '../../assets/img/actual-icon.png';
+import delayIcon from '../../assets/img/delay-icon.png';
+import axios from 'axios';
+import { useProject } from '../../contexts/ProjectContext';
 
-const DashBoard = () => {
+
+const Dashboard = () => {
+  
+  const [selected, setSelected] = useState("total");
+  const [startDate, setStartDate] = useState("dd/mm/yyyy");
+  const [endDate, setEndDate] = useState("dd/mm/yyyy");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedStatus, setSelectedStatus] = useState("Tất cả");
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
   const { setSelectedProjectId } = useProject();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [selectedDuAnIds, setSelectedDuAnIds] = useState([]);
@@ -40,6 +44,85 @@ const DashBoard = () => {
   const [contractor, setContractor] = useState('all');
   const [contractorList, setContractorList] = useState([]);
   const [completionLevel, setCompletionLevel] = useState('all');
+  const [statusCounts, setStatusCounts] = useState({
+    total: 0,
+    "Đang triển khai": 0,
+    "Đã hoàn thành": 0,
+    "Chậm tiến độ": 0,
+    "Đã phê duyệt - chờ khởi công": 0,
+    "Đã phê duyệt - chậm tiến độ": 0,
+    "Dự kiến khởi công": 0
+  });
+
+  const statuses = [
+    { label: "Tổng số dự án", count: statusCounts.total },
+    { label: "Đang triển khai", count: statusCounts["Đang triển khai"] },
+    { label: "Đã hoàn thành", count: statusCounts["Đã hoàn thành"] },
+    { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"] },
+    { label: "Đã phê duyệt - chờ khởi công", count: statusCounts["Đã phê duyệt - chờ khởi công"] },
+    { label: "Đã phê duyệt - chậm tiến độ", count: statusCounts["Đã phê duyệt - chậm tiến độ"] },
+    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"] }
+  ];
+
+  const [activeStatus, setActiveStatus] = useState(statuses[0].label);
+
+  const statuses_1 = [
+    { label: "Tất cả", count: statusCounts.total, color: "text-red-600", box: "bg-red-600" },
+    { label: "Đang triển khai", count: statusCounts["Đang triển khai"], color: "text-red-600", box: "bg-blue-600" },
+    { label: "Đã hoàn thành", count: statusCounts["Đã hoàn thành"], color: "text-red-600", box: "bg-green-600" },
+    { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"], color: "text-red-600", box: "bg-yellow-500" },
+    { label: "Đã phê duyệt - chờ khởi công", count: statusCounts["Đã phê duyệt - chờ khởi công"], color: "text-red-600", box: "bg-purple-500" },
+    { label: "Đã phê duyệt - chậm tiến độ", count: statusCounts["Đã phê duyệt - chậm tiến độ"], color: "text-red-600", box: "bg-orange-500" },
+    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"], color: "text-red-600", box: "bg-gray-500" }
+  ];
+
+  const getStatusColor = (status) => {
+    const foundStatus = statuses_1.find(s => s.label === status);
+    return foundStatus ? foundStatus.box : "bg-gray-400";
+  };
+
+  
+
+  const calculateStatusCounts = (projects) => {
+  const counts = {
+    total: projects.length,
+    "Đang triển khai": 0,
+    "Đã hoàn thành": 0,
+    "Chậm tiến độ": 0,
+    "Đã phê duyệt - chờ khởi công": 0,
+    "Đã phê duyệt - chậm tiến độ": 0,
+    "Dự kiến khởi công": 0
+  };
+
+  projects.forEach(project => {
+    if (counts.hasOwnProperty(project.TrangThai)) {
+      counts[project.TrangThai]++;
+    }
+  });
+
+  return counts;
+};
+
+
+
+useEffect(() => {
+  if (projects.length > 0) {
+    const counts = calculateStatusCounts(projects);
+    setStatusCounts(counts);
+  }
+}, [projects]);
+
+  const handleStatusClick = (statusLabel) => {
+    if (statusLabel === "Tất cả" || statusLabel === statuses[0].label) {
+      setStatus('all');
+      setSelectedStatus("Tất cả");
+      setActiveStatus("Tất cả");
+    } else {
+      setStatus(statusLabel);
+      setSelectedStatus(statusLabel);
+      setActiveStatus(statusLabel);
+    }
+  };
 
   const filterProjects = () => {
     let result = [...projects];
@@ -99,6 +182,11 @@ const DashBoard = () => {
         return completion >= minCompletion;
       });
     }
+
+    if (status !== 'all') {
+      result = result.filter(project => project.TrangThai === status);
+    }
+
     setFilteredProjects(result);
   };
 
@@ -211,11 +299,13 @@ const DashBoard = () => {
   useEffect(() => {
     filterProjects();
   }, [fromDate, toDate, status, searchTerm, selectedProvince, contractor, completionLevel, projects]);
-  const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan) => {
-    
-    if (soLuongDuAnThanhPhan > 0) {
+  const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan, soLuongGoiThau) => {
+    if (soLuongDuAnThanhPhan > 0 ) {
       navigate(`/side-project/${DuAnID}`);
-    } else {
+    } else if (soLuongDuAnThanhPhan === 0 && soLuongGoiThau === 0) {
+      navigate(`/side-project/${DuAnID}`);
+    }
+    else {
       navigate('/detail', {
         state: {
           projectId: DuAnID,
@@ -224,7 +314,7 @@ const DashBoard = () => {
           subProjectId: DuAnID
         }
       });
-      console.log("hhe:", DuAnID, TenDuAn, typeof(soLuongDuAnThanhPhan)); 
+
     }
     setSelectedProjectId(DuAnID);
   };
@@ -275,46 +365,40 @@ const DashBoard = () => {
     setContractor('all')
   };
 
+
+
+  const handleExportReport = () => {
+    navigate('/bao-cao-tong')
+  };
+
   return (
-    <div className="dashboard">
-      <div className="w-full bg-white shadow-md">
-        {/* Navbar */}
-        <div className="flex justify-between items-center px-4 py-2 border-b">
-          <div>
-            <button className="p-2 rounded hover:bg-gray-200" aria-label="Navigation menu">
-            </button>
-          </div>
+    <div className="flex flex-col min-h-screen bg-gray-200">
 
-          <div className="flex items-center gap-3">
-            <img src={menuIcon} alt="Menu" className="w-5 h-5 cursor-pointer" />
-            <img src={helpIcon} alt="Help" className="w-5 h-5 cursor-pointer" />
-            <img src={userIcon} alt="User profile" className="w-5 h-5 cursor-pointer" />
-          </div>
+      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4">
+        <div className="flex items-center space-x-4">
+          <span className="text-gray-500">Thông báo</span>
+          <FaRegBell />
+          <span>Rdsic</span>
+          <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">R</div>
         </div>
+      </header>
 
-        <div className="px-4 py-3">
-          <h1 className="md:text-xl text-xs mt-6 font-semibold text-gray-800 mb-3"><span className='md:hidden text-xs text-blue-700'>Trang chủ > </span>Danh sách dự án đường bộ</h1>
-          <div className="md:hidden mb-3">
-            <button
-              onClick={() => setShowMobileFilters(!showMobileFilters)}
-              className="px-3 py-1.5 text-xs bg-gray-100 rounded border border-gray-300"
-            >
-              {showMobileFilters ? 'Ẩn bộ lọc ▲' : 'Hiện bộ lọc ▼'}
-            </button>
-          </div>
+      <div className="px-6 pb-2 pt-2">
+        <h2 className="text-l mt-6 md:mt-0 font-bold">Danh sách dự án đường bộ</h2>
+      </div>
 
-          <form className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="col-span-1 md:col-span-2">
-              <div className="relative">
-                <input
-                  id="project-search"
-                  type="text"
-                  placeholder="Tìm dự án..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                />
-                {showSuggestions && searchSuggestions.length > 0 && (
+      <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
+        <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
+          <div className="flex flex-col md:flex-row items-center gap-2">
+            <div className="relative w-full md:w-64">
+              <input
+                type="text"
+                placeholder="Tìm dự án"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-3 pr-10 py-1 border rounded w-full text-sm"
+              />
+              {showSuggestions && searchSuggestions.length > 0 && (
                   <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
                     {searchSuggestions.map((suggestion, index) => (
                       <li
@@ -327,301 +411,387 @@ const DashBoard = () => {
                     ))}
                   </ul>
                 )}
-              </div>
             </div>
-            <div className={`contents md:contents ${showMobileFilters ? '' : 'hidden md:grid'}`}>
-              <div className="col-span-1">
-                <div className="flex items-center gap-1">
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <span className="text-xs text-gray-500 whitespace-nowrap">đến</span>
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
+            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-sm text-gray-700 bg-white w-full md:w-auto">
+              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+              />
+              <span className="mx-1">-</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+              />
+            </div>
+            <select
+              value={selectedProvince}
+              onChange={handleProvinceChange}
+              className="px-3 py-1 border rounded w-full md:w-48"
+            >
+              <option value="">Tất cả tỉnh</option>
+              {provinces.map((province) => (
+                <option key={province.code} value={province.name}>
+                  {province.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-3 py-1 border rounded w-full md:w-48"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Chậm tiến độ">Chậm tiến độ</option>
+              <option value="Đang triển khai">Đang triển khai</option>
+              <option value="Đang tiến hành">Đang tiến hành</option>
+              <option value="Đã hoàn thành">Đã hoàn thành</option>
+              <option value="Đã phê duyệt - chờ khởi công">Đã phê duyệt-chờ khởi công</option>
+              <option value="Đã phê duyệt - chậm tiến độ">Đã phê duyệt-chậm tiến độ</option>
+              <option value="Dự kiến khởi công">Dự kiến khởi công</option>
+            </select>
+            <select
+              value={contractor}
+              onChange={(e) => setContractor(e.target.value)} 
+              className="px-3 py-1 border rounded w-full md:w-48"
+            >
+              <option value="all">Tất cả nhà thầu</option>
+              {contractorList.map((nhathau) => (
+                <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
+                  {nhathau.TenNhaThau}
+                </option>
+              ))}
+            </select>
+            <select 
+              value={completionLevel}
+              onChange={(e) => setCompletionLevel(e.target.value)}
+              className="px-3 py-1 border rounded w-full md:w-48"
+            >
+              <option value="all">Mọi tiến độ</option>
+              <option value="20">&gt;20%</option>
+              <option value="50">&gt;50%</option>
+              <option value="80">&gt;80%</option>
+              <option value="100">100%</option>
+            </select>
+          </div>
+          <div className="flex gap-2 mb-2 mt-3">
+            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">XUẤT EXCEL</button>
+            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">NHẬP EXCEL</button>
+          </div>
+          <div className="text-gray-500">Cập nhật lần cuối: 15:10</div>
+
+          {/* Status bar section - hidden on mobile */}
+          <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
+            <div className="flex shadow overflow-hidden bg-white w-full mt-1">
+              {statuses.map((status) => (
+                <div
+                  key={status.label}
+                  onClick={() => handleStatusClick(status.label)}
+                  className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
+                    ${status.lâbel !== statuses[0].label ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300" : ""}
+                    ${
+                      activeStatus === status.label
+                        ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
+                        : "bg-gray-100 text-gray-600"
+                    }
+                  `}
+                >
+                  <div className="mb-1 text-lg">
+                    {status.icon}
+                  </div>
+                  <div className="text-sm font-bold">{status.label}</div>
+                  <div className="text-sm text-gray-500">{status.count}</div>
                 </div>
-              </div>
-              <div className="col-span-1">
-                <select
-                  value={selectedProvince}
-                  onChange={handleProvinceChange}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              ))}
+            </div>
+          </div>
+
+          <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
+          
+          <div className="p-2 font-sans text-[13px]">
+            {/* Status Bar - hidden on mobile */}
+            <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
+              {statuses_1.map((s) => {
+                const isActive = selectedStatus === s.label;
+                return (
+                  <div
+                    key={s.label}
+                    onClick={() => handleStatusClick(s.label)}
+                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${
+                      isActive
+                        ? `${s.color} border-red-600`
+                        : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <div className={`w-[10px] h-[10px] rounded-sm ${s.box}`}></div>
+                      <span>
+                        {s.label}
+                        {s.count !== null && ` (${s.count})`}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile Select - visible only on mobile */}
+              <div className="md:hidden mb-3 relative">
+                <div 
+                  className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
+                  onClick={() => setIsSelectOpen(!isSelectOpen)}
                 >
-                  <option value="">Tất cả tỉnh</option>
-                  {provinces.map((province) => (
-                    <option key={province.code} value={province.name}>
-                      {province.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">Tất cả trạng thái</option>
-                  <option value="Chậm tiến độ">Chậm tiến độ</option>
-                  <option value="Đang triển khai">Đang triển khai</option>
-                  <option value="Đang tiến hành">Đang tiến hành</option>
-                  <option value="Đã hoàn thành">Đã hoàn thành</option>
-                  <option value="Đã phê duyệt - chờ khởi công">Đã phê duyệt-chờ khởi công</option>
-                  <option value="Đã phê duyệt - chậm tiến độ">Đã phê duyệt-chậm tiến độ</option>
-                  <option value="Dự kiến khởi công">Dự kiến khởi công</option>
-                </select>
-              </div>
-              <div className="col-span-1">
-                <select
-                  value={contractor}
-                  onChange={(e) => setContractor(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">Tất cả nhà thầu</option>
-                  {contractorList.map((nhathau) => (
-                    <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
-                      {nhathau.TenNhaThau}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <select
-                  value={completionLevel}
-                  onChange={(e) => setCompletionLevel(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">Mọi tiến độ</option>
-                  <option value="20">&gt;20%</option>
-                  <option value="50">&gt;50%</option>
-                  <option value="80">&gt;80%</option>
-                  <option value="100">100%</option>
-                </select>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block w-3 h-3 rounded-sm ${statuses_1.find(s => s.label === selectedStatus)?.box || 'bg-gray-200'}`}></span>
+                    {selectedStatus || "Tất cả"}
+                  </div>
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-200 ${isSelectOpen ? 'transform rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+                
+                {isSelectOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div 
+                      className={`p-2 flex items-center gap-2 ${!selectedStatus ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                      onClick={() => {
+                        setSelectedStatus("");
+                        setIsSelectOpen(false);
+                      }}
+                    >
+                    </div>
+                    {statuses_1.map((s) => (
+                      <div 
+                        key={s.label}
+                        className={`p-2 flex items-center gap-2 ${selectedStatus === s.label ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                        onClick={() => {
+                          setSelectedStatus(s.label);
+                          setIsSelectOpen(false);
+                        }}
+                      >
+                        <span className={`inline-block w-3 h-3 rounded-sm ${s.box}`}></span>
+                        {s.label} {s.count !== null && `(${s.count})`}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Reset Button */}
-              <div className="col-span-1">
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 px-2 py-1.5 text-xs rounded transition-colors"
-                >
-                  Xóa lọc
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className=" hidden md:block max-h-[calc(100vh-200px)] overflow-y-auto">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] md:min-w-full">
-              <thead className="bg-gray-50 sticky top-0">
-                <tr>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">STT</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Thao tác</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dự án</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dải tuyến</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">DA Thành phần</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Gói thầu</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Trạng thái</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Tiến độ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredProjects.length > 0 ? (
-                  [...filteredProjects]
-                    .sort((a, b) => {
-                      const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                      const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                      if (aIsPinned && !bIsPinned) return -1;
-                      if (!aIsPinned && bIsPinned) return 1;
-                      return 0;
-                    })
-                    .map((project, index) => (
-                      <tr
-                        key={project.DuAnID}
-                        onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongGoiThau)}
-                        className="hover:bg-blue-50 cursor-pointer transition-colors"
-                      >
-                        {/* Các ô dữ liệu giữ nguyên như trước */}
-                        <td className="p-2 text-sm text-gray-800 whitespace-nowrap">{index + 1}</td>
-                        <td className="p-2 whitespace-nowrap">
-                          <div className="flex space-x-2">
-                            <button
-                              className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                              title="Tệp đính kèm"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
-                            </button>
-                            <button
-                              className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                              title="Xoá"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <img src={trash} alt="Xoá" className="w-5 h-5" />
-                            </button>
-                            <button
-                              className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
-                                }`}
-                              title="Ghim"
+            {/* Desktop Table */}
+            <div className="hidden md:flex flex-col" style={{ height: 'calc(100vh - 300px)' }}>
+              <div className="overflow-y-auto">
+                <table className="min-w-full border border-gray-300 text-sm">
+                  <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
+                    <tr className="text-center">
+                      <th className="border px-2 py-1 w-6 text-sm">CHỌN</th>
+                      <th className="border px-2 py-1 text-sm">THAO TÁC</th>
+                      <th className="border px-2 py-1 text-sm">MÃ DỰ ÁN</th>
+                      <th className="border px-2 py-1 text-sm">TÊN DỰ ÁN</th>
+                      <th className="border px-2 py-1 text-sm">DÀI TUYẾN</th>
+                      <th className="border px-2 py-1 text-sm">TRẠNG THÁI</th>
+                      <th className="border px-2 py-1 text-sm">TIẾN ĐỘ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProjects.length > 0 ? (
+                      [...filteredProjects]
+                        .sort((a, b) => {
+                          const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                          const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                          if (aIsPinned && !bIsPinned) return -1;
+                          if (!aIsPinned && bIsPinned) return 1;
+                          return 0;
+                        })
+                        .map((project, index) => (
+                      <tr key={project.DuAnID} className="text-center">
+                        <td className="border px-1 py-2 text-center">
+                          <input type="checkbox" className="accent-red-500" />
+                        </td>
+                        <td className="border px-1 py-2">
+                          <button
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Tệp đính kèm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
+                          </button>
+                          <button
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Xoá"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <img src={trash} alt="Xoá" className="w-5 h-5" />
+                          </button>
+                          <button
+                            className='p-1.5 hover:bg-gray-200 rounded-full transition-all'
+                            title="Ghim"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePinProject(project.DuAnID);
                               }}
-                            >
-                              <img src={pin} alt="Ghim" className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="p-2 text-sm text-gray-800 whitespace-nowrap">{project.TenDuAn}</td>
-                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">{project.TongChieuDai} Km</td>
-                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">
-                          {project.soLuongDuAnThanhPhan} Dự án thành phần
-                        </td>
-                        <td className="p-2 text-sm text-gray-600 whitespace-nowrap">
-                          {project.soLuongGoiThau} gói thầu xây lắp
-                        </td>
-                        <td className="p-2 whitespace-nowrap">
-                          <span
-                            className="inline-block px-2 py-1 rounded-full text-xs font-medium"
-                            style={getStatusStyle(project.TrangThai)}
                           >
+                            <img src={pin} alt="Ghim" className="w-5 h-5" />
+                          </button>
+                        </td>
+                        <td className="border px-1 py-2 text-blue-600 font-medium">
+                          <div>{project.DuAnID}</div>
+                          <div className="text-blue-400 text-xs cursor-pointer hover:underline" onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)} >Xem chi tiết</div>
+                        </td>
+                        <td className="border px-1 py-2">{project.TenDuAn}</td>
+                        <td className="border px-1 py-2">
+                          {project.TongChieuDai} Km
+                        </td>
+                        
+                        <td className="border px-1 py-2">
+                          <span className={`px-2 py-[2px] text-white text-xs rounded-full ${
+                            getStatusColor(project.TrangThai)
+                          }`}>
                             {project.TrangThai}
                           </span>
                         </td>
-                        <td className="p-2 whitespace-nowrap">
+
+                        <td className="border px-1 py-2">
                           <div className="grid grid-rows-3 gap-2">
                             <div className="flex items-center gap-2">
                               <img src={planIcon} width="16" height="16" alt="Kế hoạch" className="flex-shrink-0" />
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-blue-600 font-bold">
                                 Kế hoạch: <strong className="font-medium">{project.phanTramKeHoach || '0'}%</strong>
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <img src={actualIcon} width="16" height="16" alt="Hoàn thành" className="flex-shrink-0" />
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-green-600 font-bold">
                                 Hoàn thành: <strong className="font-medium">{project.phanTramHoanThanh || '0'}%</strong>
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <img src={delayIcon} width="16" height="16" alt="Chậm tiến độ" className="flex-shrink-0" />
-                              <span className="text-xs text-gray-600">
+                              <span className="text-xs text-yellow-600 font-bold">
                                 Chậm tiến độ: <strong className="font-medium">{project.phanTramChamTienDo || '0'}%</strong>
                               </span>
                             </div>
                           </div>
                         </td>
                       </tr>
-                    ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
-                      Không tìm thấy dự án nào phù hợp
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="md:hidden">
-          <div className="space-y-3 p-3">
-            {filteredProjects.length > 0 ? (
-              [...filteredProjects]
-                .sort((a, b) => {
-                  const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                  const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                  if (aIsPinned && !bIsPinned) return -1;
-                  if (!aIsPinned && bIsPinned) return 1;
-                  return 0;
-                })
-                .map((project, index) => (
-                  <div
-                    key={project.DuAnID}
-                    className="border border-gray-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer"
-                    onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan)}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="font-medium text-gray-800">{project.TenDuAn}</div>
-                      <div className="flex space-x-2">
-                        <button
-                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <img src={attachment} alt="Tệp" className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <img src={trash} alt="Xoá" className="w-4 h-4" />
-                        </button>
-                        <button
-                          className={`w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 ${pinnedProjects.includes(project.DuAnID) ? 'bg-yellow-100' : ''
-                            }`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePinProject(project.DuAnID);
-                          }}
-                        >
-                          <img src={pin} alt="Ghim" className="w-4 h-4" />
-                        </button>
+                        ))            ) : (
+            <tr>
+              <td colSpan="7" className="text-center text-gray-500 py-4">
+                Không tìm thấy dự án nào phù hợp
+              </td>
+            </tr>
+            )} 
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3">
+              {filteredProjects.length > 0 ? (
+                [...filteredProjects]
+                  .sort((a, b) => {
+                    const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                    const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                    if (aIsPinned && !bIsPinned) return -1;
+                    if (!aIsPinned && bIsPinned) return 1;
+                    return 0;
+                  })
+                  .map((project, index) => (
+                <div 
+                  key={project.DuAnID} 
+                  className="bg-white rounded-lg shadow p-4 border border-gray-200"
+                  onClick={(e) => {
+                    // Chỉ chuyển trang nếu không click vào checkbox
+                    if (!e.target.closest('input[type="checkbox"]')) {
+                     handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center">
+                      <input type="checkbox" className="accent-red-500 mr-2" onClick={(e) => e.stopPropagation()} />
+                      <div className="text-blue-600 font-medium">
+                        <div>{project.DuAnID}</div>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm mb-2">
-                      <div>
-                        <span className="text-gray-500">STT:</span>
-                        <span className="ml-1 font-medium">{index + 1}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Dải tuyến:</span>
-                        <span className="ml-1 font-medium">{project.TongChieuDai} Km</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">DA Thành phần:</span>
-                        <span className="ml-1 font-medium">{project.soLuongDuAnThanhPhan}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Gói thầu:</span>
-                        <span className="ml-1 font-medium">{project.soLuongGoiThau}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-2">
-                      <span
-                        className="inline-block px-2 py-1 rounded text-xs font-medium"
-                        style={getStatusStyle(project.TrangThai)}
-                      >
-                        {project.TrangThai}
-                      </span>
-
-                      <div className="flex items-center text-xs text-gray-600">
-                        <img src={actualIcon} width="14" alt="Hoàn thành" className="mr-1" />
-                        <span>{project.phanTramHoanThanh || '0'}%</span>
-                      </div>
+                    <div className="flex space-x-1">
+                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                        <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
+                      </button>
+                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                        <img src={trash} alt="Xoá" className="w-5 h-5" />
+                      </button>
+                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                        <img src={pin} alt="Ghim" className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
-                ))
-            ) : (
+                  
+                  <div className="mb-2">
+                    <div className="text-gray-600 font-medium">Tên dự án:</div>
+                    <div>{project.TenDuAn}</div>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <div className="text-gray-600 font-medium">Dài tuyến:</div>
+                    <div>{project.TongChieuDai}</div>
+                  </div>
+                  
+                  <div className="mb-2">
+                    <div className="text-gray-600 font-medium">Trạng thái:</div>
+                    <span className={`px-2 py-[2px] text-white text-xs rounded-full ${
+                      getStatusColor(project.TrangThai)
+                    }`}>
+                      {project.TrangThai}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-gray-600 font-medium">Tiến độ:</div>
+                    <div className="flex items-center gap-2">
+                      <img src={planIcon} width="16" height="16" alt="Kế hoạch" />
+                      <span className="text-xs">
+                        Kế hoạch: <strong>{project.phanTramKeHoach || '0'}%</strong>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img src={actualIcon} width="16" height="16" alt="Hoàn thành" />
+                      <span className="text-xs">
+                        Hoàn thành: <strong>{project.phanTramHoanThanh || '0'}%</strong>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <img src={delayIcon} width="16" height="16" alt="Chậm tiến độ" />
+                      <span className="text-xs">
+                        Chậm tiến độ: <strong>{project.phanTramChamTienDo || '0'}%</strong>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))) : (
               <div className="text-center text-gray-500 py-4">
                 Không tìm thấy dự án nào phù hợp
               </div>
-            )}
+            )} 
+            </div>
+
+
           </div>
         </div>
       </div>
 
-      {/* Popup thêm mới */}
+            {/* Popup thêm mới */}
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>
           <div className="popup-content" onClick={(e) => e.stopPropagation()}>
@@ -632,4 +802,4 @@ const DashBoard = () => {
   );
 };
 
-export default DashBoard;
+export default Dashboard;

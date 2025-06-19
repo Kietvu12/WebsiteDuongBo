@@ -17,6 +17,8 @@ import attachment from '../../assets/img/attachment.png'
 import trash from '../../assets/img/file.png'
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
 import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
+import AddNewPackage from '../AddNewPackage/AddNewPackage';
+
 const SideProject = () => {
   const location = useLocation();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -38,6 +40,7 @@ const SideProject = () => {
   const [filteredSubProjects, setFilteredProjects] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+  const [showAddPackage, setShowAddPackage] = useState(false);
 
   const filterProjects = () => {
     let result = [...subProjects];
@@ -147,62 +150,14 @@ const SideProject = () => {
   useEffect(() => {
     const fetchProjectDetails = async () => {
       try {
-        // Trường hợp 1: Có danh sách ID dự án con cần hiển thị
-        if (selectedDuAnConIds.length > 0) {
-          console.log("Đang xử lý nhiều dự án con:", selectedDuAnConIds);
+        const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${DuAnID}`);
+        console.log(response.data.data);
 
-          // Tạo mảng các promises cho các request API
-          const promises = selectedDuAnConIds.map(conId =>
-            axios.get(`${API_BASE_URL}/duAntp/${conId}`)
-          );
-
-          // Chạy tất cả các requests cùng lúc
-          const results = await Promise.all(promises);
-
-          // Xử lý kết quả và cập nhật state hiển thị
-          const duAnConData = results.map((res, index) => ({
-            ...res.data.data,
-            DuAnID: selectedDuAnConIds[index]
-          }));
-
-          // Cập nhật subProjects để hiển thị trong bảng
-          setSubProjects(duAnConData);
-          setLoading(false);
-
-          // Xóa IDs khỏi URL sau khi đã lấy dữ liệu
-          // window.history.replaceState({}, '', `/side-project/${DuAnID}`);
-          // setSelectedDuAnConIds([]);
+        if (response.data.data) {
+          setProject(response.data.data.duAnTong);
+          setSubProjects(response.data.data.duAnThanhPhan);
         }
-        // Trường hợp 2: Có một ID dự án con duy nhất
-        else if (selectedDuAnConId) {
-          console.log("Đang xử lý một dự án con:", selectedDuAnConId);
-
-          const response = await axios.get(`${API_BASE_URL}/duAntp/${selectedDuAnConId}`);
-          const duAnConData = [{
-            ...response.data.data,
-            DuAnID: selectedDuAnConId
-          }];
-
-          // Cập nhật subProjects để hiển thị trong bảng
-          setSubProjects(duAnConData);
-          setLoading(false);
-
-          // Xóa ID khỏi URL sau khi đã lấy dữ liệu
-          window.history.replaceState({}, '', `/side-project/${DuAnID}`);
-          setSelectedDuAnConId(null);
-        }
-        // Trường hợp 3: Tải tất cả dự án con (trường hợp mặc định)
-        else {
-          console.log("Đang tải tất cả dự án con của dự án cha:", DuAnID);
-
-          // Tải dữ liệu dự án cha và danh sách dự án con
-          const response = await axios.get(`${API_BASE_URL}/duAnThanhPhan/${DuAnID}`);
-          if (response.data.data) {
-            setProject(response.data.data.duAnTong);
-            setSubProjects(response.data.data.duAnThanhPhan);
-          }
-          setLoading(false);
-        }
+        setLoading(false);
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu dự án:', error);
         setLoading(false);
@@ -413,26 +368,27 @@ const SideProject = () => {
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">STT</th>
+                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Thao tác</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dự án</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Dải tuyến</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Trạng thái</th>
                   <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Tiến độ</th>
-                  <th className="text-sm p-2 text-left whitespace-nowrap font-medium text-gray-700">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredSubProjects.length > 0 ? (
-                  [...filteredSubProjects]
-                    .sort((a, b) => {
-                      const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                      const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                      if (aIsPinned && !bIsPinned) return -1;
-                      if (!aIsPinned && bIsPinned) return 1;
-                      return 0;
-                    })
-                    .map((subProject, index) => (
+              {filteredSubProjects.length > 0 ? (
+                [...filteredSubProjects]
+                  .sort((a, b) => {
+                    const aIsPinned = pinnedProjects.includes(a.DuAnID);
+                    const bIsPinned = pinnedProjects.includes(b.DuAnID);
+                    if (aIsPinned && !bIsPinned) return -1;
+                    if (!aIsPinned && bIsPinned) return 1;
+                    return 0;
+                  })
+                  .map((subProject, index) => (
+                    <tbody key={subProject.DuAnID} className="divide-y divide-gray-200">
+
                       <tr
-                        key={subProject.DuAnID}
+
                         onClick={() => handleDetail(subProject.DuAnID)}
                         className="hover:bg-blue-50 cursor-pointer transition-colors"
                       >
@@ -500,15 +456,43 @@ const SideProject = () => {
                           </div>
                         </td>
                       </tr>
-                    ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
-                      Không tìm thấy dự án nào phù hợp
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+
+                    </tbody>
+                  ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
+                  <div className="text-center text-gray-500 py-4">
+                Không tìm thấy dự án nào phù hợp
+                <div className="mt-2 text-sm text-gray-500">
+                  <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                  <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                </div>
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => setShowAddPackage(true)}
+                  >
+                    <svg
+                      className="-ml-1 mr-2 h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Thêm mới gói thầu
+                  </button>
+                </div>
+              </div>
+                  </td>
+                </tr>
+              )}
             </table>
           </div>
         </div>
@@ -582,6 +566,31 @@ const SideProject = () => {
             ) : (
               <div className="text-center text-gray-500 py-4">
                 Không tìm thấy dự án nào phù hợp
+                <div className="mt-2 text-sm text-gray-500">
+                  <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                  <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                </div>
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => setShowAddPackage(true)}
+                  >
+                    <svg
+                      className="-ml-1 mr-2 h-5 w-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Thêm mới gói thầu
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -596,6 +605,29 @@ const SideProject = () => {
               // Xử lý khi thêm thành công
             }}
           />
+        </div>
+      )}
+            {showAddPackage && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen p-4">
+            {/* Lớp phủ mờ */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50"
+              onClick={() => setShowAddPackage(false)}
+            ></div>
+            
+            {/* Container pop-up - đã điều chỉnh max-width và width */}
+            <div className="relative w-full max-w-6xl z-10"> {/* Tăng từ max-w-4xl lên max-w-6xl */}
+              <AddNewPackage
+                projectId={DuAnID}
+                onClose={() => setShowAddPackage(false)}
+                onSuccess={(newPackage) => {
+                  
+                }}
+                className="bg-white rounded-lg shadow-xl overflow-hidden"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
