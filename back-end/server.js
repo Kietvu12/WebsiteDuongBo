@@ -8,6 +8,31 @@ const fs = require('fs');
 const app = express();
 const port = 5000;
 
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Tạo connection pool thay vì single connection
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '123456',
+  database: 'dulieuduongbo',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
+}).promise();
+
+// Xử lý kết nối pool
+pool.on('connection', (connection) => {
+  console.log('MySQL connection established');
+});
+
+pool.on('error', (err) => {
+  console.error('MySQL pool error:', err);
+});
 function createUploadMiddleware(loaiDoiTuong, doiTuongID = 'temp') {
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -3656,16 +3681,32 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
 
 
 
+// Middleware xử lý lỗi toàn cục
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(500).json({
     success: false,
-    message: 'Đã xảy ra lỗi hệ thống'
+    message: err.message || 'Đã xảy ra lỗi hệ thống'
   });
 });
 
+// Đóng kết nối pool khi server dừng
+process.on('SIGINT', () => {
+  pool.end()
+    .then(() => {
+      console.log('MySQL pool closed');
+      process.exit(0);
+    })
+    .catch(err => {
+      console.error('Error closing MySQL pool:', err);
+      process.exit(1);
+    });
+});
 
 // Khởi động server
 app.listen(port, () => {
   console.log(`Server đang chạy trên port ${port}`);
 });
+
+// Export pool để sử dụng trong các route
+module.exports = { pool };
