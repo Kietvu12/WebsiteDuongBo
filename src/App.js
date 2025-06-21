@@ -86,17 +86,17 @@ function App() {
             <ProjectReport/>
           </LayoutWithSidebar>
         } />
-        <Route path='/work-items/:projectId' element={
+        <Route path='/work-items' element={
           <LayoutWithSidebar>
             <WorkItem/>
           </LayoutWithSidebar>
         } />
-        <Route path='/project-progress/:projectId' element={
+        <Route path='/project-progress' element={
           <LayoutWithSidebar>
             <ProjectProgress/>
           </LayoutWithSidebar>
         } />
-        <Route path='/approvals/:projectId' element={
+        <Route path='/approvals' element={
           <LayoutWithSidebar>
             <Approvals/>
           </LayoutWithSidebar>

@@ -42,6 +42,10 @@ const Sidebar = () => {
     navigate(finalPath);
     setSidebarOpen(false);
   };
+  const handleSimpleNavigation = (path) => {
+    navigate(path);
+  };
+  
 
   const handleDashboard = () => {
     navigate('/home');
@@ -227,9 +231,9 @@ const Sidebar = () => {
             icon: progressIcon,
             label: 'Quản lý tiến độ',
             submenu: [
-              { label: 'Hạng mục công việc', onClick: () => handleNavigation(`/work-items`) },
-              { label: 'Khó khăn & vướng mắc', onClick: () => handleNavigation('/approvals') },
-              { label: 'Báo cáo tiến độ', onClick: () => handleNavigation(`/project-progress`) },
+              { label: 'Hạng mục công việc', onClick: () => handleSimpleNavigation(`/work-items`) },
+              { label: 'Khó khăn & vướng mắc', onClick: () => handleSimpleNavigation('/approvals') },
+              { label: 'Báo cáo tiến độ', onClick: () => handleSimpleNavigation(`/project-progress`) },
             ],
           },
           {

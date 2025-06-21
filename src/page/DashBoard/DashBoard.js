@@ -1,27 +1,22 @@
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  FaRegCalendarAlt,
-  FaRegBell
-} from "react-icons/fa";
-import pin from '../../assets/img/pin.png'
-import attachment from '../../assets/img/attachment.png'
-import trash from '../../assets/img/file.png'
-import planIcon from '../../assets/img/plan-icon.png';
-import actualIcon from '../../assets/img/actual-icon.png';
-import delayIcon from '../../assets/img/delay-icon.png';
-import axios from 'axios';
-import { useProject } from '../../contexts/ProjectContext';
-
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
+import pin from "../../assets/img/pin.png";
+import attachment from "../../assets/img/attachment.png";
+import trash from "../../assets/img/file.png";
+import planIcon from "../../assets/img/plan-icon.png";
+import actualIcon from "../../assets/img/actual-icon.png";
+import delayIcon from "../../assets/img/delay-icon.png";
+import axios from "axios";
+import { useProject } from "../../contexts/ProjectContext";
 
 const Dashboard = () => {
-  
   const [selected, setSelected] = useState("total");
   const [startDate, setStartDate] = useState("dd/mm/yyyy");
   const [endDate, setEndDate] = useState("dd/mm/yyyy");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [selectedStatus, setSelectedStatus] = useState("Tất cả");
+  const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const { setSelectedProjectId } = useProject();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -29,29 +24,31 @@ const Dashboard = () => {
   const [selectedDuAnId, setSelectedDuAnId] = useState(null);
   const navigate = useNavigate();
   const [showAddPopup, setShowAddPopup] = useState(false);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [status, setStatus] = useState('all');
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState("all");
   const [isMapView, setIsMapView] = useState(false);
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [provinces, setProvinces] = useState([]);
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [contractor, setContractor] = useState('all');
+  const [selectedProvince, setSelectedProvince] = useState("");
+  const [contractor, setContractor] = useState("all");
   const [contractorList, setContractorList] = useState([]);
-  const [completionLevel, setCompletionLevel] = useState('all');
+  const [completionLevel, setCompletionLevel] = useState("all");
+
+  
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
     "Đang triển khai": 0,
     "Đã hoàn thành": 0,
     "Chậm tiến độ": 0,
-    "Đã phê duyệt - chờ khởi công": 0,
-    "Đã phê duyệt - chậm tiến độ": 0,
-    "Dự kiến khởi công": 0
+    "Đã phê duyệt – chờ khởi công": 0,
+    "Đã phê duyệt – chậm tiến độ": 0,
+    "Dự kiến khởi công": 0,
   });
 
   const statuses = [
@@ -59,64 +56,101 @@ const Dashboard = () => {
     { label: "Đang triển khai", count: statusCounts["Đang triển khai"] },
     { label: "Đã hoàn thành", count: statusCounts["Đã hoàn thành"] },
     { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"] },
-    { label: "Đã phê duyệt - chờ khởi công", count: statusCounts["Đã phê duyệt - chờ khởi công"] },
-    { label: "Đã phê duyệt - chậm tiến độ", count: statusCounts["Đã phê duyệt - chậm tiến độ"] },
-    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"] }
+    {
+      label: "Đã phê duyệt – chờ khởi công",
+      count: statusCounts["Đã phê duyệt – chờ khởi công"],
+    },
+    {
+      label: "Đã phê duyệt – chậm tiến độ",
+      count: statusCounts["Đã phê duyệt – chậm tiến độ"],
+    },
+    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"] },
   ];
 
-  const [activeStatus, setActiveStatus] = useState(statuses[0].label);
+  const [activeStatus, setActiveStatus] = useState("Tổng số dự án");
 
-  const statuses_1 = [
-    { label: "Tất cả", count: statusCounts.total, color: "text-red-600", box: "bg-red-600" },
-    { label: "Đang triển khai", count: statusCounts["Đang triển khai"], color: "text-red-600", box: "bg-blue-600" },
-    { label: "Đã hoàn thành", count: statusCounts["Đã hoàn thành"], color: "text-red-600", box: "bg-green-600" },
-    { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"], color: "text-red-600", box: "bg-yellow-500" },
-    { label: "Đã phê duyệt - chờ khởi công", count: statusCounts["Đã phê duyệt - chờ khởi công"], color: "text-red-600", box: "bg-purple-500" },
-    { label: "Đã phê duyệt - chậm tiến độ", count: statusCounts["Đã phê duyệt - chậm tiến độ"], color: "text-red-600", box: "bg-orange-500" },
-    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"], color: "text-red-600", box: "bg-gray-500" }
+  const statusesLabel = [
+    {
+      label: "Tổng số dự án",
+      count: statusCounts.total,
+      color: "text-red-600",
+      box: "bg-red-600",
+    },
+    {
+      label: "Đang triển khai",
+      count: statusCounts["Đang triển khai"],
+      color: "text-red-600",
+      box: "bg-blue-600",
+    },
+    {
+      label: "Đã hoàn thành",
+      count: statusCounts["Đã hoàn thành"],
+      color: "text-red-600",
+      box: "bg-green-600",
+    },
+    {
+      label: "Chậm tiến độ",
+      count: statusCounts["Chậm tiến độ"],
+      color: "text-red-600",
+      box: "bg-yellow-500",
+    },
+    {
+      label: "Đã phê duyệt – chờ khởi công",
+      count: statusCounts["Đã phê duyệt – chờ khởi công"],
+      color: "text-red-600",
+      box: "bg-purple-500",
+    },
+    {
+      label: "Đã phê duyệt – chậm tiến độ",
+      count: statusCounts["Đã phê duyệt – chậm tiến độ"],
+      color: "text-red-600",
+      box: "bg-orange-500",
+    },
+    {
+      label: "Dự kiến khởi công",
+      count: statusCounts["Dự kiến khởi công"],
+      color: "text-red-600",
+      box: "bg-gray-500",
+    },
   ];
 
   const getStatusColor = (status) => {
-    const foundStatus = statuses_1.find(s => s.label === status);
+    const foundStatus = statusesLabel.find((s) => s.label === status);
     return foundStatus ? foundStatus.box : "bg-gray-400";
   };
 
-  
-
   const calculateStatusCounts = (projects) => {
-  const counts = {
-    total: projects.length,
-    "Đang triển khai": 0,
-    "Đã hoàn thành": 0,
-    "Chậm tiến độ": 0,
-    "Đã phê duyệt - chờ khởi công": 0,
-    "Đã phê duyệt - chậm tiến độ": 0,
-    "Dự kiến khởi công": 0
+    const counts = {
+      total: projects.length,
+      "Đang triển khai": 0,
+      "Đã hoàn thành": 0,
+      "Chậm tiến độ": 0,
+      "Đã phê duyệt – chờ khởi công": 0,
+      "Đã phê duyệt – chậm tiến độ": 0,
+      "Dự kiến khởi công": 0,
+    };
+
+    projects.forEach((project) => {
+      if (counts.hasOwnProperty(project.TrangThai)) {
+        counts[project.TrangThai]++;
+      }
+    });
+
+    return counts;
   };
 
-  projects.forEach(project => {
-    if (counts.hasOwnProperty(project.TrangThai)) {
-      counts[project.TrangThai]++;
+  useEffect(() => {
+    if (projects.length > 0) {
+      const counts = calculateStatusCounts(projects);
+      setStatusCounts(counts);
     }
-  });
-
-  return counts;
-};
-
-
-
-useEffect(() => {
-  if (projects.length > 0) {
-    const counts = calculateStatusCounts(projects);
-    setStatusCounts(counts);
-  }
-}, [projects]);
+  }, [projects]);
 
   const handleStatusClick = (statusLabel) => {
-    if (statusLabel === "Tất cả" || statusLabel === statuses[0].label) {
-      setStatus('all');
-      setSelectedStatus("Tất cả");
-      setActiveStatus("Tất cả");
+    if (statusLabel === "Tổng số dự án") {
+      setStatus("all");
+      setSelectedStatus("Tổng số dự án");
+      setActiveStatus("Tổng số dự án");
     } else {
       setStatus(statusLabel);
       setSelectedStatus(statusLabel);
@@ -129,62 +163,74 @@ useEffect(() => {
 
     // Lọc theo ngày
     if (fromDate || toDate) {
-      result = result.filter(project => {
-        const projectStartDate = new Date(project.NgayKhoiCong || '1970-01-01');
-        const filterFromDate = fromDate ? new Date(fromDate) : new Date('1970-01-01');
-        const filterToDate = toDate ? new Date(toDate) : new Date('9999-12-31');
-        return projectStartDate >= filterFromDate && projectStartDate <= filterToDate;
+      result = result.filter((project) => {
+        const projectStartDate = new Date(project.NgayKhoiCong || "1970-01-01");
+        const filterFromDate = fromDate
+          ? new Date(fromDate)
+          : new Date("1970-01-01");
+        const filterToDate = toDate ? new Date(toDate) : new Date("9999-12-31");
+        return (
+          projectStartDate >= filterFromDate && projectStartDate <= filterToDate
+        );
       });
     }
 
     // Lọc theo trạng thái
-    if (status !== 'all') {
-      result = result.filter(project => project.TrangThai === status);
+    if (status !== "all") {
+      result = result.filter((project) => project.TrangThai === status);
     }
 
     // Lọc theo tên dự án
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(project =>
-        project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)
+      result = result.filter(
+        (project) =>
+          project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)
       );
     }
 
     // Lọc theo tỉnh thành
     if (selectedProvince) {
-      result = result.filter(project => {
+      result = result.filter((project) => {
         if (!project.TinhThanh) return false;
-        const searchProvince = selectedProvince.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const searchProvince = selectedProvince
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
 
-        const projectProvinces = project.TinhThanh
-          .split('–')
-          .map(p => p.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
-        return projectProvinces.some(p => p.includes(searchProvince));
+        const projectProvinces = project.TinhThanh.split("–").map((p) =>
+          p
+            .trim()
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+        );
+        return projectProvinces.some((p) => p.includes(searchProvince));
       });
     }
 
     // Lọc theo nhà thầu (mới thêm)
-    if (contractor !== 'all') {
-      result = result.filter(project => {
+    if (contractor !== "all") {
+      result = result.filter((project) => {
         // Kiểm tra xem dự án có chứa nhà thầu được chọn không
         return project.danhSachNhaThau?.some(
-          nhathau => nhathau.NhaThauID.toString() === contractor
+          (nhathau) => nhathau.NhaThauID.toString() === contractor
         );
       });
     }
 
-    if (completionLevel !== 'all') {
+    if (completionLevel !== "all") {
       const minCompletion = parseFloat(completionLevel);
-      result = result.filter(project => {
-        const completion = parseFloat(project.phanTramHoanThanh || '0');
+      result = result.filter((project) => {
+        const completion = parseFloat(project.phanTramHoanThanh || "0");
         console.log(completion);
 
         return completion >= minCompletion;
       });
     }
 
-    if (status !== 'all') {
-      result = result.filter(project => project.TrangThai === status);
+    if (status !== "all") {
+      result = result.filter((project) => project.TrangThai === status);
     }
 
     setFilteredProjects(result);
@@ -201,9 +247,11 @@ useEffect(() => {
 
     const termLower = term.toLowerCase();
     const suggestions = projects
-      .filter(project =>
-        project.TenDuAn && project.TenDuAn.toLowerCase().includes(termLower))
-      .map(project => project.TenDuAn)
+      .filter(
+        (project) =>
+          project.TenDuAn && project.TenDuAn.toLowerCase().includes(termLower)
+      )
+      .map((project) => project.TenDuAn)
       .filter((name, index, self) => self.indexOf(name) === index)
       .slice(0, 5);
 
@@ -227,8 +275,8 @@ useEffect(() => {
         setLoading(true);
         const [projectsRes, provincesRes, contractorRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/duAnTong`),
-          axios.get('https://provinces.open-api.vn/api/?depth=1'),
-          axios.get(`${API_BASE_URL}/nhaThauList`)
+          axios.get("https://provinces.open-api.vn/api/?depth=1"),
+          axios.get(`${API_BASE_URL}/nhaThauList`),
         ]);
 
         setProjects(projectsRes.data.data);
@@ -238,7 +286,7 @@ useEffect(() => {
 
         setLoading(false);
       } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
+        console.error("Lỗi khi lấy dữ liệu:", error);
         setLoading(false);
       }
     };
@@ -252,10 +300,10 @@ useEffect(() => {
         console.log("selectedDuAnIds:", selectedDuAnIds);
         console.log("selectedDuAnId:", selectedDuAnId);
 
-        // Xử lý nhiều ID 
+        // Xử lý nhiều ID
         if (selectedDuAnIds.length > 0) {
           // Tạo mảng các promises cho các request API
-          const promises = selectedDuAnIds.map(id =>
+          const promises = selectedDuAnIds.map((id) =>
             axios.get(`${API_BASE_URL}/duAn/${id}`)
           );
 
@@ -265,16 +313,20 @@ useEffect(() => {
           // Tổng hợp kết quả
           fetchedData = results.map((res, index) => ({
             ...res.data.data,
-            DuAnID: selectedDuAnIds[index]
+            DuAnID: selectedDuAnIds[index],
           }));
         }
         // Xử lý một ID
         else if (selectedDuAnId) {
-          const response = await axios.get(`${API_BASE_URL}/duAn/${selectedDuAnId}`);
-          fetchedData = [{
-            ...response.data.data,
-            DuAnID: selectedDuAnId
-          }];
+          const response = await axios.get(
+            `${API_BASE_URL}/duAn/${selectedDuAnId}`
+          );
+          fetchedData = [
+            {
+              ...response.data.data,
+              DuAnID: selectedDuAnId,
+            },
+          ];
 
           setSelectedDuAnId(null);
         }
@@ -289,7 +341,7 @@ useEffect(() => {
         setFilteredProjects(fetchedData);
         setLoading(false);
       } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
+        console.error("Lỗi khi lấy dữ liệu:", error);
         setLoading(false);
       }
     };
@@ -298,7 +350,16 @@ useEffect(() => {
   }, [selectedDuAnIds, selectedDuAnId]);
   useEffect(() => {
     filterProjects();
-  }, [fromDate, toDate, status, searchTerm, selectedProvince, contractor, completionLevel, projects]);
+  }, [
+    fromDate,
+    toDate,
+    status,
+    searchTerm,
+    selectedProvince,
+    contractor,
+    completionLevel,
+    projects,
+  ]);
   const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan, soLuongGoiThau) => {
     if (soLuongDuAnThanhPhan > 0 ) {
       navigate(`/side-project/${DuAnID}`);
@@ -323,8 +384,8 @@ useEffect(() => {
     setIsMapView(!isMapView);
   };
   const [pinnedProjects, setPinnedProjects] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pinnedProjects');
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("pinnedProjects");
       return saved ? JSON.parse(saved) : [];
     }
     return [];
@@ -332,59 +393,60 @@ useEffect(() => {
 
   // Hàm xử lý ghim/bỏ ghim
   const handlePinProject = (projectId) => {
-    setPinnedProjects(prev => {
+    setPinnedProjects((prev) => {
       const newPinned = prev.includes(projectId)
-        ? prev.filter(id => id !== projectId) 
-        : [projectId, ...prev]; 
+        ? prev.filter((id) => id !== projectId)
+        : [projectId, ...prev];
 
       // Lưu vào localStorage
-      localStorage.setItem('pinnedProjects', JSON.stringify(newPinned));
+      localStorage.setItem("pinnedProjects", JSON.stringify(newPinned));
       return newPinned;
     });
   };
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Đang tiến hành':
-        return { backgroundColor: '#f28c5e', color: 'white' };
-      case 'Đã hoàn thành':
-        return { backgroundColor: '#2ecc71', color: 'black' };
-      case 'Chậm tiến độ':
-        return { backgroundColor: '#e74c3c', color: 'white' };
+      case "Đang tiến hành":
+        return { backgroundColor: "#f28c5e", color: "white" };
+      case "Đã hoàn thành":
+        return { backgroundColor: "#2ecc71", color: "black" };
+      case "Chậm tiến độ":
+        return { backgroundColor: "#e74c3c", color: "white" };
       default:
-        return { backgroundColor: '#3498db', color: 'white' };
+        return { backgroundColor: "#3498db", color: "white" };
     }
   };
 
   const resetFilters = () => {
-    setFromDate('');
-    setToDate('');
-    setStatus('all');
-    setSearchTerm('');
+    setFromDate("");
+    setToDate("");
+    setStatus("all");
+    setSearchTerm("");
     setSearchSuggestions([]);
     setShowSuggestions(false);
-    setContractor('all')
+    setContractor("all");
   };
 
-
-
   const handleExportReport = () => {
-    navigate('/bao-cao-tong')
+    navigate("/bao-cao-tong");
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-200">
-
       <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4">
         <div className="flex items-center space-x-4">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
           <span>Rdsic</span>
-          <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">R</div>
+          <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
+            R
+          </div>
         </div>
       </header>
 
       <div className="px-6 pb-2 pt-2">
-        <h2 className="text-l mt-6 md:mt-0 font-bold">Danh sách dự án đường bộ</h2>
+        <h2 className="text-l mt-6 md:mt-0 font-bold">
+          Danh sách dự án đường bộ
+        </h2>
       </div>
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
@@ -399,18 +461,18 @@ useEffect(() => {
                 className="pl-3 pr-10 py-1 border rounded w-full text-sm"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
-                    {searchSuggestions.map((suggestion, index) => (
-                      <li
-                        key={index}
-                        onClick={() => selectSuggestion(suggestion)}
-                        className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
-                      >
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
+                  {searchSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectSuggestion(suggestion)}
+                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                    >
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-sm text-gray-700 bg-white w-full md:w-auto">
               <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
@@ -450,13 +512,17 @@ useEffect(() => {
               <option value="Đang triển khai">Đang triển khai</option>
               <option value="Đang tiến hành">Đang tiến hành</option>
               <option value="Đã hoàn thành">Đã hoàn thành</option>
-              <option value="Đã phê duyệt - chờ khởi công">Đã phê duyệt-chờ khởi công</option>
-              <option value="Đã phê duyệt - chậm tiến độ">Đã phê duyệt-chậm tiến độ</option>
+              <option value="Đã phê duyệt – chờ khởi công">
+                Đã phê duyệt-chờ khởi công
+              </option>
+              <option value="Đã phê duyệt – chậm tiến độ">
+                Đã phê duyệt-chậm tiến độ
+              </option>
               <option value="Dự kiến khởi công">Dự kiến khởi công</option>
             </select>
             <select
               value={contractor}
-              onChange={(e) => setContractor(e.target.value)} 
+              onChange={(e) => setContractor(e.target.value)}
               className="px-3 py-1 border rounded w-full md:w-48"
             >
               <option value="all">Tất cả nhà thầu</option>
@@ -466,7 +532,7 @@ useEffect(() => {
                 </option>
               ))}
             </select>
-            <select 
+            <select
               value={completionLevel}
               onChange={(e) => setCompletionLevel(e.target.value)}
               className="px-3 py-1 border rounded w-full md:w-48"
@@ -477,12 +543,22 @@ useEffect(() => {
               <option value="80">&gt;80%</option>
               <option value="100">100%</option>
             </select>
+            <button
+                onClick={resetFilters}
+                className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
+              >
+                Xóa lọc
+              </button>
           </div>
           <div className="flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">XUẤT EXCEL</button>
-            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">NHẬP EXCEL</button>
+            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
+              XUẤT EXCEL
+            </button>
+            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
+              NHẬP EXCEL
+            </button>
           </div>
-          <div className="text-gray-500">Cập nhật lần cuối: 15:10</div>
+          {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
           {/* Status bar section - hidden on mobile */}
           <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
@@ -492,7 +568,11 @@ useEffect(() => {
                   key={status.label}
                   onClick={() => handleStatusClick(status.label)}
                   className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${status.lâbel !== statuses[0].label ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300" : ""}
+                    ${
+                      status.label !== "Tổng số dự án"
+                        ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
+                        : ""
+                    }
                     ${
                       activeStatus === status.label
                         ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
@@ -500,9 +580,7 @@ useEffect(() => {
                     }
                   `}
                 >
-                  <div className="mb-1 text-lg">
-                    {status.icon}
-                  </div>
+                  <div className="mb-1 text-lg">{status.icon}</div>
                   <div className="text-sm font-bold">{status.label}</div>
                   <div className="text-sm text-gray-500">{status.count}</div>
                 </div>
@@ -511,11 +589,11 @@ useEffect(() => {
           </div>
 
           <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
-          
+
           <div className="p-2 font-sans text-[13px]">
             {/* Status Bar - hidden on mobile */}
             <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
-              {statuses_1.map((s) => {
+              {statusesLabel.map((s) => {
                 const isActive = selectedStatus === s.label;
                 return (
                   <div
@@ -528,7 +606,9 @@ useEffect(() => {
                     }`}
                   >
                     <div className="flex items-center gap-1">
-                      <div className={`w-[10px] h-[10px] rounded-sm ${s.box}`}></div>
+                      <div
+                        className={`w-[10px] h-[10px] rounded-sm ${s.box}`}
+                      ></div>
                       <span>
                         {s.label}
                         {s.count !== null && ` (${s.count})`}
@@ -540,54 +620,76 @@ useEffect(() => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-              <div className="md:hidden mb-3 relative">
-                <div 
-                  className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
-                  onClick={() => setIsSelectOpen(!isSelectOpen)}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className={`inline-block w-3 h-3 rounded-sm ${statuses_1.find(s => s.label === selectedStatus)?.box || 'bg-gray-200'}`}></span>
-                    {selectedStatus || "Tất cả"}
-                  </div>
-                  <svg 
-                    className={`w-4 h-4 transition-transform duration-200 ${isSelectOpen ? 'transform rotate-180' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+            <div className="md:hidden mb-3 relative">
+              <div
+                className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
+                onClick={() => setIsSelectOpen(!isSelectOpen)}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block w-3 h-3 rounded-sm ${
+                      statusesLabel.find((s) => s.label === selectedStatus)?.box ||
+                      "bg-gray-200"
+                    }`}
+                  ></span>
+                  {selectedStatus || "Tất cả"}
                 </div>
-                
-                {isSelectOpen && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    <div 
-                      className={`p-2 flex items-center gap-2 ${!selectedStatus ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isSelectOpen ? "transform rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+
+              {isSelectOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div
+                    className={`p-2 flex items-center gap-2 ${
+                      !selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => {
+                      setSelectedStatus("");
+                      setIsSelectOpen(false);
+                    }}
+                  ></div>
+                  {statusesLabel.map((s) => (
+                    <div
+                      key={s.label}
+                      className={`p-2 flex items-center gap-2 ${
+                        selectedStatus === s.label
+                          ? "bg-blue-50"
+                          : "hover:bg-gray-100"
+                      }`}
                       onClick={() => {
-                        setSelectedStatus("");
+                        setSelectedStatus(s.label);
                         setIsSelectOpen(false);
                       }}
                     >
+                      <span
+                        className={`inline-block w-3 h-3 rounded-sm ${s.box}`}
+                      ></span>
+                      {s.label} {s.count !== null && `(${s.count})`}
                     </div>
-                    {statuses_1.map((s) => (
-                      <div 
-                        key={s.label}
-                        className={`p-2 flex items-center gap-2 ${selectedStatus === s.label ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
-                        onClick={() => {
-                          setSelectedStatus(s.label);
-                          setIsSelectOpen(false);
-                        }}
-                      >
-                        <span className={`inline-block w-3 h-3 rounded-sm ${s.box}`}></span>
-                        {s.label} {s.count !== null && `(${s.count})`}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Desktop Table */}
-            <div className="hidden md:flex flex-col" style={{ height: 'calc(100vh - 300px)' }}>
+            <div
+              className="hidden md:flex flex-col"
+              style={{ height: "calc(100vh - 300px)" }}
+            >
               <div className="overflow-y-auto">
                 <table className="min-w-full border border-gray-300 text-sm">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
@@ -612,88 +714,138 @@ useEffect(() => {
                           return 0;
                         })
                         .map((project, index) => (
-                      <tr key={project.DuAnID} className="text-center">
-                        <td className="border px-1 py-2 text-center">
-                          <input type="checkbox" className="accent-red-500" />
-                        </td>
-                        <td className="border px-1 py-2">
-                          <button
-                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                            title="Tệp đính kèm"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                            title="Xoá"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <img src={trash} alt="Xoá" className="w-5 h-5" />
-                          </button>
-                          <button
-                            className='p-1.5 hover:bg-gray-200 rounded-full transition-all'
-                            title="Ghim"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePinProject(project.DuAnID);
-                              }}
-                          >
-                            <img src={pin} alt="Ghim" className="w-5 h-5" />
-                          </button>
-                        </td>
-                        <td className="border px-1 py-2 text-blue-600 font-medium">
-                          <div>{project.DuAnID}</div>
-                          <div className="text-blue-400 text-xs cursor-pointer hover:underline" onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)} >Xem chi tiết</div>
-                        </td>
-                        <td className="border px-1 py-2">{project.TenDuAn}</td>
-                        <td className="border px-1 py-2">
-                          {project.TongChieuDai} Km
-                        </td>
-                        
-                        <td className="border px-1 py-2">
-                          <span className={`px-2 py-[2px] text-white text-xs rounded-full ${
-                            getStatusColor(project.TrangThai)
-                          }`}>
-                            {project.TrangThai}
-                          </span>
-                        </td>
+                          <tr key={project.DuAnID} className="text-center">
+                            <td className="border px-1 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                className="accent-red-500"
+                              />
+                            </td>
+                            <td className="border px-1 py-2">
+                              <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Tệp đính kèm"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <img
+                                  src={attachment}
+                                  alt="Tệp đính kèm"
+                                  className="w-5 h-5"
+                                />
+                              </button>
+                              <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Xoá"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <img
+                                  src={trash}
+                                  alt="Xoá"
+                                  className="w-5 h-5"
+                                />
+                              </button>
+                              <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Ghim"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePinProject(project.DuAnID);
+                                }}
+                              >
+                                <img src={pin} alt="Ghim" className="w-5 h-5" />
+                              </button>
+                            </td>
+                            <td className="border px-1 py-2 text-blue-600 font-medium">
+                              <div>{project.DuAnID}</div>
+                              <div
+                                className="text-blue-400 text-xs cursor-pointer hover:underline"
+                                onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)}
+                              >
+                                Xem chi tiết
+                              </div>
+                            </td>
+                            <td className="border px-1 py-2">
+                              {project.TenDuAn}
+                            </td>
+                            <td className="border px-1 py-2">
+                              {project.TongChieuDai} Km
+                            </td>
 
-                        <td className="border px-1 py-2">
-                          <div className="grid grid-rows-3 gap-2">
-                            <div className="flex items-center gap-2">
-                              <img src={planIcon} width="16" height="16" alt="Kế hoạch" className="flex-shrink-0" />
-                              <span className="text-xs text-blue-600 font-bold">
-                                Kế hoạch: <strong className="font-medium">{project.phanTramKeHoach || '0'}%</strong>
+                            <td className="border px-1 py-2">
+                              <span
+                                className={`px-2 py-[2px] text-white text-xs rounded-full ${getStatusColor(
+                                  project.TrangThai
+                                )}`}
+                              >
+                                {project.TrangThai}
                               </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <img src={actualIcon} width="16" height="16" alt="Hoàn thành" className="flex-shrink-0" />
-                              <span className="text-xs text-green-600 font-bold">
-                                Hoàn thành: <strong className="font-medium">{project.phanTramHoanThanh || '0'}%</strong>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <img src={delayIcon} width="16" height="16" alt="Chậm tiến độ" className="flex-shrink-0" />
-                              <span className="text-xs text-yellow-600 font-bold">
-                                Chậm tiến độ: <strong className="font-medium">{project.phanTramChamTienDo || '0'}%</strong>
-                              </span>
-                            </div>
-                          </div>
+                            </td>
+
+                            <td className="border px-1 py-2">
+                              <div className="grid grid-rows-3 gap-2">
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={planIcon}
+                                    width="16"
+                                    height="16"
+                                    alt="Kế hoạch"
+                                    className="flex-shrink-0"
+                                  />
+                                  <span className="text-xs text-blue-600 font-bold">
+                                    Kế hoạch:{" "}
+                                    <strong className="font-medium">
+                                      {project.phanTramKeHoach || "0"}%
+                                    </strong>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={actualIcon}
+                                    width="16"
+                                    height="16"
+                                    alt="Hoàn thành"
+                                    className="flex-shrink-0"
+                                  />
+                                  <span className="text-xs text-green-600 font-bold">
+                                    Hoàn thành:{" "}
+                                    <strong className="font-medium">
+                                      {project.phanTramHoanThanh || "0"}%
+                                    </strong>
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <img
+                                    src={delayIcon}
+                                    width="16"
+                                    height="16"
+                                    alt="Chậm tiến độ"
+                                    className="flex-shrink-0"
+                                  />
+                                  <span className="text-xs text-yellow-600 font-bold">
+                                    Chậm tiến độ:{" "}
+                                    <strong className="font-medium">
+                                      {project.phanTramChamTienDo || "0"}%
+                                    </strong>
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan="7"
+                          className="text-center text-gray-500 py-4"
+                        >
+                          Không tìm thấy dự án nào phù hợp
                         </td>
                       </tr>
-                        ))            ) : (
-            <tr>
-              <td colSpan="7" className="text-center text-gray-500 py-4">
-                Không tìm thấy dự án nào phù hợp
-              </td>
-            </tr>
-            )} 
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
@@ -707,95 +859,134 @@ useEffect(() => {
                     return 0;
                   })
                   .map((project, index) => (
-                <div 
-                  key={project.DuAnID} 
-                  className="bg-white rounded-lg shadow p-4 border border-gray-200"
-                  onClick={(e) => {
-                    // Chỉ chuyển trang nếu không click vào checkbox
-                    if (!e.target.closest('input[type="checkbox"]')) {
-                     handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center">
-                      <input type="checkbox" className="accent-red-500 mr-2" onClick={(e) => e.stopPropagation()} />
-                      <div className="text-blue-600 font-medium">
-                        <div>{project.DuAnID}</div>
+                    <div
+                      key={project.DuAnID}
+                      className="bg-white rounded-lg shadow p-4 border border-gray-200"
+                      onClick={(e) => {
+                        // Chỉ chuyển trang nếu không click vào checkbox
+                        if (!e.target.closest('input[type="checkbox"]')) {
+                          handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)
+                        }
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            className="accent-red-500 mr-2"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="text-blue-600 font-medium">
+                            <div>{project.DuAnID}</div>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                            <img
+                              src={attachment}
+                              alt="Tệp đính kèm"
+                              className="w-5 h-5"
+                            />
+                          </button>
+                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                            <img src={trash} alt="Xoá" className="w-5 h-5" />
+                          </button>
+                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
+                            <img src={pin} alt="Ghim" className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mb-2">
+                        <div className="text-gray-600 font-medium">
+                          Tên dự án:
+                        </div>
+                        <div>{project.TenDuAn}</div>
+                      </div>
+
+                      <div className="mb-2">
+                        <div className="text-gray-600 font-medium">
+                          Dài tuyến:
+                        </div>
+                        <div>{project.TongChieuDai}</div>
+                      </div>
+
+                      <div className="mb-2">
+                        <div className="text-gray-600 font-medium">
+                          Trạng thái:
+                        </div>
+                        <span
+                          className={`px-2 py-[2px] text-white text-xs rounded-full ${getStatusColor(
+                            project.TrangThai
+                          )}`}
+                        >
+                          {project.TrangThai}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="text-gray-600 font-medium">
+                          Tiến độ:
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={planIcon}
+                            width="16"
+                            height="16"
+                            alt="Kế hoạch"
+                          />
+                          <span className="text-xs">
+                            Kế hoạch:{" "}
+                            <strong>{project.phanTramKeHoach || "0"}%</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={actualIcon}
+                            width="16"
+                            height="16"
+                            alt="Hoàn thành"
+                          />
+                          <span className="text-xs">
+                            Hoàn thành:{" "}
+                            <strong>{project.phanTramHoanThanh || "0"}%</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={delayIcon}
+                            width="16"
+                            height="16"
+                            alt="Chậm tiến độ"
+                          />
+                          <span className="text-xs">
+                            Chậm tiến độ:{" "}
+                            <strong>
+                              {project.phanTramChamTienDo || "0"}%
+                            </strong>
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex space-x-1">
-                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                        <img src={attachment} alt="Tệp đính kèm" className="w-5 h-5" />
-                      </button>
-                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                        <img src={trash} alt="Xoá" className="w-5 h-5" />
-                      </button>
-                      <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                        <img src={pin} alt="Ghim" className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="text-gray-600 font-medium">Tên dự án:</div>
-                    <div>{project.TenDuAn}</div>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="text-gray-600 font-medium">Dài tuyến:</div>
-                    <div>{project.TongChieuDai}</div>
-                  </div>
-                  
-                  <div className="mb-2">
-                    <div className="text-gray-600 font-medium">Trạng thái:</div>
-                    <span className={`px-2 py-[2px] text-white text-xs rounded-full ${
-                      getStatusColor(project.TrangThai)
-                    }`}>
-                      {project.TrangThai}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="text-gray-600 font-medium">Tiến độ:</div>
-                    <div className="flex items-center gap-2">
-                      <img src={planIcon} width="16" height="16" alt="Kế hoạch" />
-                      <span className="text-xs">
-                        Kế hoạch: <strong>{project.phanTramKeHoach || '0'}%</strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <img src={actualIcon} width="16" height="16" alt="Hoàn thành" />
-                      <span className="text-xs">
-                        Hoàn thành: <strong>{project.phanTramHoanThanh || '0'}%</strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <img src={delayIcon} width="16" height="16" alt="Chậm tiến độ" />
-                      <span className="text-xs">
-                        Chậm tiến độ: <strong>{project.phanTramChamTienDo || '0'}%</strong>
-                      </span>
-                    </div>
-                  </div>
+                  ))
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Không tìm thấy dự án nào phù hợp
                 </div>
-              ))) : (
-              <div className="text-center text-gray-500 py-4">
-                Không tìm thấy dự án nào phù hợp
-              </div>
-            )} 
+              )}
             </div>
-
-
           </div>
         </div>
       </div>
 
-            {/* Popup thêm mới */}
+      {/* Popup thêm mới */}
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>
-          <div className="popup-content" onClick={(e) => e.stopPropagation()}>
-          </div>
+          <div
+            className="popup-content"
+            onClick={(e) => e.stopPropagation()}
+          ></div>
         </div>
       )}
     </div>
