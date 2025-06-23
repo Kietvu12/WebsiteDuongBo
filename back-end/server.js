@@ -3678,6 +3678,102 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
     });
   }
 });
+app.delete('/duan/:id', async (req, res) => {
+  try {
+    const duAnId = req.params.id;
+    
+    // Kiểm tra dự án tồn tại
+    const [results] = await pool.query('SELECT * FROM duan WHERE DuAnID = ?', [duAnId]);
+    if (results.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Dự án không tồn tại' 
+      });
+    }
+
+    // Xóa các file đính kèm liên quan trước (nếu cần)
+    const uploadPath = path.join(__dirname, 'Uploads', 'DUAN', duAnId);
+    if (fs.existsSync(uploadPath)) {
+      fs.rmSync(uploadPath, { recursive: true, force: true });
+    }
+
+    // Xóa dự án từ database
+    await pool.query('DELETE FROM duan WHERE DuAnID = ?', [duAnId]);
+
+    res.json({ 
+      success: true, 
+      message: 'Đã xóa dự án và tất cả dữ liệu liên quan' 
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa dự án:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server khi xóa dự án',
+      error: error.message 
+    });
+  }
+});
+app.delete('/goithau/:id', async (req, res) => {
+  try {
+      const goiThauId = req.params.id;
+      const result = await GoiThau.destroy({
+          where: { GoiThau_ID: goiThauId }
+      });
+
+      if (result === 0) {
+          return res.status(404).json({ success: false, message: 'Gói thầu không tồn tại' });
+      }
+
+      res.json({ 
+          success: true, 
+          message: 'Đã xóa gói thầu và tất cả dữ liệu liên quan' 
+      });
+  } catch (error) {
+      console.error('Lỗi khi xóa gói thầu:', error);
+      res.status(500).json({ 
+          success: false, 
+          message: 'Lỗi server khi xóa gói thầu' 
+      });
+  }
+});
+app.delete('/hangmuc/:id', async (req, res) => {
+  try {
+    const hangMucId = req.params.id;
+    
+    // Kiểm tra hạng mục tồn tại
+    const [results] = await pool.query('SELECT * FROM hangmuc WHERE HangMucID = ?', [hangMucId]);
+    if (results.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Hạng mục không tồn tại' 
+      });
+    }
+
+    // Xóa các kế hoạch liên quan trước (nếu cần cascade)
+    await pool.query('DELETE FROM kehoach WHERE HangMucID = ?', [hangMucId]);
+
+    // Xóa các file đính kèm liên quan (nếu có)
+    const uploadPath = path.join(__dirname, 'Uploads', 'HANGMUC', hangMucId);
+    if (fs.existsSync(uploadPath)) {
+      fs.rmSync(uploadPath, { recursive: true, force: true });
+    }
+
+    // Xóa hạng mục từ database
+    await pool.query('DELETE FROM hangmuc WHERE HangMucID = ?', [hangMucId]);
+
+    res.json({ 
+      success: true, 
+      message: 'Đã xóa hạng mục và tất cả kế hoạch liên quan' 
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa hạng mục:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server khi xóa hạng mục',
+      error: error.message 
+    });
+  }
+});
 
 
 

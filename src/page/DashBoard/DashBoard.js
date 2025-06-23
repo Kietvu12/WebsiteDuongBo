@@ -40,7 +40,7 @@ const Dashboard = () => {
   const [contractorList, setContractorList] = useState([]);
   const [completionLevel, setCompletionLevel] = useState("all");
 
-  
+
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
     "Đang triển khai": 0,
@@ -360,8 +360,36 @@ const Dashboard = () => {
     completionLevel,
     projects,
   ]);
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:5000/duan/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // Thêm token authorization nếu cần
+          // 'Authorization': `Bearer ${yourToken}`
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Cập nhật UI sau khi xóa thành công
+        setProjects(projects.filter(project => project.DuAnID !== projectId));
+        alert('Xóa dự án thành công');
+      } else {
+        alert(`Lỗi: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa dự án:', error);
+      alert('Có lỗi xảy ra khi xóa dự án');
+    }
+  };
   const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan, soLuongGoiThau) => {
-    if (soLuongDuAnThanhPhan > 0 ) {
+    if (soLuongDuAnThanhPhan > 0) {
       navigate(`/side-project/${DuAnID}`);
     } else if (soLuongDuAnThanhPhan === 0 && soLuongGoiThau === 0) {
       navigate(`/side-project/${DuAnID}`);
@@ -544,11 +572,11 @@ const Dashboard = () => {
               <option value="100">100%</option>
             </select>
             <button
-                onClick={resetFilters}
-                className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
-              >
-                Xóa lọc
-              </button>
+              onClick={resetFilters}
+              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
+            >
+              Xóa lọc
+            </button>
           </div>
           <div className="flex gap-2 mb-2 mt-3">
             <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
@@ -568,15 +596,13 @@ const Dashboard = () => {
                   key={status.label}
                   onClick={() => handleStatusClick(status.label)}
                   className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${
-                      status.label !== "Tổng số dự án"
-                        ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
-                        : ""
+                    ${status.label !== "Tổng số dự án"
+                      ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
+                      : ""
                     }
-                    ${
-                      activeStatus === status.label
-                        ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
-                        : "bg-gray-100 text-gray-600"
+                    ${activeStatus === status.label
+                      ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
+                      : "bg-gray-100 text-gray-600"
                     }
                   `}
                 >
@@ -599,11 +625,10 @@ const Dashboard = () => {
                   <div
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${
-                      isActive
+                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
                         ? `${s.color} border-red-600`
                         : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1">
                       <div
@@ -627,17 +652,15 @@ const Dashboard = () => {
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-block w-3 h-3 rounded-sm ${
-                      statusesLabel.find((s) => s.label === selectedStatus)?.box ||
+                    className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)?.box ||
                       "bg-gray-200"
-                    }`}
+                      }`}
                   ></span>
                   {selectedStatus || "Tất cả"}
                 </div>
                 <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isSelectOpen ? "transform rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 transition-transform duration-200 ${isSelectOpen ? "transform rotate-180" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -654,9 +677,8 @@ const Dashboard = () => {
               {isSelectOpen && (
                 <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
                   <div
-                    className={`p-2 flex items-center gap-2 ${
-                      !selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
-                    }`}
+                    className={`p-2 flex items-center gap-2 ${!selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
+                      }`}
                     onClick={() => {
                       setSelectedStatus("");
                       setIsSelectOpen(false);
@@ -665,11 +687,10 @@ const Dashboard = () => {
                   {statusesLabel.map((s) => (
                     <div
                       key={s.label}
-                      className={`p-2 flex items-center gap-2 ${
-                        selectedStatus === s.label
+                      className={`p-2 flex items-center gap-2 ${selectedStatus === s.label
                           ? "bg-blue-50"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedStatus(s.label);
                         setIsSelectOpen(false);
@@ -733,10 +754,14 @@ const Dashboard = () => {
                                   className="w-5 h-5"
                                 />
                               </button>
+
                               <button
                                 className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
                                 title="Xoá"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(project.DuAnID);
+                                }}
                               >
                                 <img
                                   src={trash}
@@ -744,6 +769,7 @@ const Dashboard = () => {
                                   className="w-5 h-5"
                                 />
                               </button>
+
                               <button
                                 className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
                                 title="Ghim"
@@ -889,9 +915,21 @@ const Dashboard = () => {
                               className="w-5 h-5"
                             />
                           </button>
-                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                            <img src={trash} alt="Xoá" className="w-5 h-5" />
-                          </button>
+                          <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Xoá"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(project.DuAnID);
+                                }}
+                              >
+                                <img
+                                  src={trash}
+                                  alt="Xoá"
+                                  className="w-5 h-5"
+                                />
+                              </button>
+                          
                           <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
                             <img src={pin} alt="Ghim" className="w-5 h-5" />
                           </button>

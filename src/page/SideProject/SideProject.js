@@ -54,6 +54,7 @@ const SideProject = () => {
     "Đang thực hiện": 0,
   });
 
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
     { label: "Tổng số dự án", count: statusCounts.total },
     { label: "Đang hoạt động", count: statusCounts["Đang hoạt động"] },
@@ -212,6 +213,34 @@ const SideProject = () => {
     setSearchSuggestions([]);
     setShowSuggestions(false);
   };
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa dự án này?')) {
+      return;
+    }
+    try {
+      const response = await fetch(`http://localhost:5000/duan/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          // Thêm token authorization nếu cần
+          // 'Authorization': `Bearer ${yourToken}`
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Cập nhật UI sau khi xóa thành công
+        setSubProjects(subProjects.filter(project => project.DuAnID !== projectId));
+        alert('Xóa dự án thành công');
+      } else {
+        alert(`Lỗi: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('Lỗi khi xóa dự án:', error);
+      alert('Có lỗi xảy ra khi xóa dự án');
+    }
+  };
   useEffect(() => {
     const fetchProjectData = async () => {
       if (!DuAnID) {
@@ -221,7 +250,7 @@ const SideProject = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:5000/duAnThanhPhan/${DuAnID}`
+          `${API_BASE_URL}/duAnThanhPhan/${DuAnID}`
         );
         setProject(response.data.data.duAnTong);
         setSubProjects(response.data.data.duAnThanhPhan);
@@ -406,13 +435,13 @@ const SideProject = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-200">
       <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4">
-      <button
-              onClick={() => setShowAddProject(true)}
-              className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
-            >
-              <FiPlus className="w-3 h-3" />
-              <span>Tạo dự án mới</span>
-            </button>
+        <button
+          onClick={() => setShowAddProject(true)}
+          className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
+        >
+          <FiPlus className="w-3 h-3" />
+          <span>Tạo dự án mới</span>
+        </button>
 
         <div>
           <button
@@ -507,11 +536,11 @@ const SideProject = () => {
               <option value="100">100%</option>
             </select>
             <button
-                onClick={resetFilters}
-                className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
-              >
-                Xóa lọc
-              </button>
+              onClick={resetFilters}
+              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
+            >
+              Xóa lọc
+            </button>
           </div>
           <div className="flex gap-2 mb-2 mt-3">
             <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
@@ -531,15 +560,13 @@ const SideProject = () => {
                   key={status.label}
                   onClick={() => handleStatusClick(status.label)}
                   className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${
-                      status.label !== "Tổng số dự án"
-                        ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
-                        : ""
+                    ${status.label !== "Tổng số dự án"
+                      ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
+                      : ""
                     }
-                    ${
-                      activeStatus === status.label
-                        ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
-                        : "bg-gray-100 text-gray-600"
+                    ${activeStatus === status.label
+                      ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
+                      : "bg-gray-100 text-gray-600"
                     }
                   `}
                 >
@@ -562,11 +589,10 @@ const SideProject = () => {
                   <div
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${
-                      isActive
+                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
                         ? `${s.color} border-red-600`
                         : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1">
                       <div
@@ -590,23 +616,20 @@ const SideProject = () => {
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-block w-3 h-3 rounded-sm ${
-                      statusesLabel.find((s) => s.label === selectedStatus)
+                    className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)
                         ?.box || "bg-gray-200"
-                    }`}
+                      }`}
                   ></span>
                   {selectedStatus || "Tổng số dự án"}{" "}
                   {statusesLabel.find((s) => s.label === selectedStatus)
                     ?.count !== null &&
-                    `(${
-                      statusesLabel.find((s) => s.label === selectedStatus)
-                        ?.count
+                    `(${statusesLabel.find((s) => s.label === selectedStatus)
+                      ?.count
                     })`}
                 </div>
                 <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${
-                    isSelectOpen ? "transform rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 transition-transform duration-200 ${isSelectOpen ? "transform rotate-180" : ""
+                    }`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -623,9 +646,8 @@ const SideProject = () => {
               {isSelectOpen && (
                 <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
                   <div
-                    className={`p-2 flex items-center gap-2 ${
-                      !selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
-                    }`}
+                    className={`p-2 flex items-center gap-2 ${!selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
+                      }`}
                     onClick={() => {
                       setSelectedStatus("");
                       setIsSelectOpen(false);
@@ -634,11 +656,10 @@ const SideProject = () => {
                   {statusesLabel.map((s) => (
                     <div
                       key={s.label}
-                      className={`p-2 flex items-center gap-2 ${
-                        selectedStatus === s.label
+                      className={`p-2 flex items-center gap-2 ${selectedStatus === s.label
                           ? "bg-blue-50"
                           : "hover:bg-gray-100"
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedStatus(s.label);
                         setIsSelectOpen(false);
@@ -705,7 +726,10 @@ const SideProject = () => {
                               <button
                                 className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
                                 title="Xoá"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(subProject.DuAnID);
+                                }}
                               >
                                 <img
                                   src={trash}
@@ -714,11 +738,10 @@ const SideProject = () => {
                                 />
                               </button>
                               <button
-                                className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${
-                                  pinnedProjects.includes(subProject.DuAnID)
+                                className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(subProject.DuAnID)
                                     ? "bg-yellow-100"
                                     : ""
-                                }`}
+                                  }`}
                                 title="Ghim"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -807,37 +830,37 @@ const SideProject = () => {
                         ))
                     ) : (
                       <tr>
-                  <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
-                  <div className="text-center text-gray-500 py-4">
-                Không tìm thấy dự án nào phù hợp
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Dự án này hiện chưa có dự án thành phần nào.</p>
-                  <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
-                </div>
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    onClick={() => setShowAddPackage(true)}
-                  >
-                    <svg
-                      className="-ml-1 mr-2 h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Thêm mới gói thầu
-                  </button>
-                </div>
-              </div>
-                  </td>
-                </tr>
+                        <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
+                          <div className="text-center text-gray-500 py-4">
+                            Không tìm thấy dự án nào phù hợp
+                            <div className="mt-2 text-sm text-gray-500">
+                              <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                              <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                            </div>
+                            <div className="mt-6">
+                              <button
+                                type="button"
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                onClick={() => setShowAddPackage(true)}
+                              >
+                                <svg
+                                  className="-ml-1 mr-2 h-5 w-5"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Thêm mới gói thầu
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -894,17 +917,24 @@ const SideProject = () => {
                             />
                           </button>
                           <button
-                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <img src={trash} alt="Xoá" className="w-5 h-5" />
-                          </button>
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Xoá"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(subProject.DuAnID);
+                                }}
+                              >
+                                <img
+                                  src={trash}
+                                  alt="Xoá"
+                                  className="w-5 h-5"
+                                />
+                              </button>
                           <button
-                            className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${
-                              pinnedProjects.includes(project.DuAnID)
+                            className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID)
                                 ? "bg-yellow-100"
                                 : ""
-                            }`}
+                              }`}
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePinProject(subProject.DuAnID);
@@ -993,33 +1023,33 @@ const SideProject = () => {
                   ))
               ) : (
                 <div className="text-center text-gray-500 py-4">
-                Không tìm thấy dự án nào phù hợp
-                <div className="mt-2 text-sm text-gray-500">
-                  <p>Dự án này hiện chưa có dự án thành phần nào.</p>
-                  <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
-                </div>
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    onClick={() => setShowAddPackage(true)}
-                  >
-                    <svg
-                      className="-ml-1 mr-2 h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
+                  Không tìm thấy dự án nào phù hợp
+                  <div className="mt-2 text-sm text-gray-500">
+                    <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                    <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                  </div>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      onClick={() => setShowAddPackage(true)}
                     >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Thêm mới gói thầu
-                  </button>
+                      <svg
+                        className="-ml-1 mr-2 h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Thêm mới gói thầu
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
             </div>
           </div>
@@ -1038,22 +1068,22 @@ const SideProject = () => {
           />
         </div>
       )}
-            {showAddPackage && (
+      {showAddPackage && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
             {/* Lớp phủ mờ */}
-            <div 
+            <div
               className="fixed inset-0 bg-black bg-opacity-50"
               onClick={() => setShowAddPackage(false)}
             ></div>
-            
+
             {/* Container pop-up - đã điều chỉnh max-width và width */}
             <div className="relative w-full max-w-6xl z-10"> {/* Tăng từ max-w-4xl lên max-w-6xl */}
               <AddNewPackage
                 projectId={DuAnID}
                 onClose={() => setShowAddPackage(false)}
                 onSuccess={(newPackage) => {
-                  
+
                 }}
                 className="bg-white rounded-lg shadow-xl overflow-hidden"
               />
