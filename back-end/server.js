@@ -2936,8 +2936,8 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
         TinhThanh || null, 
         ChuDauTu || null, 
         NgayKhoiCong || null,
-        TrangThai || 'dang_chuan_bi', 
-        NguonVon || 'ngan_sach', 
+        TrangThai || 'Đang chuẩn bị', 
+        NguonVon || 'Ngân sách', 
         TongChieuDai || null, 
         KeHoachHoanThanh || null,
         MoTaChung || null, 
@@ -2949,7 +2949,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
 
     // Link project to its type
     await db.query(
-      'INSERT INTO DoiTuongLoaiHinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "duan", ?)',
+      'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "duan", ?)',
       [DuAnID, LoaiHinh_ID]
     );
 
@@ -2957,7 +2957,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     if (thuocTinhValuesParsed && typeof thuocTinhValuesParsed === 'object') {
       for (const [ThuocTinh_ID, GiaTri] of Object.entries(thuocTinhValuesParsed)) {
         await db.query(
-          `INSERT INTO GiaTriThuocTinh 
+          `INSERT INTO giatrithuoctinh 
           (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
           VALUES (?, ?, "duan", ?)`,
           [ThuocTinh_ID, DuAnID, GiaTri]
@@ -3087,7 +3087,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
     // 3. Link tender package to its type
     if (LoaiHinh_ID) {
       await db.query(
-        'INSERT INTO DoiTuongLoaiHinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
+        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
         [GoiThau_ID, LoaiHinh_ID]
       );
 
@@ -3095,7 +3095,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
         for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
           await db.query(
-            `INSERT INTO GiaTriThuocTinh 
+            `INSERT INTO giatrithuoctinh 
             (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
             VALUES (?, ?, "goithau", ?)`,
             [ThuocTinh_ID, GoiThau_ID, GiaTri]

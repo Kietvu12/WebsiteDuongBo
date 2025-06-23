@@ -242,8 +242,8 @@ const AddNewProject = () => {
         TinhThanh: '',
         ChuDauTu: '',
         NgayKhoiCong: '',
-        TrangThai: 'dang_chuan_bi',
-        NguonVon: 'ngan_sach',
+        TrangThai: 'Đang chuẩn bị',
+        NguonVon: 'Ngân sách',
         TongChieuDai: '',
         KeHoachHoanThanh: '',
         MoTaChung: '',
@@ -698,10 +698,10 @@ const AddNewProject = () => {
                                 value={formData.TrangThai}
                                 onChange={handleInputChange}
                             >
-                                <option value="dang_chuan_bi">Đang chuẩn bị</option>
-                                <option value="dang_thi_cong">Đang thi công</option>
-                                <option value="hoan_thanh">Hoàn thành</option>
-                                <option value="tam_dung">Tạm dừng</option>
+                                <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+                                <option value="Đang thi công">Đang thi công</option>
+                                <option value="Hoàn thành">Hoàn thành</option>
+                                <option value="Tạm dừng">Tạm dừng</option>
                             </select>
                         </div>
                     </div>
