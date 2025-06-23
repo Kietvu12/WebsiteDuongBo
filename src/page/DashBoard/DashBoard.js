@@ -365,7 +365,7 @@ const Dashboard = () => {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/duan/${projectId}`, {
+      const response = await fetch(`${API_BASE_URL}/duan/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

@@ -218,7 +218,7 @@ const SideProject = () => {
       return;
     }
     try {
-      const response = await fetch(`http://localhost:5000/duan/${projectId}`, {
+      const response = await fetch(`${API_BASE_URL}/duan/${projectId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -299,7 +299,7 @@ const SideProject = () => {
 
           // Tạo mảng các promises cho các request API
           const promises = selectedDuAnConIds.map((conId) =>
-            axios.get(`http://localhost:5000/duAntp/${conId}`)
+            axios.get(`${API_BASE_URL}/duAntp/${conId}`)
           );
 
           // Chạy tất cả các requests cùng lúc
@@ -324,7 +324,7 @@ const SideProject = () => {
           console.log("Đang xử lý một dự án con:", selectedDuAnConId);
 
           const response = await axios.get(
-            `http://localhost:5000/duAntp/${selectedDuAnConId}`
+            `${API_BASE_URL}/duAntp/${selectedDuAnConId}`
           );
           const duAnConData = [
             {
@@ -347,7 +347,7 @@ const SideProject = () => {
 
           // Tải dữ liệu dự án cha và danh sách dự án con
           const response = await axios.get(
-            `http://localhost:5000/duAnThanhPhan/${DuAnID}`
+            `${API_BASE_URL}/duAnThanhPhan/${DuAnID}`
           );
           if (response.data.data) {
             setProject(response.data.data.duAnTong);
