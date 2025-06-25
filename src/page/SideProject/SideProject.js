@@ -20,6 +20,7 @@ import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
 import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
 import AddNewPackage from '../AddNewPackage/AddNewPackage';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
+import edit from "../../assets/img/edit.png"
 
 
 const SideProject = () => {
@@ -45,6 +46,7 @@ const SideProject = () => {
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+    const [showEdit, setShowEdit] = useState(false)
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
@@ -53,6 +55,44 @@ const SideProject = () => {
     "Chậm tiến độ – đang hoàn thiện": 0,
     "Đang thực hiện": 0,
   });
+  const mergedProvinces = [
+    "Thành phố Hà Nội",
+    "Thành phố Huế",
+    "Tỉnh Quảng Ninh",
+    "Tỉnh Cao Bằng",
+    "Tỉnh Lạng Sơn",
+    "Tỉnh Lai Châu",
+    "Tỉnh Điện Biên",
+    "Tỉnh Sơn La",
+    "Tỉnh Thanh Hóa",
+    "Tỉnh Nghệ An",
+    "Tỉnh Hà Tĩnh",
+    "Tỉnh Tuyên Quang",
+    "Tỉnh Lào Cai",
+    "Tỉnh Thái Nguyên",
+    "Tỉnh Phú Thọ",
+    "Tỉnh Bắc Ninh",
+    "Tỉnh Hưng Yên",
+    "Thành phố Hải Phòng",
+    "Tỉnh Ninh Bình",
+    "Tỉnh Quảng Trị",
+    "Thành phố Đà Nẵng",
+    "Tỉnh Quảng Ngãi",
+    "Tỉnh Gia Lai",
+    "Tỉnh Khánh Hòa",
+    "Tỉnh Lâm Đồng",
+    "Tỉnh Đắk Lắk",
+    "Thành phố Hồ Chí Minh",
+    "Tỉnh Đồng Nai",
+    "Tỉnh Tây Ninh",
+    "Thành phố Cần Thơ",
+    "Tỉnh Vĩnh Long",
+    "Tỉnh Đồng Tháp",
+    "Tỉnh Cà Mau",
+    "Tỉnh An Giang"
+  ];
+    const [selectedID, setSelectedID] = useState(null)
+    const [selectedParentID, setSelectedParentID] = useState(null)
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
@@ -183,6 +223,11 @@ const SideProject = () => {
     }
 
     setFilteredProjects(result);
+  };
+  const handleEdit = (projectID, parentID) => {
+    setSelectedID(projectID);
+    setSelectedParentID(parentID);
+    setShowEdit(true);
   };
   const updateSearchSuggestions = (term) => {
     if (!term) {
@@ -750,6 +795,16 @@ const SideProject = () => {
                               >
                                 <img src={pin} alt="Ghim" className="w-5 h-5" />
                               </button>
+                              <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Sửa thông tin"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(subProject.DuAnID, subProject.ParentID);
+                                }}
+                              >
+                                <img src={edit} alt="Ghim" className="w-5 h-5" />
+                              </button>
                             </td>
                             <td className="border px-1 py-2 text-blue-600 font-medium">
                               <div>{subProject.DuAnID}</div>
@@ -1091,6 +1146,21 @@ const SideProject = () => {
           </div>
         </div>
       )}
+      {showEdit && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+                  <AddNewSubProject
+                    isEdit= {1}
+                    ProjectID={selectedID}
+                    DuAnID={selectedParentID}
+                    onClose={() => setShowEdit(false)}
+                    onSuccess={() => {
+                      setShowEdit(false);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
     </div>
   );
 };

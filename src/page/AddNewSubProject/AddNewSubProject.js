@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -6,9 +6,8 @@ import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
 
-const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
+const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => {
     const navigate = useNavigate();
-    const { projectId } = useParams();
     const [showAddAttribute, setShowAddAttribute] = useState(false);
     const [tinhThanhList, setTinhThanhList] = useState([]);
     const [loaiHinhList, setLoaiHinhList] = useState([]);
@@ -16,22 +15,64 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
     const [removedThuocTinh, setRemovedThuocTinh] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedLoaiHinh, setSelectedLoaiHinh] = useState(null);
-    const [expanded, setExpanded] = useState(false);
     const [availableThuocTinh, setAvailableThuocTinh] = useState([]);
     const [expandedInputs, setExpandedInputs] = useState({});
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
-
     const [nhaThauList, setNhaThauList] = useState([]);
     const [fetchingContractors, setFetchingContractors] = useState(true);
     const [fetchError, setFetchError] = useState(null);
-
-    const toggleExpand = (id) => {
-        setExpandedInputs(prev => ({
-            ...prev,
-            [id]: !prev[id],
-        }));
-    };
+    console.log(isEdit, ProjectID, DuAnID);
+    const dropdownRef = useRef();
+    const [selectedProvinces, setSelectedProvinces] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const mergedProvinces = [
+        "Thành phố Hà Nội",
+        "Thành phố Huế",
+        "Tỉnh Quảng Ninh",
+        "Tỉnh Cao Bằng",
+        "Tỉnh Lạng Sơn",
+        "Tỉnh Lai Châu",
+        "Tỉnh Điện Biên",
+        "Tỉnh Sơn La",
+        "Tỉnh Thanh Hóa",
+        "Tỉnh Nghệ An",
+        "Tỉnh Hà Tĩnh",
+        "Tỉnh Tuyên Quang",
+        "Tỉnh Lào Cai",
+        "Tỉnh Thái Nguyên",
+        "Tỉnh Phú Thọ",
+        "Tỉnh Bắc Ninh",
+        "Tỉnh Hưng Yên",
+        "Thành phố Hải Phòng",
+        "Tỉnh Ninh Bình",
+        "Tỉnh Quảng Trị",
+        "Thành phố Đà Nẵng",
+        "Tỉnh Quảng Ngãi",
+        "Tỉnh Gia Lai",
+        "Tỉnh Khánh Hòa",
+        "Tỉnh Lâm Đồng",
+        "Tỉnh Đắk Lắk",
+        "Thành phố Hồ Chí Minh",
+        "Tỉnh Đồng Nai",
+        "Tỉnh Tây Ninh",
+        "Thành phố Cần Thơ",
+        "Tỉnh Vĩnh Long",
+        "Tỉnh Đồng Tháp",
+        "Tỉnh Cà Mau",
+        "Tỉnh An Giang"
+    ];
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
     const [formData, setFormData] = useState({
         TenDuAn: '',
         TinhThanh: '',
@@ -51,8 +92,64 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
     const handleFileChange = (e) => {
         setFiles([...e.target.files]);
     };
+    useEffect(() => {
+        const fetchData = async () => {
+            if (isEdit && ProjectID) {
+                try {
+                    setLoading(true);
+                    const response = await axios.get(`${API_BASE_URL}/duAnChiTiet/${ProjectID}`);
 
+                    if (response.data.success) {
+                        const projectData = response.data.data;
 
+                        // Cập nhật formData với dữ liệu từ API
+                        setFormData({
+                            TenDuAn: projectData.TenDuAn || '',
+                            TinhThanh: projectData.TinhThanh || '',
+                            ChuDauTu: projectData.ChuDauTu || '',
+                            NgayKhoiCong: projectData.NgayKhoiCong || '',
+                            TrangThai: projectData.TrangThai || 'Đang chuẩn bị',
+                            NguonVon: projectData.NguonVon || 'Ngân sách',
+                            TongChieuDai: projectData.TongChieuDai || '',
+                            KeHoachHoanThanh: projectData.KeHoachHoanThanh || '',
+                            MoTaChung: projectData.MoTaChung || '',
+                            ParentID: projectData.ParentID || DuAnID,
+                            LoaiHinh_ID: projectData.LoaiHinh_ID || '',
+                            ThuocTinhValues: projectData.ThuocTinhValues || {}
+                        });
+
+                        // Load loại hình và thuộc tính tương ứng
+                        if (projectData.LoaiHinh_ID) {
+                            const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == projectData.LoaiHinh_ID);
+                            setSelectedLoaiHinh(loaiHinh);
+
+                            const thuocTinhResponse = await axios.get(`${API_BASE_URL}/loaihinh/${projectData.LoaiHinh_ID}/thuoctinh`);
+                            if (thuocTinhResponse.data.success) {
+                                setThuocTinhList(thuocTinhResponse.data.data.thuocTinh);
+                            }
+                        }
+
+                        // Load danh sách file đính kèm
+                        if (projectData.TaiLieu && projectData.TaiLieu.length > 0) {
+                            setFiles(projectData.TaiLieu.map(file => ({
+                                id: file.TaiLieuID,
+                                name: file.TenTaiLieu,
+                                url: file.DuongDan,
+                                isExisting: true
+                            })));
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching project details:', error);
+                    alert('Không thể tải thông tin dự án');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchData();
+    }, [isEdit, ProjectID]);
     useEffect(() => {
         fetchLoaiHinh();
     }, []);
@@ -116,13 +213,10 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
     const removeThuocTinh = (thuocTinh) => {
         setThuocTinhList(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setRemovedThuocTinh(prev => [...prev, thuocTinh]);
-
-        // Xóa giá trị thuộc tính khỏi formData
         const newThuocTinhValues = { ...formData.ThuocTinhValues };
         delete newThuocTinhValues[thuocTinh.ThuocTinh_ID];
         setFormData({ ...formData, ThuocTinhValues: newThuocTinhValues });
     };
-
     const restoreThuocTinh = (thuocTinh) => {
         setRemovedThuocTinh(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setThuocTinhList(prev => [...prev, thuocTinh]);
@@ -131,6 +225,21 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
+    };
+    const handleProvinceToggle = (province) => {
+        setSelectedProvinces(prev => {
+            const updated = prev.includes(province)
+                ? prev.filter(p => p !== province)
+                : [...prev, province];
+
+            // Cập nhật formData
+            setFormData(prevData => ({
+                ...prevData,
+                TinhThanh: updated.join(" - ")
+            }));
+
+            return updated;
+        });
     };
 
     const handleThuocTinhChange = (thuocTinhId, value) => {
@@ -142,7 +251,6 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
             }
         });
     };
-
     const handleDateChange = (name, date) => {
         setFormData({ ...formData, [name]: date });
     };
@@ -153,7 +261,6 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
         e.preventDefault();
         setLoading(true);
 
-        // Kiểm tra dữ liệu bắt buộc trước khi gửi
         if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
             setLoading(false);
             return;
@@ -161,7 +268,7 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
 
         const formattedValues = {
             ...formData,
-            ParentID: DuAnID, // Thêm trường ParentID
+            ParentID: DuAnID,
             NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
             KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
         };
@@ -169,7 +276,6 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
         try {
             const formDataToSend = new FormData();
 
-            // Thêm từng trường dữ liệu vào FormData
             Object.entries(formattedValues).forEach(([key, value]) => {
                 if (value !== null && value !== undefined) {
                     if (key === 'ThuocTinhValues') {
@@ -179,31 +285,44 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
                     }
                 }
             });
-
-            // Thêm các file vào FormData
             files.forEach(file => {
-                formDataToSend.append('files', file);
-            });
-
-            const response = await axios.post(`${API_BASE_URL}/duan/tao-moi`, formDataToSend, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
+                if (!file.isExisting) {
+                    formDataToSend.append('files', file);
                 }
             });
+
+            // Thêm danh sách file cần xóa
+            const filesToDelete = files.filter(file => file.markedForDeletion);
+            if (filesToDelete.length > 0) {
+                formDataToSend.append('deletedFiles', JSON.stringify(filesToDelete.map(file => file.id)));
+            }
+
+            let response;
+            if (isEdit) {
+                response = await axios.put(`${API_BASE_URL}/duan/${ProjectID}`, formDataToSend, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+            } else {
+                response = await axios.post(`${API_BASE_URL}/duan/tao-moi`, formDataToSend, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+            }
 
             if (response.data.success) {
                 onSuccess(response.data.data);
                 onClose();
-            } else {
-                console.log("Lỗi");
             }
         } catch (error) {
             console.error('Error:', error);
+            alert(isEdit ? 'Cập nhật dự án thất bại' : 'Tạo dự án thất bại');
         } finally {
             setLoading(false);
         }
     };
-
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
 
@@ -274,7 +393,7 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
             <div className="flex justify-between items-center mb-2">
                 <h1 className="text-lg font-semibold text-gray-800 flex items-center">
                     <FaRoad className="mr-1 text-blue-500 text-sm" />
-                    Thêm dự án mới
+                    {isEdit ? "Cập nhật dự án" : "Thêm mơi dự án"}
                 </h1>
                 <div className="flex items-center gap-2">
                     <button
@@ -308,11 +427,11 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
                         <select
                             className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
                             onChange={handleLoaiHinhChange}
-                            value={formData.LoaiHinh_ID}
+                            value={formData.LoaiHinh_ID ? String(formData.LoaiHinh_ID) : ""}
                         >
                             <option value="">Chọn loại hình dự án</option>
                             {loaiHinhList.map(loaiHinh => (
-                                <option key={loaiHinh.LoaiHinh_ID} value={loaiHinh.LoaiHinh_ID}>
+                                <option key={loaiHinh.LoaiHinh_ID} value={String(loaiHinh.LoaiHinh_ID)}>
                                     {loaiHinh.TenLoaiHinh}
                                 </option>
                             ))}
@@ -385,8 +504,6 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
                                 <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                             </div>
                         </div>
-
-                        {/* Chủ đầu tư */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -412,25 +529,42 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
 
                     {/* Right Column */}
                     <div className="space-y-2">
-                        {/* Tỉnh thành */}
-                        <div className="flex flex-col">
+                        <div className="flex flex-col relative" ref={dropdownRef}>
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-xs" />
                                 Tỉnh thành
                             </label>
-                            <select
-                                name="TinhThanh"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.TinhThanh}
-                                onChange={handleInputChange}
+
+                            {/* Ô hiển thị */}
+                            <div
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs bg-white cursor-pointer"
+                                onClick={() => setShowDropdown(!showDropdown)}
                             >
-                                <option value="">-- Chọn tỉnh thành --</option>
-                                {tinhThanhList.map((tinh, index) => (
-                                    <option key={index} value={tinh.name}>
-                                        {tinh.name}
-                                    </option>
-                                ))}
-                            </select>
+                                {selectedProvinces.length > 0
+                                    ? selectedProvinces.join(" - ")
+                                    : <span className="text-gray-400">-- Chọn tỉnh thành --</span>}
+                            </div>
+                            {showDropdown && (
+                                <div
+                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-xs transition-all duration-200 ease-out animate-slide-down z-50"
+                                >
+                                    {mergedProvinces.map((tinh, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => handleProvinceToggle(tinh)}
+                                            className="px-2 py-1 hover:bg-blue-50 cursor-pointer flex items-center transition-all"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                className="mr-2 accent-blue-500"
+                                                checked={selectedProvinces.includes(tinh)}
+                                                readOnly
+                                            />
+                                            {tinh}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Nguồn vốn */}
@@ -445,10 +579,10 @@ const AddNewSubProject = ({ DuAnID, onClose, onSuccess }) => {
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
-                                <option value="ngan_sach">Ngân sách</option>
-                                <option value="tu_nguyen">Tự nguyện</option>
-                                <option value="hop_tac">Hợp tác</option>
-                                <option value="nuoc_ngoai">Nước ngoài</option>
+                                <option value="Ngân sách">Ngân sách</option>
+                                <option value="Tự nguyện">Tự nguyện</option>
+                                <option value="Hợp tác">Hợp tác</option>
+                                <option value="Nước ngoài">Nước ngoài</option>
                             </select>
                         </div>
 

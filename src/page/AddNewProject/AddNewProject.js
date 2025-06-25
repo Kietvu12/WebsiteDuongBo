@@ -1,41 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
-
-
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFilePdf,
+  faFileWord,
+  faFileExcel,
+  faFileAlt,
+  faFileImage
+} from '@fortawesome/free-solid-svg-icons';
 
 const DocThongMinh = ({ onClose } = {}) => {
     const [isLoading, setIsLoading] = useState(false);
     const [apiResponse, setApiResponse] = useState(null);
     const [error, setError] = useState(null);
     const [userInput, setUserInput] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState(null);
+    const [preview, setPreview] = useState({ url: null, icon: null });
     const [dragActive, setDragActive] = useState(false);
 
-    // Xử lý upload file
+    const allowedFileTypes = [
+        'image/jpeg',
+        'image/png',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+    ];
+
+    const getFileIcon = (fileType) => {
+        if (fileType.startsWith('image/')) return faFileImage;
+        if (fileType.includes('pdf')) return faFilePdf;
+        if (fileType.includes('word')) return faFileWord;
+        if (fileType.includes('excel')) return faFileExcel;
+        return faFileAlt;
+    };
+
+    const getFileTypeName = (fileType) => {
+        const typeMap = {
+            'image/jpeg': 'JPEG Image',
+            'image/png': 'PNG Image',
+            'application/pdf': 'PDF Document',
+            'application/msword': 'Word Document',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+            'application/vnd.ms-excel': 'Excel Spreadsheet',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
+            'text/plain': 'Text File'
+        };
+        return typeMap[fileType] || 'File';
+    };
+
     const handleFileUpload = (file) => {
-        if (!file.type.startsWith('image/')) {
-            setError('Vui lòng tải lên file ảnh (JPEG, PNG)');
+        // Kiểm tra loại file
+        if (!allowedFileTypes.includes(file.type)) {
+            setError(`Loại file không được hỗ trợ. Các loại được hỗ trợ: ${allowedFileTypes.map(t => getFileTypeName(t)).join(', ')}`);
             return false;
         }
 
-        if (file.size > 5 * 1024 * 1024) { // Giới hạn 5MB
-            setError('Kích thước ảnh quá lớn (tối đa 5MB)');
+        // Giới hạn kích thước file (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            setError('Kích thước file quá lớn (tối đa 5MB)');
             return false;
         }
 
         setUserInput(file);
-        setPreviewUrl(URL.createObjectURL(file));
         setApiResponse(null);
         setError(null);
+
+        // Xử lý preview
+        if (file.type.startsWith('image/')) {
+            setPreview({ url: URL.createObjectURL(file), icon: null });
+        } else {
+            setPreview({
+                url: null,
+                icon: (
+                    <div className="flex flex-col items-center p-4">
+                        <FontAwesomeIcon 
+                            icon={getFileIcon(file.type)} 
+                            className="text-4xl text-gray-400 mb-2" 
+                        />
+                        <span className="text-xs text-gray-500">
+                            {getFileTypeName(file.type)}
+                        </span>
+                    </div>
+                )
+            });
+        }
+
         return true;
     };
 
-    // Xử lý drag and drop
     const handleDrag = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -62,55 +122,52 @@ const DocThongMinh = ({ onClose } = {}) => {
     };
 
     const handleCancel = () => {
-        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        if (preview.url) URL.revokeObjectURL(preview.url);
         setUserInput(null);
-        setPreviewUrl(null);
+        setPreview({ url: null, icon: null });
         setApiResponse(null);
         setError(null);
     };
-const handleReadFile = async () => {
-    if (!userInput) return;
 
-    setIsLoading(true);
-    setError(null);
+    const handleReadFile = async () => {
+        if (!userInput) return;
 
-    try {
-        const formData = new FormData();
-        formData.append('file', userInput); // Key 'file' phải khớp với FastAPI
+        setIsLoading(true);
+        setError(null);
 
-        // KHÔNG đặt header 'Content-Type' thủ công
-        const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/analyze-project/', {
-            method: 'POST',
-            body: formData // Browser tự thêm headers
-        });
+        try {
+            const formData = new FormData();
+            formData.append('file', userInput);
+            const response = await fetch('https://786d-42-119-222-118.ngrok-free.app/analyze-project/', {
+                method: 'POST',
+                body: formData
+            });
 
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-        
-        const data = await response.json();
-        console.log("Server response:", data); // Debug response
-        
-        setApiResponse({ status: "success", data });
-    } catch (err) {
-        console.error("Upload error:", err);
-        setError("Lỗi khi tải ảnh lên server");
-    } finally {
-        setIsLoading(false);
-    }
-};
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            const data = await response.json();
+            setApiResponse({ status: "success", data });
+        } catch (err) {
+            console.error("Upload error:", err);
+            setError("Lỗi khi tải file lên server");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         return () => {
-            if (previewUrl) {
-                URL.revokeObjectURL(previewUrl);
+            if (preview.url) {
+                URL.revokeObjectURL(preview.url);
             }
         };
-    }, [previewUrl]);
+    }, [preview.url]);
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Đọc thông tin từ ảnh</h2>
+                    <h2 className="text-xl font-semibold">Đọc thông tin từ file</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -123,11 +180,15 @@ const handleReadFile = async () => {
                     <div className="space-y-4">
                         <div className="border border-gray-200 rounded-lg p-4">
                             <div className="flex flex-col items-center mb-4">
-                                <img
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    className="max-h-60 max-w-full object-contain"
-                                />
+                                {preview.url ? (
+                                    <img
+                                        src={preview.url}
+                                        alt="Preview"
+                                        className="max-h-60 max-w-full object-contain"
+                                    />
+                                ) : (
+                                    preview.icon
+                                )}
                                 <div className="mt-2 text-sm text-gray-600 text-center">
                                     <p>{userInput.name}</p>
                                     <p>{(userInput.size / 1024).toFixed(2)} KB</p>
@@ -154,7 +215,7 @@ const handleReadFile = async () => {
                                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none transition-colors"
                                     onClick={handleCancel}
                                 >
-                                    Chọn ảnh khác
+                                    Chọn file khác
                                 </button>
                             </div>
                         </div>
@@ -190,20 +251,20 @@ const handleReadFile = async () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                 </svg>
                                 <p className={`font-medium ${dragActive ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    {dragActive ? 'Thả ảnh vào đây' : 'Tải ảnh lên'}
+                                    {dragActive ? 'Thả file vào đây' : 'Tải file lên'}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                    Kéo thả ảnh vào đây hoặc click để chọn
+                                    Kéo thả file vào đây hoặc click để chọn
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                    Hỗ trợ: JPEG, PNG (tối đa 5MB)
+                                    Hỗ trợ: JPEG, PNG, PDF, Word, Excel, TXT (tối đa 5MB)
                                 </p>
                             </div>
                             <input
                                 type="file"
                                 className="hidden"
                                 onChange={handleChange}
-                                accept="image/jpeg,image/png"
+                                accept=".jpeg,.jpg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                             />
                         </label>
                     </div>
@@ -212,6 +273,7 @@ const handleReadFile = async () => {
         </div>
     );
 };
+
 const AddNewProject = () => {
     const navigate = useNavigate();
     const [showAddAttribute, setShowAddAttribute] = useState(false);
@@ -230,6 +292,56 @@ const AddNewProject = () => {
     const [nhaThauList, setNhaThauList] = useState([]);
     const [fetchingContractors, setFetchingContractors] = useState(true);
     const [fetchError, setFetchError] = useState(null);
+    const dropdownRef = useRef();
+    const [selectedProvinces, setSelectedProvinces] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const mergedProvinces = [
+        "Thành phố Hà Nội",
+        "Thành phố Huế",
+        "Tỉnh Quảng Ninh",
+        "Tỉnh Cao Bằng",
+        "Tỉnh Lạng Sơn",
+        "Tỉnh Lai Châu",
+        "Tỉnh Điện Biên",
+        "Tỉnh Sơn La",
+        "Tỉnh Thanh Hóa",
+        "Tỉnh Nghệ An",
+        "Tỉnh Hà Tĩnh",
+        "Tỉnh Tuyên Quang",
+        "Tỉnh Lào Cai",
+        "Tỉnh Thái Nguyên",
+        "Tỉnh Phú Thọ",
+        "Tỉnh Bắc Ninh",
+        "Tỉnh Hưng Yên",
+        "Thành phố Hải Phòng",
+        "Tỉnh Ninh Bình",
+        "Tỉnh Quảng Trị",
+        "Thành phố Đà Nẵng",
+        "Tỉnh Quảng Ngãi",
+        "Tỉnh Gia Lai",
+        "Tỉnh Khánh Hòa",
+        "Tỉnh Lâm Đồng",
+        "Tỉnh Đắk Lắk",
+        "Thành phố Hồ Chí Minh",
+        "Tỉnh Đồng Nai",
+        "Tỉnh Tây Ninh",
+        "Thành phố Cần Thơ",
+        "Tỉnh Vĩnh Long",
+        "Tỉnh Đồng Tháp",
+        "Tỉnh Cà Mau",
+        "Tỉnh An Giang"
+    ];
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     const toggleExpand = (id) => {
         setExpandedInputs(prev => ({
@@ -335,6 +447,21 @@ const AddNewProject = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
+    };
+    const handleProvinceToggle = (province) => {
+        setSelectedProvinces(prev => {
+            const updated = prev.includes(province)
+                ? prev.filter(p => p !== province)
+                : [...prev, province];
+
+            // Cập nhật formData
+            setFormData(prevData => ({
+                ...prevData,
+                TinhThanh: updated.join(" - ")
+            }));
+
+            return updated;
+        });
     };
 
     const handleThuocTinhChange = (thuocTinhId, value) => {
@@ -492,7 +619,7 @@ const AddNewProject = () => {
     };
 
     return (
-        <div className="container mx-auto p-2 max-w-screen-2xl">
+        <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl">
             {/* Header gọn */}
             <div className="flex justify-between items-center mb-2">
                 <h1 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -617,10 +744,10 @@ const AddNewProject = () => {
                             >
                                 <option value="">-- Chọn nhà thầu --</option>
                                 {nhaThauList && nhaThauList.map(nhaThau => (
-                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
-                      {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
-                    </option>
-                  ))}
+                                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
+                                        {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
+                                    </option>
+                                ))}
                             </select>
 
                         </div>
@@ -630,24 +757,42 @@ const AddNewProject = () => {
                     {/* Right Column */}
                     <div className="space-y-2">
                         {/* Tỉnh thành */}
-                        <div className="flex flex-col">
+                        <div className="flex flex-col relative" ref={dropdownRef}>
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-xs" />
                                 Tỉnh thành
                             </label>
-                            <select
-                                name="TinhThanh"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
-                                value={formData.TinhThanh}
-                                onChange={handleInputChange}
+
+                            {/* Ô hiển thị */}
+                            <div
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs bg-white cursor-pointer"
+                                onClick={() => setShowDropdown(!showDropdown)}
                             >
-                                <option value="">-- Chọn tỉnh thành --</option>
-                                {tinhThanhList.map((tinh, index) => (
-                                    <option key={index} value={tinh.name}>
-                                        {tinh.name}
-                                    </option>
-                                ))}
-                            </select>
+                                {selectedProvinces.length > 0
+                                    ? selectedProvinces.join(" - ")
+                                    : <span className="text-gray-400">-- Chọn tỉnh thành --</span>}
+                            </div>
+                            {showDropdown && (
+                                <div
+                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-xs transition-all duration-200 ease-out animate-slide-down z-50"
+                                >
+                                    {mergedProvinces.map((tinh, index) => (
+                                        <div
+                                            key={index}
+                                            onClick={() => handleProvinceToggle(tinh)}
+                                            className="px-2 py-1 hover:bg-blue-50 cursor-pointer flex items-center transition-all"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                className="mr-2 accent-blue-500"
+                                                checked={selectedProvinces.includes(tinh)}
+                                                readOnly
+                                            />
+                                            {tinh}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Nguồn vốn */}
@@ -662,10 +807,10 @@ const AddNewProject = () => {
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
-                                <option value="ngan_sach">Ngân sách</option>
-                                <option value="tu_nguyen">Tự nguyện</option>
-                                <option value="hop_tac">Hợp tác</option>
-                                <option value="nuoc_ngoai">Nước ngoài</option>
+                                <option value="Ngân sách">Ngân sách</option>
+                                <option value="Tự nguyện">Tự nguyện</option>
+                                <option value="Hợp tác">Hợp tác</option>
+                                <option value="Nước ngoài">Nước ngoài</option>
                             </select>
                         </div>
 

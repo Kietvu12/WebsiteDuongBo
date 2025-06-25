@@ -80,6 +80,79 @@ const db = mysql.createConnection({
 
 app.use(cors());
 app.use(express.json());
+app.post('/api/nhathau', async (req, res) => {
+  try {
+    const {
+      TenNhaThau,
+      Loai,
+      MaSoThue,
+      DiaChiTruSo,
+      SoDienThoai,
+      Email,
+      NguoiDaiDien,
+      ChucVuNguoiDaiDien,
+      GiayPhepKinhDoanh,
+      NgayCap,
+      NoiCap,
+      GhiChu
+    } = req.body;
+
+    // Validate required fields
+    if (!TenNhaThau || !MaSoThue) {
+      return res.status(400).json({ error: 'Tên nhà thầu và mã số thuế là bắt buộc' });
+    }
+
+    const connection = await pool.getConnection();
+    
+    const [result] = await connection.query(
+      `INSERT INTO nhathau (
+        TenNhaThau,
+        Loai,
+        MaSoThue,
+        DiaChiTruSo,
+        SoDienThoai,
+        Email,
+        NguoiDaiDien,
+        ChucVuNguoiDaiDien,
+        GiayPhepKinhDoanh,
+        NgayCap,
+        NoiCap,
+        GhiChu
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        TenNhaThau,
+        Loai,
+        MaSoThue,
+        DiaChiTruSo,
+        SoDienThoai,
+        Email,
+        NguoiDaiDien,
+        ChucVuNguoiDaiDien,
+        GiayPhepKinhDoanh,
+        NgayCap,
+        NoiCap,
+        GhiChu
+      ]
+    );
+
+    connection.release();
+
+    res.status(201).json({
+      message: 'Thêm nhà thầu thành công',
+      NhaThauID: result.insertId
+    });
+  } catch (error) {
+    console.error('Lỗi khi thêm nhà thầu:', error);
+    
+    // Xử lý lỗi trùng mã số thuế
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: 'Mã số thuế đã tồn tại' });
+    }
+    
+    res.status(500).json({ error: 'Lỗi server khi thêm nhà thầu' });
+  }
+});
+
 app.get('/duAnTongList', async (req, res) => {
   try {
     const [duAnTongList] = await db.query(
@@ -2888,6 +2961,263 @@ app.get('/duAn/:duAnId', async (req, res) => {
     });
   }
 });
+app.get('/duAnChiTiet/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Lấy thông tin cơ bản của dự án
+    const [duan] = await db.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
+    if (!duan || duan.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Dự án không tồn tại'
+      });
+    }
+
+    // Lấy loại hình dự án
+    const [loaiHinh] = await db.query(
+      'SELECT LoaiHinh_ID FROM doituongloaihinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
+      [id]
+    );
+
+    // Lấy các thuộc tính của dự án
+    const [thuocTinh] = await db.query(
+      'SELECT ThuocTinh_ID, GiaTri FROM giatrithuoctinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
+      [id]
+    );
+
+    // Chuyển đổi thuộc tính thành object
+    const thuocTinhValues = {};
+    thuocTinh.forEach(item => {
+      thuocTinhValues[item.ThuocTinh_ID] = item.GiaTri;
+    });
+
+    // Lấy danh sách tài liệu
+    const [taiLieu] = await db.query(
+      'SELECT TaiLieuID, TenTaiLieu, LoaiTaiLieu, DuongDan, MoTa FROM tailieu WHERE DoiTuongID = ? AND LoaiDoiTuong = "DUAN"',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...duan[0],
+        LoaiHinh_ID: loaiHinh[0]?.LoaiHinh_ID || null,
+        ThuocTinhValues: thuocTinhValues,
+        TaiLieu: taiLieu
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting project details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy thông tin dự án',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Lấy dữ liệu từ form-data
+    const {
+      TenDuAn,
+      TinhThanh,
+      ChuDauTu,
+      NgayKhoiCong,
+      TrangThai,
+      NguonVon,
+      TongChieuDai,
+      KeHoachHoanThanh,
+      MoTaChung,
+      ParentID,
+      LoaiHinh_ID,
+      ThuocTinhValues,
+      deletedFiles // Danh sách file IDs cần xóa (nếu có)
+    } = req.body;
+
+    // Parse JSON string nếu có
+    const thuocTinhValuesParsed = ThuocTinhValues ? JSON.parse(ThuocTinhValues) : {};
+
+    // Validate required fields
+    if (!TenDuAn || !LoaiHinh_ID) {
+      // Xóa file đã upload nếu validate fail
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => fs.unlinkSync(file.path));
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (TenDuAn, LoaiHinh_ID)'
+      });
+    }
+
+    // Kiểm tra dự án có tồn tại không
+    const [existingProject] = await db.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
+    if (!existingProject || existingProject.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Dự án không tồn tại'
+      });
+    }
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // Update main project info
+    await db.query(
+      `UPDATE duan SET
+        TenDuAn = ?,
+        TinhThanh = ?,
+        ChuDauTu = ?,
+        NgayKhoiCong = ?,
+        TrangThai = ?,
+        NguonVon = ?,
+        TongChieuDai = ?,
+        KeHoachHoanThanh = ?,
+        MoTaChung = ?,
+        ParentID = ?
+      WHERE DuAnID = ?`,
+      [
+        TenDuAn, 
+        TinhThanh || null, 
+        ChuDauTu || null, 
+        NgayKhoiCong || null,
+        TrangThai || 'Đang chuẩn bị', 
+        NguonVon || 'Ngân sách', 
+        TongChieuDai || null, 
+        KeHoachHoanThanh || null,
+        MoTaChung || null, 
+        ParentID || null,
+        id
+      ]
+    );
+
+    // Update project type
+    await db.query(
+      'UPDATE doituongloaihinh SET LoaiHinh_ID = ? WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
+      [LoaiHinh_ID, id]
+    );
+
+    // Xóa các thuộc tính cũ
+    await db.query(
+      'DELETE FROM giatrithuoctinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
+      [id]
+    );
+
+    // Thêm lại các thuộc tính mới
+    if (thuocTinhValuesParsed && typeof thuocTinhValuesParsed === 'object') {
+      for (const [ThuocTinh_ID, GiaTri] of Object.entries(thuocTinhValuesParsed)) {
+        await db.query(
+          `INSERT INTO giatrithuoctinh 
+          (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+          VALUES (?, ?, "duan", ?)`,
+          [ThuocTinh_ID, id, GiaTri]
+        );
+      }
+    }
+
+    // Xử lý xóa file nếu có
+    if (deletedFiles) {
+      const deletedFilesArray = Array.isArray(deletedFiles) ? deletedFiles : [deletedFiles];
+      
+      for (const fileId of deletedFilesArray) {
+        // Lấy thông tin file để xóa vật lý
+        const [fileInfo] = await db.query(
+          'SELECT DuongDan FROM tailieu WHERE TaiLieuID = ?',
+          [fileId]
+        );
+        
+        if (fileInfo && fileInfo.length > 0) {
+          const filePath = path.join(__dirname, fileInfo[0].DuongDan);
+          try {
+            fs.unlinkSync(filePath);
+          } catch (err) {
+            console.error('Error deleting file:', err);
+          }
+        }
+        
+        // Xóa record trong DB
+        await db.query(
+          'DELETE FROM tailieu WHERE TaiLieuID = ?',
+          [fileId]
+        );
+      }
+    }
+
+    // Xử lý upload file mới
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'DUAN', String(id));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'DUAN',
+            id,
+            file.originalname,
+            'KHAC',
+            `/Uploads/DUAN/${id}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/DUAN/${id}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Cập nhật dự án thành công',
+      data: {
+        DuAnID: id,
+        LoaiHinh_ID,
+        ThuocTinhValues: thuocTinhValuesParsed,
+        taiLieu: taiLieuResults
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    
+    // Clean up uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error updating project:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi cập nhật dự án',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
   try {
     // Lấy dữ liệu từ form-data
@@ -3744,7 +4074,7 @@ app.delete('/hangmuc/:id', async (req, res) => {
     const [results] = await pool.query('SELECT * FROM hangmuc WHERE HangMucID = ?', [hangMucId]);
     if (results.length === 0) {
       return res.status(404).json({ 
-        success: false, 
+        su2ccess: false, 
         message: 'Hạng mục không tồn tại' 
       });
     }

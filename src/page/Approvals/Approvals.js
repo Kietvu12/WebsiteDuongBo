@@ -26,7 +26,14 @@ const Approvals = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-  // const { selectedProjectId, selectedSubProjectId } = useProject();
+
+    useEffect(() => {
+      const savedSearchTerm = localStorage.getItem('lastSearchTerm');
+      const savedProjectId = localStorage.getItem('lastSelectedProjectId');
+      
+      if (savedSearchTerm) setSearchTerm(savedSearchTerm);
+      if (savedProjectId) setSelectedProjectId(savedProjectId);
+    }, []);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
@@ -37,6 +44,15 @@ const Approvals = () => {
         const data = await response.json();
         if (data.success) {
           setProjects(data.data);
+          if (!localStorage.getItem('lastSelectedProjectId') && data.data.length > 0) {
+            const firstProject = data.data[0];
+            setSearchTerm(firstProject.TenDuAn);
+            setSelectedProjectId(firstProject.DuAnID);
+            
+            // Lưu vào localStorage
+            localStorage.setItem('lastSearchTerm', firstProject.TenDuAn);
+            localStorage.setItem('lastSelectedProjectId', firstProject.DuAnID);
+          }
         }
       } catch (error) {
         console.error('Error fetching projects:', error);
@@ -55,6 +71,8 @@ const Approvals = () => {
         if (selectedProjectId) {
           const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
           setProject(response.data.data.duAnTong);
+          localStorage.setItem('lastSelectedProjectId', selectedProjectId);
+          localStorage.setItem('lastSearchTerm', searchTerm);
         }
 
         setLoading(false);
@@ -88,6 +106,8 @@ const Approvals = () => {
     setSearchTerm(project.TenDuAn);
     setSelectedProjectId(project.DuAnID);
     setShowSuggestions(false);
+    localStorage.setItem('lastSearchTerm', project.TenDuAn);
+    localStorage.setItem('lastSelectedProjectId', project.DuAnID);
   };
 
   const handleSearchSubmit = (e) => {

@@ -24,8 +24,17 @@ const WorkItem = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-  // const { selectedProjectId, selectedSubProjectId } = useProject();
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  
+  // Khôi phục state từ localStorage khi component mount
+  useEffect(() => {
+    const savedSearchTerm = localStorage.getItem('lastSearchTerm');
+    const savedProjectId = localStorage.getItem('lastSelectedProjectId');
+    
+    if (savedSearchTerm) setSearchTerm(savedSearchTerm);
+    if (savedProjectId) setSelectedProjectId(savedProjectId);
+  }, []);
+  
   useEffect(() => {
     const fetchProjects = async () => {
       setIsLoadingProjects(true);
@@ -34,6 +43,17 @@ const WorkItem = () => {
         const data = await response.json();
         if (data.success) {
           setProjects(data.data);
+          
+          // Nếu là lần đầu và không có dự án nào được lưu, chọn dự án đầu tiên
+          if (!localStorage.getItem('lastSelectedProjectId') && data.data.length > 0) {
+            const firstProject = data.data[0];
+            setSearchTerm(firstProject.TenDuAn);
+            setSelectedProjectId(firstProject.DuAnID);
+            
+            // Lưu vào localStorage
+            localStorage.setItem('lastSearchTerm', firstProject.TenDuAn);
+            localStorage.setItem('lastSelectedProjectId', firstProject.DuAnID);
+          }
         }
       } catch (error) {
         console.error('Error fetching projects:', error);
@@ -41,59 +61,69 @@ const WorkItem = () => {
         setIsLoadingProjects(false);
       }
     };
-
+  
     fetchProjects();
   }, []);
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
+  
         if (selectedProjectId) {
           const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
           setProject(response.data.data.duAnTong);
+          
+          // Lưu state vào localStorage khi có thay đổi
+          localStorage.setItem('lastSelectedProjectId', selectedProjectId);
+          localStorage.setItem('lastSearchTerm', searchTerm);
         }
-
+  
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [selectedProjectId, navigate]);
+  
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredProjects([]);
       return;
     }
-
+  
     const filtered = projects.filter(project =>
       project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredProjects(filtered);
   }, [searchTerm, projects]);
-
+  
   // Event handlers
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setShowSuggestions(true);
   };
-
+  
   const handleProjectSelect = (project) => {
     setSearchTerm(project.TenDuAn);
     setSelectedProjectId(project.DuAnID);
     setShowSuggestions(false);
+    
+    // Lưu vào localStorage khi chọn dự án
+    localStorage.setItem('lastSearchTerm', project.TenDuAn);
+    localStorage.setItem('lastSelectedProjectId', project.DuAnID);
   };
-
+  
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (filteredProjects.length > 0) {
       handleProjectSelect(filteredProjects[0]);
     }
   };
-
+  
   const renderTitle = () => {
     if (project) {
       return `Kế hoạch các hạng mục - ${project.tenDuAn}`;
@@ -115,17 +145,12 @@ const WorkItem = () => {
             <img src={userIcon} alt="User" className="w-4 h-4 sm:w-6 sm:h-6 rounded-full" />
           </div>
         </div>
-
         {/* Title */}
         <div className="mt-3 sm:mt-4">
           <h1 className="mt-8 text-xs md:text-xl text-gray-800 font-semibold">{renderTitle()}</h1>
         </div>
-
-        {/* Search + Filter */}
         <div className="mt-3 sm:mt-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-
-            {/* Search */}
             <div className="flex-1 relative">
               <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
                 <div className="relative flex-grow">

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { 
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+
+import {
   FaListOl,
-  FaProjectDiagram, 
-  FaBoxOpen, 
+  FaProjectDiagram,
+  FaBoxOpen,
   FaTasks,
   FaCalendarAlt,
   FaChevronDown,
@@ -11,9 +12,9 @@ import {
 } from 'react-icons/fa';
 import axios from 'axios';
 import './ProjectMenu.css';
-import { useProject } from '../../contexts/ProjectContext';
 
 const ProjectMenu = ({ projectId, onItemSelect }) => {
+  const restoredRef = useRef(false);
   const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -46,8 +47,75 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
       fetchData();
     }
   }, [projectId]);
+  const combinedPackages = useMemo(() => {
+    return [].concat(
+      projectData?.duAnThanhPhan?.danhSachGoiThau || [],
+      projectData?.duAnTong?.danhSachGoiThauTrucTiep || [],
+      projectData?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+    );
+  }, [projectData]);
+  useEffect(() => {
+    if (combinedPackages.length === 0 || Object.keys(expandedItems.packages).length > 0) return;
 
-  // Toggle expand/collapse
+    const newPackages = {};
+    const newWorkItems = {};
+
+    combinedPackages.forEach((pkg) => {
+      newPackages[pkg.goiThauId] = true;
+      pkg.danhSachHangMuc?.forEach((workItem) => {
+        newWorkItems[workItem.hangMucId] = true;
+      });
+    });
+
+    setExpandedItems(prev => ({
+      ...prev,
+      packages: newPackages,
+      workItems: newWorkItems
+    }));
+  }, [combinedPackages, expandedItems.packages]);
+  useEffect(() => {
+    if (!projectData || restoredRef.current) return;
+
+    const last = localStorage.getItem('lastSelectedPlan');
+    if (!last) return;
+
+    const lastPlan = JSON.parse(last);
+    const foundPlan = combinedPackages
+      .flatMap(pkg =>
+        (pkg.danhSachHangMuc || []).flatMap(workItem =>
+          (workItem.danhSachKeHoach || []).map(plan => ({
+            ...plan,
+            parent: {
+              packageId: pkg.goiThauId,
+              workItemId: workItem.hangMucId
+            }
+          }))
+        )
+      )
+      .find(plan => plan.keHoachId === lastPlan.keHoachId);
+
+    if (foundPlan) {
+      restoredRef.current = true;
+
+      setExpandedItems(prev => ({
+        ...prev,
+        project: true,
+        packages: {
+          ...prev.packages,
+          [foundPlan.parent.packageId]: true
+        },
+        workItems: {
+          ...prev.workItems,
+          [foundPlan.parent.workItemId]: true
+        }
+      }));
+
+      setSelectedItem({ ...foundPlan, type: 'plan' });
+      if (onItemSelect) {
+        onItemSelect({ ...foundPlan, type: 'plan' });
+      }
+    }
+  }, [projectData, combinedPackages, onItemSelect]);
   const toggleExpand = (type, id) => {
     setExpandedItems(prev => ({
       ...prev,
@@ -57,19 +125,18 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
       }
     }));
   };
-
-  // Handle plan selection (will close menu on mobile)
   const handlePlanSelect = (plan) => {
-    setSelectedItem({ ...plan, type: 'plan' });
+    const selected = { ...plan, type: 'plan' };
+    setSelectedItem(selected);
+    localStorage.setItem('lastSelectedPlan', JSON.stringify(selected));
+
     if (onItemSelect) {
-      onItemSelect({ ...plan, type: 'plan' });
+      onItemSelect(selected);
     }
     if (window.innerWidth < 768) {
       setMobileMenuOpen(false);
     }
   };
-
-  // Handle other item selections (won't close menu)
   const handleItemSelect = (item, type) => {
     setSelectedItem({ ...item, type });
     if (onItemSelect) {
@@ -81,18 +148,13 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
   if (error) return <div className="error-message">Lỗi: {error}</div>;
   if (!projectData) return <div className="no-data">Không có dữ liệu dự án</div>;
 
-  // Combine package lists from different sources
-  const combinedPackages = [].concat(
-    projectData?.duAnThanhPhan?.danhSachGoiThau || [],
-    projectData?.duAnTong?.danhSachGoiThauTrucTiep || [],
-    projectData?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-  );
+
 
   return (
     <div className="p-4">
       {/* Mobile Toggle Button */}
       <div className="md:hidden mb-2">
-        <button 
+        <button
           className="w-full flex items-center justify-between bg-white border border-gray-300 rounded px-4 py-2 text-blue-700 font-semibold text-sm"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
@@ -116,9 +178,8 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
 
             {/* Project Header */}
             <div
-              className={`flex justify-between items-center px-4 py-3 border-b cursor-pointer transition hover:bg-gray-100 ${
-                selectedItem?.type === 'project' ? 'bg-blue-50 border-l-4 border-blue-600' : ''
-              }`}
+              className={`flex justify-between items-center px-4 py-3 border-b cursor-pointer transition hover:bg-gray-100 ${selectedItem?.type === 'project' ? 'bg-blue-50 border-l-4 border-blue-600' : ''
+                }`}
               onClick={() => handleItemSelect(projectData, 'project')}
             >
               <div className="flex gap-2 items-center text-sm text-gray-700">
@@ -150,11 +211,10 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                 {combinedPackages.map((pkg) => (
                   <div key={pkg.goiThauId}>
                     <div
-                      className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${
-                        selectedItem?.type === 'package' && selectedItem?.goiThauId === pkg.goiThauId
+                      className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'package' && selectedItem?.goiThauId === pkg.goiThauId
                           ? 'bg-blue-50 border-l-4 border-blue-600'
                           : ''
-                      }`}
+                        }`}
                       onClick={() => {
                         toggleExpand('packages', pkg.goiThauId);
                         handleItemSelect(pkg, 'package');
@@ -184,11 +244,10 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                         {pkg.danhSachHangMuc.map((workItem) => (
                           <div key={workItem.hangMucId}>
                             <div
-                              className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${
-                                selectedItem?.type === 'work' && selectedItem?.hangMucId === workItem.hangMucId
+                              className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'work' && selectedItem?.hangMucId === workItem.hangMucId
                                   ? 'bg-blue-50 border-l-4 border-blue-600'
                                   : ''
-                              }`}
+                                }`}
                               onClick={() => {
                                 toggleExpand('workItems', workItem.hangMucId);
                                 handleItemSelect(workItem, 'work');
@@ -222,11 +281,10 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                                 {workItem.danhSachKeHoach.map((plan) => (
                                   <div
                                     key={plan.keHoachId}
-                                    className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${
-                                      selectedItem?.type === 'plan' && selectedItem?.keHoachId === plan.keHoachId
+                                    className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'plan' && selectedItem?.keHoachId === plan.keHoachId
                                         ? 'bg-blue-50 border-l-4 border-blue-600'
                                         : ''
-                                    }`}
+                                      }`}
                                     onClick={() => handlePlanSelect(plan)}
                                   >
                                     <div className="flex gap-2 items-center text-sm text-gray-700">

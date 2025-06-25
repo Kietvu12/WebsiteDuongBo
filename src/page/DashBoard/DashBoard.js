@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, use } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
 import pin from "../../assets/img/pin.png";
@@ -8,14 +8,12 @@ import trash from "../../assets/img/file.png";
 import planIcon from "../../assets/img/plan-icon.png";
 import actualIcon from "../../assets/img/actual-icon.png";
 import delayIcon from "../../assets/img/delay-icon.png";
+import edit from "../../assets/img/edit.png"
 import axios from "axios";
 import { useProject } from "../../contexts/ProjectContext";
+import AddNewSubProject from "../AddNewSubProject/AddNewSubProject";
 
 const Dashboard = () => {
-  const [selected, setSelected] = useState("total");
-  const [startDate, setStartDate] = useState("dd/mm/yyyy");
-  const [endDate, setEndDate] = useState("dd/mm/yyyy");
-  const [activeIndex, setActiveIndex] = useState(0);
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const { setSelectedProjectId } = useProject();
@@ -39,8 +37,45 @@ const Dashboard = () => {
   const [contractor, setContractor] = useState("all");
   const [contractorList, setContractorList] = useState([]);
   const [completionLevel, setCompletionLevel] = useState("all");
-
-
+  const [showEdit, setShowEdit] = useState(false)
+  const [selectedID, setSelectedID] = useState(null)
+  const [selectedParentID, setSelectedParentID] = useState(null)
+  const mergedProvinces = [
+    "Thành phố Hà Nội",
+    "Thành phố Huế",
+    "Tỉnh Quảng Ninh",
+    "Tỉnh Cao Bằng",
+    "Tỉnh Lạng Sơn",
+    "Tỉnh Lai Châu",
+    "Tỉnh Điện Biên",
+    "Tỉnh Sơn La",
+    "Tỉnh Thanh Hóa",
+    "Tỉnh Nghệ An",
+    "Tỉnh Hà Tĩnh",
+    "Tỉnh Tuyên Quang",
+    "Tỉnh Lào Cai",
+    "Tỉnh Thái Nguyên",
+    "Tỉnh Phú Thọ",
+    "Tỉnh Bắc Ninh",
+    "Tỉnh Hưng Yên",
+    "Thành phố Hải Phòng",
+    "Tỉnh Ninh Bình",
+    "Tỉnh Quảng Trị",
+    "Thành phố Đà Nẵng",
+    "Tỉnh Quảng Ngãi",
+    "Tỉnh Gia Lai",
+    "Tỉnh Khánh Hòa",
+    "Tỉnh Lâm Đồng",
+    "Tỉnh Đắk Lắk",
+    "Thành phố Hồ Chí Minh",
+    "Tỉnh Đồng Nai",
+    "Tỉnh Tây Ninh",
+    "Thành phố Cần Thơ",
+    "Tỉnh Vĩnh Long",
+    "Tỉnh Đồng Tháp",
+    "Tỉnh Cà Mau",
+    "Tỉnh An Giang"
+  ];
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
     "Đang triển khai": 0,
@@ -239,6 +274,11 @@ const Dashboard = () => {
   const handleProvinceChange = (e) => {
     setSelectedProvince(e.target.value);
   };
+  const handleEdit = (projectID, parentID) => {
+    setSelectedID(projectID);
+    setSelectedParentID(parentID);
+    setShowEdit(true);
+  };
   const updateSearchSuggestions = (term) => {
     if (!term) {
       setSearchSuggestions([]);
@@ -332,7 +372,7 @@ const Dashboard = () => {
         }
         // Trường hợp không có ID nào, lấy tất cả dự án
         else {
-          const response = await axios.get(`${API_BASE_URL}/duAnTong`);
+          const response = await axios.get(`${API_BASE_URL}/duAnTongList`);
           fetchedData = response.data.data;
         }
 
@@ -389,6 +429,8 @@ const Dashboard = () => {
     }
   };
   const handleDetail = (DuAnID, TenDuAn, soLuongDuAnThanhPhan, soLuongGoiThau) => {
+    console.log(soLuongDuAnThanhPhan, soLuongGoiThau);
+
     if (soLuongDuAnThanhPhan > 0) {
       navigate(`/side-project/${DuAnID}`);
     } else if (soLuongDuAnThanhPhan === 0 && soLuongGoiThau === 0) {
@@ -519,17 +561,17 @@ const Dashboard = () => {
               />
             </div>
             <select
-              value={selectedProvince}
-              onChange={handleProvinceChange}
-              className="px-3 py-1 border rounded w-full md:w-48"
-            >
-              <option value="">Tất cả tỉnh</option>
-              {provinces.map((province) => (
-                <option key={province.code} value={province.name}>
-                  {province.name}
-                </option>
-              ))}
-            </select>
+  value={selectedProvince}
+  onChange={handleProvinceChange}
+  className="px-3 py-1 border rounded w-full md:w-48"
+>
+  <option value="">Tất cả tỉnh</option>
+  {mergedProvinces.map((province, index) => (
+    <option key={index} value={province}>
+      {province}
+    </option>
+  ))}
+</select>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
@@ -626,8 +668,8 @@ const Dashboard = () => {
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
                     className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
-                        ? `${s.color} border-red-600`
-                        : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
+                      ? `${s.color} border-red-600`
+                      : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
                       }`}
                   >
                     <div className="flex items-center gap-1">
@@ -688,8 +730,8 @@ const Dashboard = () => {
                     <div
                       key={s.label}
                       className={`p-2 flex items-center gap-2 ${selectedStatus === s.label
-                          ? "bg-blue-50"
-                          : "hover:bg-gray-100"
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-100"
                         }`}
                       onClick={() => {
                         setSelectedStatus(s.label);
@@ -780,6 +822,19 @@ const Dashboard = () => {
                               >
                                 <img src={pin} alt="Ghim" className="w-5 h-5" />
                               </button>
+
+                              <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Sửa thông tin"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(project.DuAnID, project.ParentID);
+                                }}
+                              >
+                                <img src={edit} alt="Ghim" className="w-5 h-5" />
+                              </button>
+
+
                             </td>
                             <td className="border px-1 py-2 text-blue-600 font-medium">
                               <div>{project.DuAnID}</div>
@@ -916,20 +971,30 @@ const Dashboard = () => {
                             />
                           </button>
                           <button
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Xoá"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProject(project.DuAnID);
+                            }}
+                          >
+                            <img
+                              src={trash}
+                              alt="Xoá"
+                              className="w-5 h-5"
+                            />
+                          </button>
+                          <button
                                 className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Xoá"
+                                title="Sửa thông tin"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDeleteProject(project.DuAnID);
+                                  handleEdit(project.DuAnID, project.ParentID);
                                 }}
                               >
-                                <img
-                                  src={trash}
-                                  alt="Xoá"
-                                  className="w-5 h-5"
-                                />
+                                <img src={edit} alt="Ghim" className="w-5 h-5" />
                               </button>
-                          
+
                           <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
                             <img src={pin} alt="Ghim" className="w-5 h-5" />
                           </button>
@@ -1025,6 +1090,21 @@ const Dashboard = () => {
             className="popup-content"
             onClick={(e) => e.stopPropagation()}
           ></div>
+        </div>
+      )}
+      {showEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <AddNewSubProject
+              isEdit= {1}
+              ProjectID={selectedID}
+              DuAnID={selectedParentID}
+              onClose={() => setShowEdit(false)}
+              onSuccess={() => {
+                setShowEdit(false);
+              }}
+            />
+          </div>
         </div>
       )}
     </div>

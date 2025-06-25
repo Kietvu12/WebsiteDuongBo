@@ -17,6 +17,7 @@ import MapBoard from './page/MapBoard/MapBoard';
 import AddNewProject from './page/AddNewProject/AddNewProject';
 import AddNewSubProject from './page/AddNewSubProject/AddNewSubProject';
 import AddNewPackage from './page/AddNewPackage/AddNewPackage';
+import AddNewContructors from './page/AddNewContructors/AddNewContructors';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -114,6 +115,11 @@ function App() {
         <Route path='/add-new-package/:projectId' element={
           <LayoutWithSidebar>
             <AddNewPackage/>
+          </LayoutWithSidebar>
+        } />
+        <Route path='/add-new-contructor' element={
+          <LayoutWithSidebar>
+            <AddNewContructors/>
           </LayoutWithSidebar>
         } />
       </Routes>

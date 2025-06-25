@@ -22,7 +22,7 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
     ToaDo_KetThuc_Y: '',
     NgayKhoiCong: '',
     NgayHoanThanh: '',
-    TrangThai: 'dang_chuan_bi',
+    TrangThai: 'Đang chuẩn bị',
     NhaThauID: '',
     LoaiHinh_ID: '',
     ThuocTinhValues: {}
@@ -44,6 +44,7 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [selectedAddressType, setSelectedAddressType] = useState(null);
   const [showAddAttribute, setShowAddAttribute] = useState(false);
+  
 
   // Refs cho bản đồ
   const mapRef = useRef(null);
@@ -377,7 +378,7 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Km bắt đầu</label>
                   <input
-                    type="number"
+                    type="text"
                     step="0.01"
                     name="Km_BatDau"
                     className="w-full px-3 py-2 border rounded-md text-sm"
@@ -388,7 +389,7 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Km kết thúc</label>
                   <input
-                    type="number"
+                    type="text"
                     step="0.01"
                     name="Km_KetThuc"
                     className="w-full px-3 py-2 border rounded-md text-sm"
