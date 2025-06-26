@@ -172,7 +172,7 @@ const UpdateProgress = ({ keHoachId, DonViTinh }) => {
                   </div>
                 )}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {/* <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tài liệu đính kèm (có thể chọn nhiều file)
                   </label>
                   <input
@@ -192,7 +192,7 @@ const UpdateProgress = ({ keHoachId, DonViTinh }) => {
                         ))}
                       </ul>
                     </div>
-                  )}
+                  )} */}
                 </div>
                 <button
                   type="submit"

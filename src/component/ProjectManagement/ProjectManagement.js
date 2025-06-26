@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import ProjectMenu from '../ProjectMenu/ProjectMenu';
+
 import {
   FaListOl,
   FaProjectDiagram,
@@ -10,9 +11,13 @@ import {
   FaChevronDown,
   FaChevronRight, FaChevronUp
 } from 'react-icons/fa';
-const ProjectManagement = ({ projectId }) => {
+const ProjectManagement = ({ tenDuAn, projectId }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [projectContext, setProjectContext] = useState({
+    tenDuAn: '',
+    tenHangMuc: ''
+  });
   const [formData, setFormData] = useState({
     khoiLuongThucHien: '',
     moTaVuongMac: '',
@@ -35,18 +40,21 @@ const ProjectManagement = ({ projectId }) => {
     { value: 'Khac', label: 'Khác' }
   ];
 
-  const handlePlanSelect = (item) => {
-    if (item.type === 'plan') {
-      setSelectedPlan(item);
+  const handlePlanSelect = (plan, context) => {
+    if (plan.type === 'plan') {
+      setSelectedPlan(plan);
+      setProjectContext(context); // Lưu thông tin dự án và hạng mục
       setFormData({
         khoiLuongThucHien: '',
-        donViTinh: item.DonViTinh || '',
+        donViTinh: plan.DonViTinh || '',
         moTaVuongMac: '',
         loaiVuongMac: '',
         ghiChu: ''
       });
     }
   };
+  console.log(selectedPlan);
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -55,11 +63,12 @@ const ProjectManagement = ({ projectId }) => {
       [name]: value
     }));
   };
+  console.log(selectedPlan);
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const handleSubmitProgress = async (e) => {
     e.preventDefault();
     if (!selectedPlan || !formData.khoiLuongThucHien) return;
-
     try {
       setLoading(true);
 
@@ -100,24 +109,27 @@ const ProjectManagement = ({ projectId }) => {
       setLoading(false);
     }
   };
-
-
-
-
-  const remainingQuantity = selectedPlan
-    ? selectedPlan.khoiLuongKeHoach - selectedPlan.tongKhoiLuongThucHien
-    : 0;
-
-  const getStatusText = (percentage) => {
-    if (percentage >= 100) return 'Hoàn thành';
-    if (percentage >= 75) return 'Tiến độ tốt';
-    if (percentage >= 50) return 'Đang thực hiện';
-    if (percentage > 0) return 'Bắt đầu';
-    return 'Chưa bắt đầu';
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('vi-VN');
   };
 
+
+  const getStatusText = (percent) => {
+    if (percent >= 100) return 'Đã hoàn thành';
+    if (percent > 0) return 'Đang thực hiện';
+    return 'Chưa bắt đầu';
+  };
+  const remainingDays = useMemo(() => {
+    if (!selectedPlan?.ngayKetThuc) return 0;
+    const end = new Date(selectedPlan.ngayKetThuc);
+    const now = new Date();
+    return Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
+  }, [selectedPlan]);
+
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gray-50">
+    <div className="flex flex-col md:flex-row min-w-[600px] h-screen bg-gray-50">
       {/* Mobile Sidebar Toggle */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <button
@@ -150,46 +162,48 @@ const ProjectManagement = ({ projectId }) => {
       <div className="flex-1 p-4 md:p-6 overflow-y-auto">
         {selectedPlan ? (
           <div className="max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6 gap-4">
-              <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-                {selectedPlan.TenCongTac}
-              </h1>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedPlan.phanTramHoanThanh >= 100
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-blue-100 text-blue-800'
-                  }`}>
-                  {selectedPlan.phanTramHoanThanh}% hoàn thành
-                  <span className="ml-1 text-gray-500 text-xs">
-                    ({getStatusText(selectedPlan.phanTramHoanThanh)})
-                  </span>
-                </span>
-              </div>
-            </div>
+<div className="bg-white p-4 rounded-lg shadow-sm mb-6 space-y-3">
+  {/* Dòng 1: Tên công tác */}
+  <div className="flex flex-wrap items-center gap-2">
+    <h1 className="text-base sm:text-lg font-semibold text-gray-800">
+      {selectedPlan.tenCongTac}
+    </h1>
+  </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-                <h3 className="text-sm font-medium text-gray-500">Kế hoạch</h3>
-                <p className="text-xl md:text-2xl font-semibold text-gray-800">
-                  {selectedPlan.khoiLuongKeHoach} {selectedPlan.DonViTinh}
-                </p>
-              </div>
-              <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-                <h3 className="text-sm font-medium text-gray-500">Đã thực hiện</h3>
-                <p className="text-xl md:text-2xl font-semibold text-gray-800">
-                  {selectedPlan.tongKhoiLuongThucHien} {selectedPlan.DonViTinh}
-                </p>
-              </div>
-              <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-                <h3 className="text-sm font-medium text-gray-500">Còn lại</h3>
-                <p className={`text-xl md:text-2xl font-semibold ${remainingQuantity <= 0 ? 'text-green-600' : 'text-gray-800'
-                  }`}>
-                  {remainingQuantity < 0 ? 0 : remainingQuantity} {selectedPlan.DonViTinh}
-                </p>
-              </div>
-            </div>
+  {/* Dòng 2: Thông tin mô tả */}
+  <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-gray-700">
+    <div className="flex gap-1">
+      <span className="font-semibold">Mã số:</span>
+      <span className="text-blue-600 font-medium">KH-{selectedPlan.keHoachId}</span>
+    </div>
+    <div className="flex gap-1">
+      <span className="font-semibold">Dự án:</span>
+      <span className="font-medium">{projectContext.tenDuAn}</span>
+    </div>
+    <div className="flex gap-1">
+      <span className="font-semibold">Hạng mục thi công:</span>
+      <span className="font-medium uppercase">{projectContext.tenHangMuc}</span>
+    </div>
+  </div>
+
+  {/* Dòng 3: Thẻ trạng thái */}
+  <div className="flex flex-wrap gap-2 mt-2 text-sm font-semibold">
+    <span className="bg-green-100 text-green-700 px-3 py-1 rounded">
+      {remainingDays > 0 ? `${remainingDays} ngày` : 'Hết hạn'}
+    </span>
+    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded">
+      {formatDate(selectedPlan.ngayBatDau)}
+    </span>
+    <span className="bg-red-100 text-red-700 px-3 py-1 rounded">
+      {formatDate(selectedPlan.ngayKetThuc)}
+    </span>
+
+    <span className="border border-green-600 text-green-600 px-3 py-1 rounded">
+      Tiến độ hoàn thành: {selectedPlan.phanTramHoanThanh}%
+    </span>
+  </div>
+</div>
+
 
             {/* Progress Form */}
             <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-100 mb-8">
@@ -273,17 +287,16 @@ const ProjectManagement = ({ projectId }) => {
                   </div>
                 )}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {/* <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tài liệu đính kèm (có thể chọn nhiều file)
                   </label>
                   <input
                     type="file"
-                    multiple // Thêm thuộc tính này để cho phép chọn nhiều file
+                    multiple
                     onChange={handleFileChange}
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
                     className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
                   />
-                  {/* Hiển thị danh sách file đã chọn */}
                   {files.length > 0 && (
                     <div className="mt-2">
                       <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
@@ -293,7 +306,7 @@ const ProjectManagement = ({ projectId }) => {
                         ))}
                       </ul>
                     </div>
-                  )}
+                  )} */}
                 </div>
 
 
@@ -312,60 +325,68 @@ const ProjectManagement = ({ projectId }) => {
                       Đang gửi...
                     </>
                   ) : (
-                    'Gửi báo cáo'
+                    'Báo cáo tiến độ'
                   )}
                 </button>
               </form>
             </div>
+            <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+  <h2 className="text-lg font-semibold text-gray-800 mb-3">Lịch sử báo cáo</h2>
+  
+  {selectedPlan.tienDoThucHien?.length > 0 ? (
+    <div className="space-y-2">
+      {selectedPlan.tienDoThucHien.map((item, index) => (
+        <div
+          key={index}
+          className={`p-3 border rounded-lg ${
+            item.MoTaVuongMac 
+              ? 'border-orange-200 bg-orange-50' 
+              : 'border-gray-200'
+          }`}
+        >
+          {/* Dòng 1: Ghi chú và ngày */}
+          <div className="flex justify-between items-baseline">
+            <span className="font-bold text-gray-700 text-sm truncate max-w-[70%]">
+              {item.GhiChu}
+            </span>
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
+            </span>
+          </div>
 
-            {/* Progress History */}
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Lịch sử báo cáo</h2>
+          {/* Dòng 2: Khối lượng */}
+          <div className="flex justify-between my-1.5">
+            <span className="text-sm text-gray-600">Khối lượng:</span>
+            <span className="font-bold text-blue-600">
+              +{item.KhoiLuongThucHien} {selectedPlan.donViTinh}
+            </span>
+          </div>
 
-              {selectedPlan.tienDoThucHien?.length > 0 ? (
-                <div className="space-y-3">
-                  {selectedPlan.tienDoThucHien.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 md:p-4 border rounded-lg ${item.MoTaVuongMac
-                        ? 'border-orange-200 bg-orange-50'
-                        : 'border-gray-200'
-                        }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-                        <span className="text-sm text-gray-500">
-                          {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
-                        </span>
-                        <span className="font-medium text-blue-600">
-                          +{item.KhoiLuongThucHien} {selectedPlan.DonViTinh}
-                        </span>
-                      </div>
+          {/* Mô tả công việc */}
+          <p className="text-sm text-gray-800 mb-1 line-clamp-2">
+            {item.MoTaCongViec}
+          </p>
 
-                      {item.MoTaVuongMac && (
-                        <div className="mt-2">
-                          <div className="text-xs font-medium text-orange-600">
-                            Vướng mắc: {issueTypes.find(t => t.value === item.LoaiVuongMac)?.label || item.LoaiVuongMac}
-                          </div>
-                          <p className="text-sm text-gray-700 mt-1">
-                            {item.MoTaVuongMac}
-                          </p>
-                        </div>
-                      )}
-
-                      {item.GhiChu && (
-                        <p className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Ghi chú:</span> {item.GhiChu}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  Chưa có báo cáo tiến độ nào
-                </div>
-              )}
+          {/* Vướng mắc (nếu có) */}
+          {item.MoTaVuongMac && (
+            <div className="mt-1.5 pt-1.5 border-t border-orange-100">
+              <div className="text-xs font-semibold text-orange-600">
+                Vướng mắc: {issueTypes.find(t => t.value === item.LoaiVuongMac)?.label}
+              </div>
+              <p className="text-xs text-gray-700 mt-0.5">
+                {item.MoTaVuongMac}
+              </p>
             </div>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div className="text-center py-6 text-gray-400 text-sm">
+      Chưa có báo cáo tiến độ nào
+    </div>
+  )}
+</div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">

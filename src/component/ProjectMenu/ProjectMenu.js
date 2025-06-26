@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import './ProjectMenu.css';
 
-const ProjectMenu = ({ projectId, onItemSelect }) => {
+const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
   const restoredRef = useRef(false);
   const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,10 +75,10 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
   }, [combinedPackages, expandedItems.packages]);
   useEffect(() => {
     if (!projectData || restoredRef.current) return;
-
+  
     const last = localStorage.getItem('lastSelectedPlan');
     if (!last) return;
-
+  
     const lastPlan = JSON.parse(last);
     const foundPlan = combinedPackages
       .flatMap(pkg =>
@@ -87,16 +87,18 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
             ...plan,
             parent: {
               packageId: pkg.goiThauId,
-              workItemId: workItem.hangMucId
+              workItemId: workItem.hangMucId,
+              workItemName: workItem.tenHangMuc,
+              projectName: projectData.tenDuAn || projectData.duAnTong?.tenDuAn
             }
           }))
         )
       )
       .find(plan => plan.keHoachId === lastPlan.keHoachId);
-
+  
     if (foundPlan) {
       restoredRef.current = true;
-
+  
       setExpandedItems(prev => ({
         ...prev,
         project: true,
@@ -109,10 +111,16 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
           [foundPlan.parent.workItemId]: true
         }
       }));
-
+  
       setSelectedItem({ ...foundPlan, type: 'plan' });
       if (onItemSelect) {
-        onItemSelect({ ...foundPlan, type: 'plan' });
+        onItemSelect(
+          { ...foundPlan, type: 'plan' },
+          {
+            tenDuAn: foundPlan.parent.projectName,
+            tenHangMuc: foundPlan.parent.workItemName
+          }
+        );
       }
     }
   }, [projectData, combinedPackages, onItemSelect]);
@@ -208,12 +216,21 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
             {/* Gói thầu */}
             {expandedItems.project && combinedPackages.length > 0 && (
               <div className="ml-4 border-l border-gray-200">
+                <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
+                  <h3 className="text-xs font-bold text-gray-600">Danh sách gói thầu</h3>
+                  <input
+                    type="text"
+                    placeholder="Tìm..."
+                    className="w-24 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-200"
+                    disabled
+                  />
+                </div>
                 {combinedPackages.map((pkg) => (
                   <div key={pkg.goiThauId}>
                     <div
                       className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'package' && selectedItem?.goiThauId === pkg.goiThauId
-                          ? 'bg-blue-50 border-l-4 border-blue-600'
-                          : ''
+                        ? 'bg-blue-50 border-l-4 border-blue-600'
+                        : ''
                         }`}
                       onClick={() => {
                         toggleExpand('packages', pkg.goiThauId);
@@ -225,7 +242,7 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                         <span className="font-semibold">GOI-{pkg.goiThauId}</span>
                       </div>
                       <div className="flex-1 ml-4">
-                        <div>{pkg.TenGoiThau}</div>
+                        <div className="font-semibold text-xs">{pkg.tenGoiThau}</div>
                         <div className="text-xs text-gray-500">{pkg.phanTramHoanThanh}% hoàn thành</div>
                       </div>
                       {pkg.danhSachHangMuc?.length > 0 && (
@@ -241,12 +258,21 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                     {/* Hạng mục */}
                     {expandedItems.packages[pkg.goiThauId] && pkg.danhSachHangMuc?.length > 0 && (
                       <div className="ml-4 border-l border-gray-200">
+                        <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
+                          <h3 className="text-xs font-bold text-gray-600">Hạng mục thực hiện</h3>
+                          <input
+                            type="text"
+                            placeholder="Tìm..."
+                            className="w-24 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-200"
+                            disabled
+                          />
+                        </div>
                         {pkg.danhSachHangMuc.map((workItem) => (
                           <div key={workItem.hangMucId}>
                             <div
                               className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'work' && selectedItem?.hangMucId === workItem.hangMucId
-                                  ? 'bg-blue-50 border-l-4 border-blue-600'
-                                  : ''
+                                ? 'bg-blue-50 border-l-4 border-blue-600'
+                                : ''
                                 }`}
                               onClick={() => {
                                 toggleExpand('workItems', workItem.hangMucId);
@@ -258,7 +284,7 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                                 <span className="font-semibold">HM-{workItem.hangMucId}</span>
                               </div>
                               <div className="flex-1 ml-4">
-                                <div>{workItem.TenHangMuc}</div>
+                                <div className="font-semibold text-xs">{workItem.tenHangMuc}</div>
                                 <div className="text-xs text-gray-500">{workItem.phanTramHoanThanh}% hoàn thành</div>
                               </div>
                               {workItem.danhSachKeHoach?.length > 0 && (
@@ -278,21 +304,41 @@ const ProjectMenu = ({ projectId, onItemSelect }) => {
                             {/* Kế hoạch */}
                             {expandedItems.workItems[workItem.hangMucId] && workItem.danhSachKeHoach?.length > 0 && (
                               <div className="ml-4 border-l border-gray-200">
+                                <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
+                                  <h3 className="text-xs font-bold text-gray-600">Kế hoạch thực hiện</h3>
+                                  <input
+                                    type="text"
+                                    placeholder="Tìm..."
+                                    className="w-24 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-200"
+                                    disabled
+                                  />
+                                </div>
                                 {workItem.danhSachKeHoach.map((plan) => (
                                   <div
                                     key={plan.keHoachId}
                                     className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'plan' && selectedItem?.keHoachId === plan.keHoachId
-                                        ? 'bg-blue-50 border-l-4 border-blue-600'
-                                        : ''
+                                      ? 'bg-blue-50 border-l-4 border-blue-600'
+                                      : ''
                                       }`}
-                                    onClick={() => handlePlanSelect(plan)}
+                                      onClick={() => {
+                                        const context = {
+                                          tenDuAn: projectData.tenDuAn || projectData.duAnTong?.tenDuAn,
+                                          tenHangMuc: workItem.tenHangMuc
+                                        };
+                                        
+                                        handlePlanSelect(plan);
+                                        onPlanSelect( // Sử dụng trực tiếp prop đã destructure
+                                          { ...plan, type: 'plan' },
+                                          context
+                                        );
+                                      }}
                                   >
                                     <div className="flex gap-2 items-center text-sm text-gray-700">
                                       <FaCalendarAlt className="text-purple-600" />
                                       <span className="font-semibold">KH-{plan.keHoachId}</span>
                                     </div>
                                     <div className="flex-1 ml-4">
-                                      <div>{plan.TenCongTac}</div>
+                                      <div className="font-semibold text-xs">{plan.tenCongTac}</div>
                                       <div className="text-xs text-gray-500">
                                         {plan.phanTramHoanThanh}% hoàn thành
                                         <div className="text-xs text-gray-400">{plan.TenNhaThau}</div>

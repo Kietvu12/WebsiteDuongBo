@@ -726,7 +726,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                     </div>
                 </div>
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {/* <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tài liệu đính kèm (có thể chọn nhiều file)
                     </label>
                     <input
@@ -745,7 +745,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                                 ))}
                             </ul>
                         </div>
-                    )}
+                    )} */}
                 </div>
                 {/* Nút submit */}
                 <div className="flex justify-end space-x-2 mt-2">
