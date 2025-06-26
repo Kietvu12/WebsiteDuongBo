@@ -1,82 +1,158 @@
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const fs = require('fs');
+const multer = require('multer');
 const path = require('path');
-const http = require('http');
+const fs = require('fs');
+const bodyParser = require('body-parser');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const sequelize = require('./config/db');
+const authRoutes = require('./routes/auth.route');
 
 const app = express();
 const port = 5000;
 
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-app.post('/api/read-image', (req, res) => {
-  const contentType = req.headers['content-type'];
-  
-  if (!contentType || !contentType.includes('multipart/form-data')) {
-    return res.status(400).json({ error: 'Yêu cầu phải là multipart/form-data' });
-  }
+// 1. Cấu hình CORS chi tiết
+app.use(cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
-  let body = '';
-  req.setEncoding('binary');
-  
-  req.on('data', (chunk) => {
-    body += chunk;
-  });
+// 2. Middleware bảo mật
+app.use(helmet());
+app.use(bodyParser.json({ limit: '10kb' }));
 
-  req.on('end', () => {
-    try {
-      // Xác định boundary
-      const boundary = contentType.split('boundary=')[1];
-      const parts = body.split(`--${boundary}`);
-      
-      // Lấy phần chứa file
-      const filePart = parts.find(part => part.includes('filename="'));
-      
-      if (!filePart) {
-        return res.status(400).json({ error: 'Không tìm thấy file trong request' });
-      }
+// 3. Giới hạn request rate
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 phút
+  max: 100 // giới hạn mỗi IP 100 requests
+});
+app.use('/api/', limiter);
 
-      // Trích xuất thông tin file
-      const fileName = filePart.match(/filename="([^"]+)"/)[1];
-      const fileType = filePart.match(/Content-Type: ([^\r\n]+)/)[1];
-      const fileData = filePart.split('\r\n\r\n')[1].replace(/\r\n$/, '');
-
-      // Lưu file
-      const uploadPath = path.join(__dirname, 'uploads', fileName);
-      fs.writeFileSync(uploadPath, fileData, 'binary');
-
-      res.json({
-        status: 'success',
-        fileInfo: {
-          name: fileName,
-          type: fileType,
-          size: fileData.length
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+// 4. Kết nối database
+async function initializeDatabase() {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Kết nối database thành công');
+    
+    if (process.env.NODE_ENV !== 'production') {
+      await sequelize.sync();
+      console.log('🔄 Database đã đồng bộ (alter)');
     }
+  } catch (error) {
+    console.error('❌ Lỗi database:', error);
+    process.exit(1); // Thoát nếu không kết nối được database
+  }
+}
+
+// 5. Routes
+app.use('/api/auth', authRoutes);
+
+// 6. Route kiểm tra sức khỏe
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
+
+// 7. Xử lý lỗi tập trung
+app.use((err, req, res, next) => {
+  console.error('🔥 Lỗi:', err.stack);
+  
+  const statusCode = err.statusCode || 500;
+  const message = statusCode === 500 ? 'Lỗi server' : err.message;
+  
+  res.status(statusCode).json({
+    status: 'error',
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
+
+// 8. Khởi động server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, async () => {
+  await initializeDatabase();
+  console.log(`🚀 Server đang chạy trên port ${PORT}`);
+  console.log(`🔗 Truy cập: http://localhost:${PORT}`);
+});
+
+// 9. Xử lý tắt server
+process.on('SIGTERM', () => {
+  console.log('🛑 Tắt server...');
+  server.close(() => {
+    console.log('✅ Server đã tắt');
+    process.exit(0);
+  });
+});
+
+// Tạo connection pool thay vì single connection
+const pool = mysql.createPool({
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'minh_1',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
+}).promise();
+
+// Xử lý kết nối pool
+pool.on('connection', (connection) => {
+  console.log('MySQL connection established');
+});
+
+pool.on('error', (err) => {
+  console.error('MySQL pool error:', err);
+});
+function createUploadMiddleware(loaiDoiTuong, doiTuongID = 'temp') {
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const folderName = loaiDoiTuong.toUpperCase();
+      const objectId = String(doiTuongID);
+
+      const uploadPath = path.join(__dirname, 'Uploads', folderName, objectId);
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+
+  return multer({ 
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.png', '.zip'];
+      const extname = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.includes(extname)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Loại file không được hỗ trợ'), false);
+      }
+    }
+  }).array('files', 5); // Cho phép tối đa 5 file
+}
 
 // Kết nối với MySQL
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: '',
-<<<<<<< Updated upstream
-  database: 'dadb',
-=======
-  database: 'da_db',
->>>>>>> Stashed changes
+  database: 'minh_1',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -300,6 +376,190 @@ app.get('/duAnTong', async (req, res) => {
   try {
     const [duAnTongList] = await db.query(
       'SELECT * FROM duan WHERE ParentID IS NULL'
+    );
+
+    if (duAnTongList.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy dự án TỔNG nào'
+      });
+    }
+
+    const result = await Promise.all(duAnTongList.map(async (duAnTong) => {
+      const duAnId = duAnTong.DuAnID;
+      
+      // Get all sub-projects
+      const [duAnThanhPhan] = await db.query(
+        'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
+        [duAnId]
+      );
+
+      // Initialize totals
+      let tongKhoiLuongKeHoach = 0;
+      let tongKhoiLuongHoanThanh = 0;
+      let tongKhoiLuongChamTienDo = 0;
+      let soLuongGoiThau = 0;
+
+      // Process each sub-project
+      const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
+        // Get all contract packages for this sub-project
+        const [goiThauList] = await db.query(
+          'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
+          [duAnTP.DuAnID]
+        );
+
+        // Cập nhật tổng số gói thầu
+        soLuongGoiThau += goiThauList.length;
+
+        // Process each contract package
+        const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
+          // Get all work items for this contract package
+          const [hangMucList] = await db.query(
+            'SELECT * FROM hangmuc WHERE GoiThauID = ? ORDER BY HangMucID ASC',
+            [goiThau.GoiThau_ID]
+          );
+
+          // Process each work item
+          const hangMucWithDetails = await Promise.all(hangMucList.map(async (hangMuc) => {
+            // Get all plans for this work item
+            const [keHoachList] = await db.query(
+              'SELECT * FROM quanlykehoach WHERE HangMucID = ? ORDER BY KeHoachID ASC',
+              [hangMuc.HangMucID]
+            );
+
+            // Process each plan
+            const keHoachWithDetails = await Promise.all(keHoachList.map(async (keHoach) => {
+              // Get all progress records for this plan
+              const [tienDoList] = await db.query(
+                'SELECT * FROM tiendothuchien WHERE KeHoachID = ? ORDER BY NgayCapNhat ASC',
+                [keHoach.KeHoachID]
+              );
+
+              // Calculate total actual quantity for this plan
+              const tongThucHien = tienDoList.reduce((sum, td) => sum + td.KhoiLuongThucHien, 0);
+              
+              // Check if plan is completed (actual >= planned)
+              const isHoanThanh = tongThucHien >= keHoach.KhoiLuongKeHoach;
+              
+              // Check if plan is delayed (not completed and past end date)
+              const isChamTienDo = !isHoanThanh && new Date() > new Date(keHoach.NgayKetThuc);
+              
+              // Calculate quantities
+              const khoiLuongHoanThanh = isHoanThanh ? keHoach.KhoiLuongKeHoach : 0;
+              const khoiLuongChamTienDo = isChamTienDo ? (keHoach.KhoiLuongKeHoach - tongThucHien) : 0;
+
+              return {
+                keHoachId: keHoach.KeHoachID,
+                khoiLuongKeHoach: keHoach.KhoiLuongKeHoach,
+                khoiLuongHoanThanh,
+                khoiLuongChamTienDo,
+                ngayKetThuc: keHoach.NgayKetThuc
+              };
+            }));
+
+            // Aggregate quantities for work item
+            const hangMucKhoiLuong = keHoachWithDetails.reduce((acc, curr) => ({
+              khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+              khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+              khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+            }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+            return {
+              ...hangMuc,
+              ...hangMucKhoiLuong
+            };
+          }));
+
+          // Aggregate quantities for contract package
+          const goiThauKhoiLuong = hangMucWithDetails.reduce((acc, curr) => ({
+            khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+            khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+            khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+          }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+          return {
+            ...goiThau,
+            ...goiThauKhoiLuong,
+            hangMuc: hangMucWithDetails
+          };
+        }));
+
+        // Aggregate quantities for sub-project
+        const duAnTPKhoiLuong = goiThauWithDetails.reduce((acc, curr) => ({
+          khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+          khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+          khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+        }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+        // Get coordinates from first and last contract package
+        const coordinates = goiThauList.length > 0 ? {
+          start: {
+            lat: goiThauList[0].ToaDo_BatDau_Y,
+            lng: goiThauList[0].ToaDo_BatDau_X
+          },
+          end: {
+            lat: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_Y,
+            lng: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_X
+          }
+        } : null;
+
+        return {
+          ...duAnTP,
+          ...duAnTPKhoiLuong,
+          coordinates,
+          goiThau: goiThauWithDetails
+        };
+      }));
+
+      // Calculate totals for main project
+      const mainProjectTotals = duAnThanhPhanWithDetails.reduce((acc, curr) => ({
+        khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
+        khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
+        khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
+      }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
+
+      // Calculate percentages
+      const phanTramHoanThanh = mainProjectTotals.khoiLuongKeHoach > 0 
+        ? (mainProjectTotals.khoiLuongHoanThanh / mainProjectTotals.khoiLuongKeHoach) * 100 
+        : 0;
+      
+      const phanTramChamTienDo = mainProjectTotals.khoiLuongKeHoach > 0 
+        ? (mainProjectTotals.khoiLuongChamTienDo / mainProjectTotals.khoiLuongKeHoach) * 100 
+        : 0;
+      
+      const phanTramKeHoach = 100 - phanTramHoanThanh - phanTramChamTienDo;
+
+      return {
+        ...duAnTong,
+        ...mainProjectTotals,
+        soLuongDuAnThanhPhan: duAnThanhPhan.length,
+        soLuongGoiThau: soLuongGoiThau, 
+        phanTramHoanThanh: phanTramHoanThanh.toFixed(2),
+        phanTramChamTienDo: phanTramChamTienDo.toFixed(2),
+        phanTramKeHoach: phanTramKeHoach.toFixed(2),
+        coordinates: duAnThanhPhanWithDetails[0]?.coordinates || null,
+        duAnThanhPhan: duAnThanhPhanWithDetails
+      };
+    }));
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/duAnList', async (req, res) => {
+  try {
+    const [duAnTongList] = await db.query(
+      'SELECT * FROM duan'
     );
 
     if (duAnTongList.length === 0) {
@@ -1202,8 +1462,6 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
     });
   }
 });
-
-// Helper function to get contractor information
 async function getNhaThauInfo(nhaThauId) {
   const [nhaThau] = await db.query(
     'SELECT * FROM nhathau WHERE NhaThauID = ?',
@@ -1454,178 +1712,286 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
     });
   }
 });
-app.get('/hangMuc/:duAnThanhPhanId/detail', async (req, res) => {
+app.get('/hangMuc/:duAnId/detail', async (req, res) => {
   try {
-    const duAnThanhPhanId = req.params.duAnThanhPhanId;
+    const duAnId = req.params.duAnId;
 
-    // 1. Kiểm tra dự án thành phần có tồn tại không
-    const [duAnThanhPhan] = await db.query(
-      'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NOT NULL',
-      [duAnThanhPhanId]
+    // 1. Kiểm tra dự án có tồn tại không và xác định loại dự án
+    const [duAn] = await db.query(
+      'SELECT DuAnID, TenDuAn, ParentID, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE DuAnID = ?',
+      [duAnId]
     );
 
-    if (duAnThanhPhan.length === 0) {
+    if (duAn.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy dự án THÀNH PHẦN với ID này'
+        message: 'Không tìm thấy dự án với ID này'
       });
     }
 
-    // 2. Lấy thông tin dự án tổng (cha của dự án thành phần)
-    const [duAnTong] = await db.query(
-      'SELECT * FROM duan WHERE DuAnID = ?',
-      [duAnThanhPhan[0].ParentID]
-    );
+    const currentProject = duAn[0];
 
-    // 3. Lấy các gói thầu thuộc dự án thành phần này
-    const [goiThauList] = await db.query(
-      `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
-       FROM goithau gt
-       LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
-       WHERE gt.DuAn_ID = ?
-       ORDER BY gt.GoiThau_ID ASC`,
-      [duAnThanhPhanId]
-    );
+    // 2. Hàm lấy chi tiết gói thầu, hạng mục, kế hoạch và tiến độ (đã cập nhật)
+    const getGoiThauDetails = async (duAnId) => {
+      // Lấy các gói thầu thuộc dự án
+      const [goiThauList] = await db.query(
+        `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
+         FROM goithau gt
+         LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
+         WHERE gt.DuAn_ID = ?
+         ORDER BY gt.GoiThau_ID ASC`,
+        [duAnId]
+      );
 
-    // 4. Lấy thông tin chi tiết các gói thầu (đã bỏ cấp Loại Hạng Mục)
-    const goiThauWithHangMuc = await Promise.all(
-      goiThauList.map(async (goiThau) => {
-        // Lấy tất cả hạng mục của gói thầu (không phân loại)
-        const [hangMucList] = await db.query(
-          `SELECT * FROM hangmuc 
-           WHERE GoiThauID = ?
-           ORDER BY HangMucID ASC`,
-          [goiThau.GoiThau_ID]
+      // Lấy thông tin chi tiết các gói thầu
+      const goiThauWithHangMuc = await Promise.all(
+        goiThauList.map(async (goiThau) => {
+          // Lấy tất cả hạng mục của gói thầu
+          const [hangMucList] = await db.query(
+            `SELECT * FROM hangmuc 
+             WHERE GoiThauID = ?
+             ORDER BY HangMucID ASC`,
+            [goiThau.GoiThau_ID]
+          );
+
+          // Lấy thông tin kế hoạch và khối lượng thực thi cho từng hạng mục (đã cập nhật)
+          const hangMucWithKeHoach = await Promise.all(
+            hangMucList.map(async (hangMuc) => {
+              // Lấy danh sách kế hoạch với nhà thầu và tiến độ thực hiện
+              const [keHoachList] = await db.query(
+                `SELECT kh.*, nt.TenNhaThau 
+                 FROM quanlykehoach kh
+                 JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
+                 WHERE kh.HangMucID = ?
+                 ORDER BY kh.KeHoachID ASC`,
+                [hangMuc.HangMucID]
+              );
+
+              // Lấy chi tiết tiến độ thực hiện cho từng kế hoạch
+              const keHoachWithTienDo = await Promise.all(
+                keHoachList.map(async (keHoach) => {
+                  const [tienDoList] = await db.query(
+                    `SELECT * FROM tiendothuchien 
+                     WHERE KeHoachID = ?
+                     ORDER BY NgayCapNhat DESC`,
+                    [keHoach.KeHoachID]
+                  );
+
+                  // Tính tổng khối lượng đã thực hiện
+                  const tongThucHien = tienDoList.reduce((sum, item) => sum + item.KhoiLuongThucHien, 0);
+
+                  return {
+                    keHoachId: keHoach.KeHoachID,
+                    tenCongTac: keHoach.TenCongTac,
+                    khoiLuongKeHoach: keHoach.KhoiLuongKeHoach,
+                    donViTinh: keHoach.DonViTinh,
+                    ngayBatDau: keHoach.NgayBatDau,
+                    ngayKetThuc: keHoach.NgayKetThuc,
+                    ghiChu: keHoach.GhiChu,
+                    tenNhaThau: keHoach.TenNhaThau,
+                    tienDoThucHien: tienDoList,
+                    tongKhoiLuongThucHien: tongThucHien,
+                    ngayCapNhatGanNhat: tienDoList[0]?.NgayCapNhat || null,
+                    phanTramHoanThanh: keHoach.KhoiLuongKeHoach > 0 
+                      ? Math.min(100, (tongThucHien / keHoach.KhoiLuongKeHoach * 100)).toFixed(2)
+                      : "0.00"
+                  };
+                })
+              );
+
+              // Tính tổng cho hạng mục
+              const tongKhoiLuongKeHoach = keHoachWithTienDo.reduce(
+                (sum, item) => sum + (item.khoiLuongKeHoach || 0), 0
+              );
+              const tongKhoiLuongThucHien = keHoachWithTienDo.reduce(
+                (sum, item) => sum + (item.tongKhoiLuongThucHien || 0), 0
+              );
+
+              return {
+                hangMucId: hangMuc.HangMucID,
+                tenHangMuc: hangMuc.TenHangMuc,
+                loaiHangMuc: hangMuc.LoaiHangMuc,
+                tieuDeChiTiet: hangMuc.TieuDeChiTiet,
+                mayMocThietBi: hangMuc.MayMocThietBi,
+                nhanLucThiCong: hangMuc.NhanLucThiCong,
+                thoiGianHoanThanh: hangMuc.ThoiGianHoanThanh,
+                ghiChu: hangMuc.GhiChu,
+                danhSachKeHoach: keHoachWithTienDo,
+                tongKhoiLuongKeHoach,
+                tongKhoiLuongThucHien,
+                phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
+                  ? Math.min(100, (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100)).toFixed(2)
+                  : "0.00"
+              };
+            })
+          );
+
+          // Tính tổng cho gói thầu
+          const tongKhoiLuongKeHoachGoiThau = hangMucWithKeHoach.reduce(
+            (sum, hm) => sum + (hm.tongKhoiLuongKeHoach || 0), 0
+          );
+          const tongKhoiLuongThucHienGoiThau = hangMucWithKeHoach.reduce(
+            (sum, hm) => sum + (hm.tongKhoiLuongThucHien || 0), 0
+          );
+
+          return {
+            goiThauId: goiThau.GoiThau_ID,
+            tenGoiThau: goiThau.TenGoiThau,
+            giaTriHopDong: goiThau.GiaTriHĐ,
+            kmBatDau: goiThau.Km_BatDau,
+            kmKetThuc: goiThau.Km_KetThuc,
+            toaDoBatDau: { x: goiThau.ToaDo_BatDau_X, y: goiThau.ToaDo_BatDau_Y },
+            toaDoKetThuc: { x: goiThau.ToaDo_KetThuc_X, y: goiThau.ToaDo_KetThuc_Y },
+            ngayKhoiCong: goiThau.NgayKhoiCong,
+            ngayHoanThanh: goiThau.NgayHoanThanh,
+            trangThai: goiThau.TrangThai,
+            nhaThau: goiThau.NhaThauID ? {
+              nhaThauId: goiThau.NhaThauID,
+              tenNhaThau: goiThau.TenNhaThau,
+              maSoThue: goiThau.MaSoThue
+            } : null,
+            danhSachHangMuc: hangMucWithKeHoach,
+            tongKhoiLuongKeHoach: tongKhoiLuongKeHoachGoiThau,
+            tongKhoiLuongThucHien: tongKhoiLuongThucHienGoiThau,
+            phanTramHoanThanh: tongKhoiLuongKeHoachGoiThau > 0 
+              ? Math.min(100, (tongKhoiLuongThucHienGoiThau / tongKhoiLuongKeHoachGoiThau * 100)).toFixed(2)
+              : "0.00"
+          };
+        })
+      );
+
+      // Tính tổng cho dự án
+      const tongKhoiLuongKeHoach = goiThauWithHangMuc.reduce(
+        (sum, gt) => sum + (gt.tongKhoiLuongKeHoach || 0), 0
+      );
+      const tongKhoiLuongThucHien = goiThauWithHangMuc.reduce(
+        (sum, gt) => sum + (gt.tongKhoiLuongThucHien || 0), 0
+      );
+
+      return {
+        duAnId: duAnId,
+        danhSachGoiThau: goiThauWithHangMuc,
+        tongKhoiLuongKeHoach,
+        tongKhoiLuongThucHien,
+        phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
+          ? Math.min(100, (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100)).toFixed(2)
+          : "0.00"
+      };
+    };
+
+    // 3. Hàm kiểm tra và lấy tất cả dự án con (đệ quy)
+    const getAllChildProjects = async (parentId) => {
+      const [childProjects] = await db.query(
+        'SELECT DuAnID, TenDuAn, ParentID FROM duan WHERE ParentID = ?',
+        [parentId]
+      );
+      
+      let allChildren = [];
+      
+      for (const child of childProjects) {
+        const grandchildren = await getAllChildProjects(child.DuAnID);
+        allChildren.push(child, ...grandchildren);
+      }
+      
+      return allChildren;
+    };
+
+    // 4. Xử lý theo loại dự án
+    let responseData = { success: true, data: {} };
+
+    // Kiểm tra xem đây là dự án cha hay con
+    if (currentProject.ParentID === null) {
+      // Dự án cha - có thể có cả dự án con và gói thầu trực tiếp
+      const [directChildProjects] = await db.query(
+        'SELECT DuAnID, TenDuAn, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE ParentID = ?',
+        [duAnId]
+      );
+
+      // Lấy tất cả các dự án con (bao gồm cả cháu, chắt...)
+      const allChildProjects = await getAllChildProjects(duAnId);
+      const allChildProjectIds = allChildProjects.map(p => p.DuAnID);
+
+      // Lấy tất cả gói thầu trực tiếp thuộc dự án cha
+      const directTenders = await getGoiThauDetails(duAnId);
+
+      // Lấy thông tin chi tiết cho từng dự án con
+      const childProjectDetails = await Promise.all(
+        directChildProjects.map(async (childProject) => {
+          const details = await getGoiThauDetails(childProject.DuAnID);
+          return {
+            duAnId: childProject.DuAnID,
+            tenDuAn: childProject.TenDuAn,
+            ngayBatDau: childProject.NgayKhoiCong,
+            ngayKetThuc: childProject.KeHoachHoanThanh,
+            ...details
+          };
+        })
+      );
+
+      // Lấy tất cả gói thầu từ các dự án con (bao gồm cả cháu, chắt...)
+      let allTendersFromChildren = [];
+      if (allChildProjectIds.length > 0) {
+        const [allTenders] = await db.query(
+          `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
+           FROM goithau gt
+           LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
+           WHERE gt.DuAn_ID IN (?)
+           ORDER BY gt.GoiThau_ID ASC`,
+          [allChildProjectIds]
         );
+        allTendersFromChildren = allTenders;
+      }
 
-        // Lấy thông tin kế hoạch và khối lượng thực thi cho từng hạng mục
-        const hangMucWithKeHoach = await Promise.all(
-          hangMucList.map(async (hangMuc) => {
-            const [keHoachWithTienDo] = await db.query(
-              `SELECT 
-                kh.KeHoachID,
-                kh.TenCongTac,
-                kh.KhoiLuongKeHoach,
-                kh.DonViTinh,
-                kh.NgayBatDau,
-                kh.NgayKetThuc,
-                kh.GhiChu,
-                COALESCE(SUM(td.KhoiLuongThucHien), 0) AS TongThucHien,
-                MAX(td.NgayCapNhat) AS NgayCapNhatGanNhat
-               FROM quanlykehoach kh
-               LEFT JOIN tiendothuchien td ON kh.KeHoachID = td.KeHoachID
-               WHERE kh.HangMucID = ?
-               GROUP BY kh.KeHoachID
-               ORDER BY kh.KeHoachID ASC`,
-              [hangMuc.HangMucID]
-            );
+      // Tính tổng tất cả khối lượng (bao gồm từ dự án con và gói thầu trực tiếp)
+      const totalPlannedVolume = 
+        directTenders.tongKhoiLuongKeHoach + 
+        childProjectDetails.reduce((sum, da) => sum + (da.tongKhoiLuongKeHoach || 0), 0);
+      
+      const totalActualVolume = 
+        directTenders.tongKhoiLuongThucHien + 
+        childProjectDetails.reduce((sum, da) => sum + (da.tongKhoiLuongThucHien || 0), 0);
 
-            // Format dữ liệu kế hoạch
-            const formattedKeHoach = keHoachWithTienDo.map(kh => ({
-              keHoachId: kh.KeHoachID,
-              tenCongTac: kh.TenCongTac,
-              khoiLuongKeHoach: kh.KhoiLuongKeHoach,
-              donViTinh: kh.DonViTinh,
-              ngayBatDau: kh.NgayBatDau,
-              ngayKetThuc: kh.NgayKetThuc,
-              ghiChu: kh.GhiChu,
-              tongKhoiLuongThucHien: kh.TongThucHien,
-              ngayCapNhatGanNhat: kh.NgayCapNhatGanNhat,
-              phanTramHoanThanh: kh.KhoiLuongKeHoach > 0 
-                ? Math.min(100, (kh.TongThucHien / kh.KhoiLuongKeHoach * 100)).toFixed(2)
-                : "0.00"
-            }));
-
-            // Tính tổng cho hạng mục
-            const tongKhoiLuongKeHoach = formattedKeHoach.reduce(
-              (sum, item) => sum + (item.khoiLuongKeHoach || 0), 0
-            );
-            const tongKhoiLuongThucHien = formattedKeHoach.reduce(
-              (sum, item) => sum + (item.tongKhoiLuongThucHien || 0), 0
-            );
-
-            return {
-              hangMucId: hangMuc.HangMucID,
-              tenHangMuc: hangMuc.TenHangMuc,
-              loaiHangMuc: hangMuc.LoaiHangMuc, // Vẫn giữ thông tin này nhưng không nhóm theo nó
-              tieuDeChiTiet: hangMuc.TieuDeChiTiet,
-              mayMocThietBi: hangMuc.MayMocThietBi,
-              nhanLucThiCong: hangMuc.NhanLucThiCong,
-              thoiGianHoanThanh: hangMuc.ThoiGianHoanThanh,
-              ghiChu: hangMuc.GhiChu,
-              danhSachKeHoach: formattedKeHoach,
-              tongKhoiLuongKeHoach,
-              tongKhoiLuongThucHien,
-              phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
-                ? Math.min(100, (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100)).toFixed(2)
-                : "0.00"
-            };
-          })
-        );
-
-        // Tính tổng cho gói thầu
-        const tongKhoiLuongKeHoachGoiThau = hangMucWithKeHoach.reduce(
-          (sum, hm) => sum + (hm.tongKhoiLuongKeHoach || 0), 0
-        );
-        const tongKhoiLuongThucHienGoiThau = hangMucWithKeHoach.reduce(
-          (sum, hm) => sum + (hm.tongKhoiLuongThucHien || 0), 0
-        );
-
-        return {
-          goiThauId: goiThau.GoiThau_ID,
-          tenGoiThau: goiThau.TenGoiThau,
-          giaTriHopDong: goiThau.GiaTriHĐ,
-          kmBatDau: goiThau.Km_BatDau,
-          kmKetThuc: goiThau.Km_KetThuc,
-          toaDoBatDau: { x: goiThau.ToaDo_BatDau_X, y: goiThau.ToaDo_BatDau_Y },
-          toaDoKetThuc: { x: goiThau.ToaDo_KetThuc_X, y: goiThau.ToaDo_KetThuc_Y },
-          ngayKhoiCong: goiThau.NgayKhoiCong,
-          ngayHoanThanh: goiThau.NgayHoanThanh,
-          trangThai: goiThau.TrangThai,
-          nhaThau: goiThau.NhaThauID ? {
-            nhaThauId: goiThau.NhaThauID,
-            tenNhaThau: goiThau.TenNhaThau,
-            maSoThue: goiThau.MaSoThue
-          } : null,
-          danhSachHangMuc: hangMucWithKeHoach, // Trực tiếp danh sách hạng mục, không qua loại hạng mục
-          tongKhoiLuongKeHoach: tongKhoiLuongKeHoachGoiThau,
-          tongKhoiLuongThucHien: tongKhoiLuongThucHienGoiThau,
-          phanTramHoanThanh: tongKhoiLuongKeHoachGoiThau > 0 
-            ? Math.min(100, (tongKhoiLuongThucHienGoiThau / tongKhoiLuongKeHoachGoiThau * 100)).toFixed(2)
-            : "0.00"
-        };
-      })
-    );
-
-    // 5. Tính tổng cho dự án thành phần
-    const tongKhoiLuongKeHoach = goiThauWithHangMuc.reduce(
-      (sum, gt) => sum + (gt.tongKhoiLuongKeHoach || 0), 0
-    );
-    const tongKhoiLuongThucHien = goiThauWithHangMuc.reduce(
-      (sum, gt) => sum + (gt.tongKhoiLuongThucHien || 0), 0
-    );
-
-    res.json({
-      success: true,
-      data: {
-        duAnTong: duAnTong.length > 0 ? {
-          duAnId: duAnTong[0].DuAnID,
-          tenDuAn: duAnTong[0].TenDuAn
-        } : null,
-        duAnThanhPhan: {
-          duAnId: duAnThanhPhan[0].DuAnID,
-          tenDuAn: duAnThanhPhan[0].TenDuAn,
-          ngayBatDau: duAnThanhPhan[0].NgayBatDau,
-          ngayKetThuc: duAnThanhPhan[0].NgayKetThuc,
-          danhSachGoiThau: goiThauWithHangMuc,
-          tongKhoiLuongKeHoach,
-          tongKhoiLuongThucHien,
-          phanTramHoanThanh: tongKhoiLuongKeHoach > 0 
-            ? Math.min(100, (tongKhoiLuongThucHien / tongKhoiLuongKeHoach * 100)).toFixed(2)
+      responseData.data = {
+        duAnTong: {
+          duAnId: currentProject.DuAnID,
+          tenDuAn: currentProject.TenDuAn,
+          ngayBatDau: currentProject.NgayKhoiCong,
+          ngayKetThuc: currentProject.KeHoachHoanThanh,
+          danhSachDuAnCon: childProjectDetails,
+          danhSachGoiThauTrucTiep: directTenders.danhSachGoiThau,
+          danhSachGoiThauTuDuAnCon: allTendersFromChildren,
+          tongKhoiLuongKeHoach: totalPlannedVolume,
+          tongKhoiLuongThucHien: totalActualVolume,
+          phanTramHoanThanh: totalPlannedVolume > 0 
+            ? Math.min(100, (totalActualVolume / totalPlannedVolume * 100)).toFixed(2)
             : "0.00"
         }
-      }
-    });
+      };
+    } else {
+      // Dự án con - giữ logic hiện tại
+      const [parentProject] = await db.query(
+        'SELECT DuAnID, TenDuAn FROM duan WHERE DuAnID = ?',
+        [currentProject.ParentID]
+      );
+
+      const projectDetails = await getGoiThauDetails(duAnId);
+
+      responseData.data = {
+        duAnTong: parentProject.length > 0 ? {
+          duAnId: parentProject[0].DuAnID,
+          tenDuAn: parentProject[0].TenDuAn
+        } : null,
+        duAnThanhPhan: {
+          duAnId: currentProject.DuAnID,
+          tenDuAn: currentProject.TenDuAn,
+          ngayBatDau: currentProject.NgayKhoiCong,
+          ngayKetThuc: currentProject.KeHoachHoanThanh,
+          ...projectDetails
+        }
+      };
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Database error:', error);
@@ -1636,32 +2002,20 @@ app.get('/hangMuc/:duAnThanhPhanId/detail', async (req, res) => {
     });
   }
 });
-app.post('/kehoach/them-tiendo/:keHoachId', async (req, res) => {
+app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), async (req, res) => {
   try {
     const keHoachId = req.params.keHoachId;
-    const { 
-      khoiLuongThucHien, 
-      donViTinh, 
-      moTaVuongMac, 
-      loaiVuongMac, 
-      ghiChu 
+    const {
+      khoiLuongThucHien,
+      donViTinh,
+      moTaVuongMac,
+      loaiVuongMac,
+      ghiChu
     } = req.body;
+
     const ngayCapNhat = new Date().toISOString().split('T')[0];
 
-    // 1. Kiểm tra kế hoạch có tồn tại không
-    const [keHoach] = await db.query(
-      'SELECT * FROM quanlykehoach WHERE KeHoachID = ?',
-      [keHoachId]
-    );
-
-    if (keHoach.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy kế hoạch với ID này'
-      });
-    }
-
-    // 2. Kiểm tra dữ liệu đầu vào
+    // 1. Kiểm tra dữ liệu đầu vào
     if (!khoiLuongThucHien || isNaN(khoiLuongThucHien)) {
       return res.status(400).json({
         success: false,
@@ -1669,10 +2023,24 @@ app.post('/kehoach/them-tiendo/:keHoachId', async (req, res) => {
       });
     }
 
-    // 3. Bắt đầu transaction
+    // 2. Bắt đầu transaction
     await db.query('START TRANSACTION');
 
-    // 4. Thêm bản ghi tiến độ mới
+    // 3. Kiểm tra kế hoạch tồn tại
+    const [keHoach] = await db.query(
+      'SELECT * FROM quanlykehoach WHERE KeHoachID = ?',
+      [keHoachId]
+    );
+
+    if (keHoach.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy kế hoạch với ID này'
+      });
+    }
+
+    // 4. Thêm tiến độ mới
     const [tienDoResult] = await db.query(
       `INSERT INTO tiendothuchien 
        (KeHoachID, NgayCapNhat, KhoiLuongThucHien, DonViTinh, MoTaVuongMac, GhiChu)
@@ -1687,7 +2055,9 @@ app.post('/kehoach/them-tiendo/:keHoachId', async (req, res) => {
       ]
     );
 
-    // 5. Nếu có vướng mắc thì thêm vào bảng vuongmac
+    const tienDoId = tienDoResult.insertId;
+
+    // 5. Xử lý vướng mắc nếu có
     let vuongMacId = null;
     if (moTaVuongMac && loaiVuongMac) {
       const [vuongMacResult] = await db.query(
@@ -1699,38 +2069,76 @@ app.post('/kehoach/them-tiendo/:keHoachId', async (req, res) => {
           loaiVuongMac,
           moTaVuongMac,
           ngayCapNhat,
-          'Nho' // Mặc định mức độ nhỏ
+          'Nho'
         ]
       );
       vuongMacId = vuongMacResult.insertId;
     }
 
-    // 6. Commit transaction
-    await db.query('COMMIT');
+    // 6. Xử lý upload nhiều file
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'TIENDO', String(tienDoId));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
 
-    // 7. Lấy lại thông tin đầy đủ
-    const [tienDoMoi] = await db.query(
-      'SELECT * FROM tiendothuchien WHERE TienDoID = ?',
-      [tienDoResult.insertId]
-    );
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [result] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'TIENDO',
+            tienDoId,
+            file.originalname,
+            'KHAC',
+            `/Uploads/TIENDO/${tienDoId}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: result.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/TIENDO/${tienDoId}/${file.filename}`
+        });
+      }
+    }
+
+    // 7. Commit transaction
+    await db.query('COMMIT');
 
     res.json({
       success: true,
       message: 'Thêm tiến độ và vướng mắc thành công',
       data: {
-        tienDo: tienDoMoi[0],
-        vuongMac: vuongMacId ? { 
-          VuongMacID: vuongMacId,
-          LoaiVuongMac: loaiVuongMac,
-          MoTaChiTiet: moTaVuongMac
-        } : null
+        tienDoId,
+        vuongMacId,
+        taiLieu: taiLieuResults
       }
     });
 
   } catch (error) {
-    // Rollback nếu có lỗi
     await db.query('ROLLBACK');
-    console.error('Database error:', error);
+    
+    // Xóa file đã upload nếu có lỗi
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Lỗi khi xóa file tạm:', err);
+        }
+      });
+    }
+
+    console.error('Lỗi hệ thống:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi thêm tiến độ',
@@ -2055,178 +2463,276 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
     });
   }
 });
-app.get('/hangMuc/:duAnThanhPhanId/vuongMac', async (req, res) => {
+app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
   try {
-    const duAnThanhPhanId = req.params.duAnThanhPhanId;
+    const duAnId = req.params.duAnId;
 
-    // 1. Check if the sub-project exists
-    const [duAnThanhPhan] = await db.query(
-      'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NOT NULL',
-      [duAnThanhPhanId]
+    // 1. Kiểm tra dự án có tồn tại không
+    const [duAn] = await db.query(
+      'SELECT DuAnID, TenDuAn, ParentID, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE DuAnID = ?',
+      [duAnId]
     );
 
-    if (duAnThanhPhan.length === 0) {
+    if (duAn.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Không tìm thấy dự án THÀNH PHẦN với ID này'
+        message: 'Không tìm thấy dự án với ID này'
       });
     }
 
-    // 2. Get main project info
-    const [duAnTong] = await db.query(
-      'SELECT * FROM duan WHERE DuAnID = ?',
-      [duAnThanhPhan[0].ParentID]
-    );
+    const currentProject = duAn[0];
 
-    // 3. Get all packages for this sub-project
-    const [goiThauList] = await db.query(
-      `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
-       FROM goithau gt
-       LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
-       WHERE gt.DuAn_ID = ?
-       ORDER BY gt.GoiThau_ID ASC`,
-      [duAnThanhPhanId]
-    );
+    // 2. Hàm lấy chi tiết vướng mắc cho một dự án
+    const getVuongMacDetails = async (projectId) => {
+      // Lấy các gói thầu thuộc dự án
+      const [goiThauList] = await db.query(
+        `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
+         FROM goithau gt
+         LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
+         WHERE gt.DuAn_ID = ?
+         ORDER BY gt.GoiThau_ID ASC`,
+        [projectId]
+      );
 
-    // 4. Get detailed package info (simplified structure)
-    const goiThauWithHangMuc = await Promise.all(
-      goiThauList.map(async (goiThau) => {
-        // Get all items for this package (without category grouping)
-        const [hangMucList] = await db.query(
-          `SELECT * FROM hangmuc 
-           WHERE GoiThauID = ?
-           ORDER BY HangMucID ASC`,
-          [goiThau.GoiThau_ID]
-        );
+      // Lấy thông tin chi tiết các gói thầu
+      const goiThauWithHangMuc = await Promise.all(
+        goiThauList.map(async (goiThau) => {
+          // Lấy tất cả hạng mục của gói thầu
+          const [hangMucList] = await db.query(
+            `SELECT * FROM hangmuc 
+             WHERE GoiThauID = ?
+             ORDER BY HangMucID ASC`,
+            [goiThau.GoiThau_ID]
+          );
 
-        // Get obstacle details for each item
-        const hangMucWithVuongMac = await Promise.all(
-          hangMucList.map(async (hangMuc) => {
-            const [vuongMacList] = await db.query(
-              `SELECT 
-                vm.VuongMacID,
-                vm.KeHoachID,
-                vm.LoaiVuongMac,
-                vm.MoTaChiTiet,
-                vm.NgayPhatSinh,
-                vm.NgayKetThuc,
-                vm.MucDo,
-                vm.BienPhapXuLy,
-                kh.TenCongTac,
-                kh.KhoiLuongKeHoach,
-                kh.DonViTinh
-               FROM vuongmac vm
-               LEFT JOIN quanlykehoach kh ON vm.KeHoachID = kh.KeHoachID
-               WHERE kh.HangMucID = ?
-               ORDER BY vm.VuongMacID ASC`,
-              [hangMuc.HangMucID]
-            );
+          // Lấy thông tin vướng mắc cho từng hạng mục
+          const hangMucWithVuongMac = await Promise.all(
+            hangMucList.map(async (hangMuc) => {
+              const [vuongMacList] = await db.query(
+                `SELECT 
+                  vm.VuongMacID,
+                  vm.KeHoachID,
+                  vm.LoaiVuongMac,
+                  vm.MoTaChiTiet,
+                  vm.NgayPhatSinh,
+                  vm.NgayKetThuc,
+                  vm.MucDo,
+                  vm.BienPhapXuLy,
+                  kh.TenCongTac,
+                  kh.KhoiLuongKeHoach,
+                  kh.DonViTinh
+                 FROM vuongmac vm
+                 LEFT JOIN quanlykehoach kh ON vm.KeHoachID = kh.KeHoachID
+                 WHERE kh.HangMucID = ?
+                 ORDER BY vm.VuongMacID ASC`,
+                [hangMuc.HangMucID]
+              );
 
-            // Format obstacle data
-            const formattedVuongMac = vuongMacList.map(vm => ({
-              vuongMacId: vm.VuongMacID,
-              keHoachId: vm.KeHoachID,
-              tenCongTac: vm.TenCongTac,
-              khoiLuongKeHoach: vm.KhoiLuongKeHoach,
-              donViTinh: vm.DonViTinh,
-              loaiVuongMac: vm.LoaiVuongMac,
-              moTaChiTiet: vm.MoTaChiTiet,
-              ngayPhatSinh: vm.NgayPhatSinh,
-              ngayKetThuc: vm.NgayKetThuc,
-              mucDo: vm.MucDo,
-              bienPhapXuLy: vm.BienPhapXuLy,
-              trangThai: vm.BienPhapXuLy ? 'Đã phê duyệt' : 'Chưa phê duyệt'
-            }));
+              // Format dữ liệu vướng mắc
+              const formattedVuongMac = vuongMacList.map(vm => ({
+                vuongMacId: vm.VuongMacID,
+                keHoachId: vm.KeHoachID,
+                tenCongTac: vm.TenCongTac,
+                khoiLuongKeHoach: vm.KhoiLuongKeHoach,
+                donViTinh: vm.DonViTinh,
+                loaiVuongMac: vm.LoaiVuongMac,
+                moTaChiTiet: vm.MoTaChiTiet,
+                ngayPhatSinh: vm.NgayPhatSinh,
+                ngayKetThuc: vm.NgayKetThuc,
+                mucDo: vm.MucDo,
+                bienPhapXuLy: vm.BienPhapXuLy,
+                trangThai: vm.BienPhapXuLy ? 'Đã phê duyệt' : 'Chưa phê duyệt'
+              }));
 
-            // Count obstacles by status
-            const tongVuongMac = formattedVuongMac.length;
-            const soVuongMacDaPheDuyet = formattedVuongMac.filter(
-              vm => vm.trangThai === 'Đã phê duyệt'
-            ).length;
-            const soVuongMacChuaPheDuyet = tongVuongMac - soVuongMacDaPheDuyet;
+              // Đếm vướng mắc theo trạng thái
+              const tongVuongMac = formattedVuongMac.length;
+              const soVuongMacDaPheDuyet = formattedVuongMac.filter(
+                vm => vm.trangThai === 'Đã phê duyệt'
+              ).length;
+              const soVuongMacChuaPheDuyet = tongVuongMac - soVuongMacDaPheDuyet;
 
-            return {
-              hangMucId: hangMuc.HangMucID,
-              tenHangMuc: hangMuc.TenHangMuc,
-              loaiHangMuc: hangMuc.LoaiHangMuc, // Still keep this field but don't group by it
-              tieuDeChiTiet: hangMuc.TieuDeChiTiet,
-              mayMocThietBi: hangMuc.MayMocThietBi,
-              nhanLucThiCong: hangMuc.NhanLucThiCong,
-              thoiGianHoanThanh: hangMuc.ThoiGianHoanThanh,
-              ghiChu: hangMuc.GhiChu,
-              danhSachVuongMac: formattedVuongMac,
-              tongVuongMac,
-              soVuongMacDaPheDuyet,
-              soVuongMacChuaPheDuyet
-            };
-          })
-        );
+              return {
+                hangMucId: hangMuc.HangMucID,
+                tenHangMuc: hangMuc.TenHangMuc,
+                loaiHangMuc: hangMuc.LoaiHangMuc,
+                tieuDeChiTiet: hangMuc.TieuDeChiTiet,
+                mayMocThietBi: hangMuc.MayMocThietBi,
+                nhanLucThiCong: hangMuc.NhanLucThiCong,
+                thoiGianHoanThanh: hangMuc.ThoiGianHoanThanh,
+                ghiChu: hangMuc.GhiChu,
+                danhSachVuongMac: formattedVuongMac,
+                tongVuongMac,
+                soVuongMacDaPheDuyet,
+                soVuongMacChuaPheDuyet
+              };
+            })
+          );
 
-        // Calculate totals for the package
-        const tongVuongMacGoiThau = hangMucWithVuongMac.reduce(
-          (sum, hm) => sum + (hm.tongVuongMac || 0), 0
-        );
-        const tongDaPheDuyetGoiThau = hangMucWithVuongMac.reduce(
-          (sum, hm) => sum + (hm.soVuongMacDaPheDuyet || 0), 0
-        );
-        const tongChuaPheDuyetGoiThau = hangMucWithVuongMac.reduce(
-          (sum, hm) => sum + (hm.soVuongMacChuaPheDuyet || 0), 0
-        );
+          // Tính tổng cho gói thầu
+          const tongVuongMacGoiThau = hangMucWithVuongMac.reduce(
+            (sum, hm) => sum + (hm.tongVuongMac || 0), 0
+          );
+          const tongDaPheDuyetGoiThau = hangMucWithVuongMac.reduce(
+            (sum, hm) => sum + (hm.soVuongMacDaPheDuyet || 0), 0
+          );
+          const tongChuaPheDuyetGoiThau = hangMucWithVuongMac.reduce(
+            (sum, hm) => sum + (hm.soVuongMacChuaPheDuyet || 0), 0
+          );
 
-        return {
-          goiThauId: goiThau.GoiThau_ID,
-          tenGoiThau: goiThau.TenGoiThau,
-          giaTriHopDong: goiThau.GiaTriHĐ,
-          kmBatDau: goiThau.Km_BatDau,
-          kmKetThuc: goiThau.Km_KetThuc,
-          toaDoBatDau: { x: goiThau.ToaDo_BatDau_X, y: goiThau.ToaDo_BatDau_Y },
-          toaDoKetThuc: { x: goiThau.ToaDo_KetThuc_X, y: goiThau.ToaDo_KetThuc_Y },
-          ngayKhoiCong: goiThau.NgayKhoiCong,
-          ngayHoanThanh: goiThau.NgayHoanThanh,
-          trangThai: goiThau.TrangThai,
-          nhaThau: goiThau.NhaThauID ? {
-            nhaThauId: goiThau.NhaThauID,
-            tenNhaThau: goiThau.TenNhaThau,
-            maSoThue: goiThau.MaSoThue
-          } : null,
-          danhSachHangMuc: hangMucWithVuongMac, // Direct list of items, no category grouping
-          tongVuongMac: tongVuongMacGoiThau,
-          tongDaPheDuyet: tongDaPheDuyetGoiThau,
-          tongChuaPheDuyet: tongChuaPheDuyetGoiThau
-        };
-      })
-    );
+          return {
+            goiThauId: goiThau.GoiThau_ID,
+            tenGoiThau: goiThau.TenGoiThau,
+            giaTriHopDong: goiThau.GiaTriHĐ,
+            kmBatDau: goiThau.Km_BatDau,
+            kmKetThuc: goiThau.Km_KetThuc,
+            toaDoBatDau: { x: goiThau.ToaDo_BatDau_X, y: goiThau.ToaDo_BatDau_Y },
+            toaDoKetThuc: { x: goiThau.ToaDo_KetThuc_X, y: goiThau.ToaDo_KetThuc_Y },
+            ngayKhoiCong: goiThau.NgayKhoiCong,
+            ngayHoanThanh: goiThau.NgayHoanThanh,
+            trangThai: goiThau.TrangThai,
+            nhaThau: goiThau.NhaThauID ? {
+              nhaThauId: goiThau.NhaThauID,
+              tenNhaThau: goiThau.TenNhaThau,
+              maSoThue: goiThau.MaSoThue
+            } : null,
+            danhSachHangMuc: hangMucWithVuongMac,
+            tongVuongMac: tongVuongMacGoiThau,
+            tongDaPheDuyet: tongDaPheDuyetGoiThau,
+            tongChuaPheDuyet: tongChuaPheDuyetGoiThau
+          };
+        })
+      );
 
-    // 5. Calculate totals for the sub-project
-    const tongVuongMac = goiThauWithHangMuc.reduce(
-      (sum, gt) => sum + (gt.tongVuongMac || 0), 0
-    );
-    const tongDaPheDuyet = goiThauWithHangMuc.reduce(
-      (sum, gt) => sum + (gt.tongDaPheDuyet || 0), 0
-    );
-    const tongChuaPheDuyet = goiThauWithHangMuc.reduce(
-      (sum, gt) => sum + (gt.tongChuaPheDuyet || 0), 0
-    );
+      // Tính tổng cho dự án
+      const tongVuongMac = goiThauWithHangMuc.reduce(
+        (sum, gt) => sum + (gt.tongVuongMac || 0), 0
+      );
+      const tongDaPheDuyet = goiThauWithHangMuc.reduce(
+        (sum, gt) => sum + (gt.tongDaPheDuyet || 0), 0
+      );
+      const tongChuaPheDuyet = goiThauWithHangMuc.reduce(
+        (sum, gt) => sum + (gt.tongChuaPheDuyet || 0), 0
+      );
 
-    res.json({
-      success: true,
-      data: {
-        duAnTong: duAnTong.length > 0 ? {
-          duAnId: duAnTong[0].DuAnID,
-          tenDuAn: duAnTong[0].TenDuAn
-        } : null,
-        duAnThanhPhan: {
-          duAnId: duAnThanhPhan[0].DuAnID,
-          tenDuAn: duAnThanhPhan[0].TenDuAn,
-          ngayBatDau: duAnThanhPhan[0].NgayBatDau,
-          ngayKetThuc: duAnThanhPhan[0].NgayKetThuc,
-          danhSachGoiThau: goiThauWithHangMuc,
-          tongVuongMac,
-          tongDaPheDuyet,
-          tongChuaPheDuyet
+      return {
+        duAnId: projectId,
+        danhSachGoiThau: goiThauWithHangMuc,
+        tongVuongMac,
+        tongDaPheDuyet,
+        tongChuaPheDuyet
+      };
+    };
+
+    // 3. Hàm lấy tất cả dự án con (đệ quy)
+    const getAllChildProjects = async (parentId) => {
+      const [childProjects] = await db.query(
+        'SELECT DuAnID, TenDuAn, ParentID FROM duan WHERE ParentID = ?',
+        [parentId]
+      );
+      
+      let allChildren = [];
+      
+      for (const child of childProjects) {
+        const grandchildren = await getAllChildProjects(child.DuAnID);
+        allChildren.push(child, ...grandchildren);
+      }
+      
+      return allChildren;
+    };
+
+    // 4. Xử lý theo loại dự án
+    let responseData = { success: true, data: {} };
+
+    if (currentProject.ParentID === null) {
+      // Dự án cha - có thể có cả dự án con và gói thầu trực tiếp
+      const [directChildProjects] = await db.query(
+        'SELECT DuAnID, TenDuAn, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE ParentID = ?',
+        [duAnId]
+      );
+
+      // Lấy tất cả các dự án con (bao gồm cả cháu, chắt...)
+      const allChildProjects = await getAllChildProjects(duAnId);
+      const allChildProjectIds = allChildProjects.map(p => p.DuAnID);
+
+      // Lấy vướng mắc từ gói thầu trực tiếp thuộc dự án cha
+      const directTenders = await getVuongMacDetails(duAnId);
+
+      // Lấy thông tin chi tiết cho từng dự án con
+      const childProjectDetails = await Promise.all(
+        directChildProjects.map(async (childProject) => {
+          const details = await getVuongMacDetails(childProject.DuAnID);
+          return {
+            duAnId: childProject.DuAnID,
+            tenDuAn: childProject.TenDuAn,
+            ngayBatDau: childProject.NgayKhoiCong,
+            ngayKetThuc: childProject.KeHoachHoanThanh,
+            ...details
+          };
+        })
+      );
+
+      // Lấy tất cả vướng mắc từ các dự án con (bao gồm cả cháu, chắt...)
+      let allVuongMacFromChildren = {
+        tongVuongMac: 0,
+        tongDaPheDuyet: 0,
+        tongChuaPheDuyet: 0
+      };
+      
+      if (allChildProjectIds.length > 0) {
+        // Tính tổng vướng mắc từ tất cả dự án con
+        for (const child of childProjectDetails) {
+          allVuongMacFromChildren.tongVuongMac += child.tongVuongMac || 0;
+          allVuongMacFromChildren.tongDaPheDuyet += child.tongDaPheDuyet || 0;
+          allVuongMacFromChildren.tongChuaPheDuyet += child.tongChuaPheDuyet || 0;
         }
       }
-    });
+
+      // Tính tổng tất cả vướng mắc (bao gồm từ dự án con và gói thầu trực tiếp)
+      const totalVuongMac = 
+        directTenders.tongVuongMac + allVuongMacFromChildren.tongVuongMac;
+      const totalDaPheDuyet = 
+        directTenders.tongDaPheDuyet + allVuongMacFromChildren.tongDaPheDuyet;
+      const totalChuaPheDuyet = 
+        directTenders.tongChuaPheDuyet + allVuongMacFromChildren.tongChuaPheDuyet;
+
+      responseData.data = {
+        duAnTong: {
+          duAnId: currentProject.DuAnID,
+          tenDuAn: currentProject.TenDuAn,
+          ngayBatDau: currentProject.NgayKhoiCong,
+          ngayKetThuc: currentProject.KeHoachHoanThanh,
+          danhSachDuAnCon: childProjectDetails,
+          danhSachGoiThauTrucTiep: directTenders.danhSachGoiThau,
+          tongVuongMac: totalVuongMac,
+          tongDaPheDuyet: totalDaPheDuyet,
+          tongChuaPheDuyet: totalChuaPheDuyet
+        }
+      };
+    } else {
+      // Dự án con - giữ logic hiện tại
+      const [parentProject] = await db.query(
+        'SELECT DuAnID, TenDuAn FROM duan WHERE DuAnID = ?',
+        [currentProject.ParentID]
+      );
+
+      const projectDetails = await getVuongMacDetails(duAnId);
+
+      responseData.data = {
+        duAnTong: parentProject.length > 0 ? {
+          duAnId: parentProject[0].DuAnID,
+          tenDuAn: parentProject[0].TenDuAn
+        } : null,
+        duAnThanhPhan: {
+          duAnId: currentProject.DuAnID,
+          tenDuAn: currentProject.TenDuAn,
+          ngayBatDau: currentProject.NgayKhoiCong,
+          ngayKetThuc: currentProject.KeHoachHoanThanh,
+          ...projectDetails
+        }
+      };
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Database error:', error);
@@ -2462,15 +2968,921 @@ app.get('/duAn/:duAnId', async (req, res) => {
     });
   }
 });
+app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
+  try {
+    // Lấy dữ liệu từ form-data
+    const {
+      TenDuAn,
+      TinhThanh,
+      ChuDauTu,
+      NgayKhoiCong,
+      TrangThai,
+      NguonVon,
+      TongChieuDai,
+      KeHoachHoanThanh,
+      MoTaChung,
+      ParentID,
+      LoaiHinh_ID,
+      ThuocTinhValues
+    } = req.body;
+
+    // Parse JSON string nếu có
+    const thuocTinhValuesParsed = ThuocTinhValues ? JSON.parse(ThuocTinhValues) : {};
+
+    // Validate required fields
+    if (!TenDuAn || !LoaiHinh_ID) {
+      // Xóa file đã upload nếu validate fail
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => fs.unlinkSync(file.path));
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (TenDuAn, LoaiHinh_ID)'
+      });
+    }
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // Insert main project info
+    const [result] = await db.query(
+      `INSERT INTO duan (
+        TenDuAn, TinhThanh, ChuDauTu, NgayKhoiCong,
+        TrangThai, NguonVon, TongChieuDai, KeHoachHoanThanh,
+        MoTaChung, ParentID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        TenDuAn, 
+        TinhThanh || null, 
+        ChuDauTu || null, 
+        NgayKhoiCong || null,
+        TrangThai || 'Đang chuẩn bị', 
+        NguonVon || 'Ngân sách', 
+        TongChieuDai || null, 
+        KeHoachHoanThanh || null,
+        MoTaChung || null, 
+        ParentID || null
+      ]
+    );
+
+    const DuAnID = result.insertId;
+
+    // Link project to its type
+    await db.query(
+      'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "duan", ?)',
+      [DuAnID, LoaiHinh_ID]
+    );
+
+    // Insert attribute values if provided
+    if (thuocTinhValuesParsed && typeof thuocTinhValuesParsed === 'object') {
+      for (const [ThuocTinh_ID, GiaTri] of Object.entries(thuocTinhValuesParsed)) {
+        await db.query(
+          `INSERT INTO giatrithuoctinh 
+          (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+          VALUES (?, ?, "duan", ?)`,
+          [ThuocTinh_ID, DuAnID, GiaTri]
+        );
+      }
+    }
+
+    // Handle file uploads
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'DUAN', String(DuAnID));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'DUAN',
+            DuAnID,
+            file.originalname,
+            'KHAC',
+            `/Uploads/DUAN/${DuAnID}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/DUAN/${DuAnID}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Tạo dự án mới thành công',
+      data: {
+        DuAnID,
+        LoaiHinh_ID,
+        ThuocTinhValues: thuocTinhValuesParsed,
+        taiLieu: taiLieuResults
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    
+    // Clean up uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error creating project:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo dự án',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res) => {
+  try {
+    const {
+      TenGoiThau,
+      DuAn_ID,
+      GiaTriHĐ,
+      Km_BatDau,
+      Km_KetThuc,
+      ToaDo_BatDau_X,
+      ToaDo_BatDau_Y,
+      ToaDo_KetThuc_X,
+      ToaDo_KetThuc_Y,
+      NgayKhoiCong,
+      NgayHoanThanh,
+      TrangThai,
+      NhaThauID,
+      LoaiHinh_ID,
+      ThuocTinhValues
+    } = req.body;
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // 1. Insert main tender package info
+    const [goiThauResult] = await db.query(
+      `INSERT INTO goithau (
+        TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+        ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+        ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+      ]
+    );
+
+    const GoiThau_ID = goiThauResult.insertId;
+
+    // 2. Insert into goithau_nhathau table if NhaThauID is provided
+    if (NhaThauID) {
+      await db.query(
+        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
+        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
+      );
+    }
+
+    // 3. Link tender package to its type
+    if (LoaiHinh_ID) {
+      await db.query(
+        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
+        [GoiThau_ID, LoaiHinh_ID]
+      );
+
+      // 4. Insert attribute values if provided
+      if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
+        for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
+          await db.query(
+            `INSERT INTO giatrithuoctinh 
+            (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+            VALUES (?, ?, "goithau", ?)`,
+            [ThuocTinh_ID, GoiThau_ID, GiaTri]
+          );
+        }
+      }
+    }
+
+    // 5. Handle file uploads
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'GOITHAU',
+            GoiThau_ID,
+            file.originalname,
+            'KHAC',
+            `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Tạo gói thầu mới thành công',
+      data: {
+        GoiThau_ID,
+        LoaiHinh_ID,
+        ThuocTinhValues,
+        taiLieu: taiLieuResults
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    
+    // Clean up uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error creating tender package:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo gói thầu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/loaihinh/them-thuoctinh', async (req, res) => {
+  try {
+    const {
+      LoaiHinh_ID,
+      TenThuocTinh,
+      KieuDuLieu = 'varchar',
+      DonVi,
+      BatBuoc = 0
+    } = req.body;
+
+    // Validate required fields
+    if (!LoaiHinh_ID || !TenThuocTinh) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (LoaiHinh_ID, TenThuocTinh)'
+      });
+    }
+
+    // Check if type exists
+    const [loaiHinh] = await db.query(
+      'SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?',
+      [LoaiHinh_ID]
+    );
+
+    if (loaiHinh.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy loại hình với ID này'
+      });
+    }
+
+    // Insert new attribute
+    const [result] = await db.query(
+      `INSERT INTO thuoctinhloaihinh 
+      (LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc)
+      VALUES (?, ?, ?, ?, ?)`,
+      [LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc]
+    );
+
+    res.json({
+      success: true,
+      message: 'Thêm thuộc tính mới thành công',
+      data: {
+        ThuocTinh_ID: result.insertId,
+        LoaiHinh_ID,
+        TenThuocTinh,
+        KieuDuLieu,
+        DonVi,
+        BatBuoc
+      }
+    });
+
+  } catch (error) {
+    console.error('Error adding attribute:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi thêm thuộc tính',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/loaihinh', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM loaihinh');
+
+    res.json({
+      success: true,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Error fetching loaihinh:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy danh sách loại hình',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
+  try {
+    const loaiHinhId = req.params.id;
+
+    // Kiểm tra loại hình có tồn tại
+    const [loaiHinh] = await db.query('SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
+    if (loaiHinh.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy loại hình với ID này'
+      });
+    }
+
+    // Lấy thuộc tính của loại hình
+    const [thuocTinh] = await db.query(
+      'SELECT * FROM thuoctinhloaihinh WHERE LoaiHinh_ID = ?',
+      [loaiHinhId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        loaiHinh: loaiHinh[0],
+        thuocTinh
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching thuoc tinh loai hinh:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy thuộc tính loại hình',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/api/tailieu/:loaiDoiTuong/:doiTuongID', async (req, res) => {
+  try {
+    const { loaiDoiTuong, doiTuongID } = req.params;
+    const { user } = 1
+    
+    // Validate loại đối tượng
+    const validTypes = ['DUAN', 'GOITHAU', 'HANGMUC', 'KEHOACH', 'TIENDO', 'VUONGMAC'];
+    if (!validTypes.includes(loaiDoiTuong.toUpperCase())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Loại đối tượng không hợp lệ'
+      });
+    }
+
+    // Xử lý upload file
+    upload(req, res, async (err) => {
+      if (err) {
+        return res.status(400).json({
+          success: false,
+          message: err instanceof multer.MulterError 
+            ? 'File quá lớn (tối đa 100MB)' 
+            : 'Lỗi khi upload file'
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'Vui lòng chọn file để upload'
+        });
+      }
+
+      const {
+        tenTaiLieu = req.file.originalname,
+        loaiTaiLieu,
+        moTa = '',
+        public = false
+      } = req.body;
+
+      // Tính dung lượng file (MB)
+      const fileSizeMB = req.file.size / (1024 * 1024);
+
+      // Lưu thông tin vào database
+      const [result] = await db.query(
+        `INSERT INTO tailieu (
+          LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+          DuongDan, DungLuong, NguoiUpload, MoTa, Public
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          loaiDoiTuong.toUpperCase(),
+          doiTuongID,
+          tenTaiLieu,
+          loaiTaiLieu,
+          `/uploads/${loaiDoiTuong}/${doiTuongID}/${req.file.filename}`,
+          fileSizeMB,
+          user.userId,
+          moTa,
+          public
+        ]
+      );
+
+      res.json({
+        success: true,
+        message: 'Upload tài liệu thành công',
+        data: {
+          taiLieuID: result.insertId,
+          tenTaiLieu,
+          duongDan: `/uploads/${loaiDoiTuong}/${doiTuongID}/${req.file.filename}`,
+          dungLuong: fileSizeMB.toFixed(2) + ' MB'
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi upload tài liệu'
+    });
+  }
+});
+app.get('/api/tailieu/:loaiDoiTuong/:doiTuongID', async (req, res) => {
+  try {
+    const { loaiDoiTuong, doiTuongID } = req.params;
+    const { user } = 1
+
+    // Kiểm tra quyền truy cập (tùy thuộc vào logic ứng dụng của bạn)
+    // ...
+
+    const [documents] = await db.query(
+      `SELECT * FROM tailieu 
+       WHERE LoaiDoiTuong = ? AND DoiTuongID = ?
+       ORDER BY NgayUpload DESC`,
+      [loaiDoiTuong.toUpperCase(), doiTuongID]
+    );
+
+    res.json({
+      success: true,
+      data: documents
+    });
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy danh sách tài liệu'
+    });
+  }
+});
+app.delete('/api/tailieu/:taiLieuID', async (req, res) => {
+  try {
+    const { taiLieuID } = req.params;
+    const { user } = req;
+
+    // Lấy thông tin tài liệu trước khi xóa
+    const [document] = await db.query(
+      `SELECT * FROM tailieu WHERE TaiLieuID = ?`,
+      [taiLieuID]
+    );
+
+    if (!document.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Tài liệu không tồn tại'
+      });
+    }
+
+    // Kiểm tra quyền xóa (ví dụ: chỉ người upload hoặc admin mới được xóa)
+    if (document[0].NguoiUpload !== user.userId && !user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền xóa tài liệu này'
+      });
+    }
+
+    // Xóa file vật lý
+    const filePath = path.join(__dirname, document[0].DuongDan);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Xóa record trong database
+    await db.query(
+      `DELETE FROM tailieu WHERE TaiLieuID = ?`,
+      [taiLieuID]
+    );
+
+    res.json({
+      success: true,
+      message: 'Xóa tài liệu thành công'
+    });
+  } catch (error) {
+    console.error('Error deleting document:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi xóa tài liệu'
+    });
+  }
+});
+app.post('/hangmuc/tao-moi', createUploadMiddleware('HANGMUC'), async (req, res) => {
+  try {
+    const {
+      GoiThauID,
+      TenHangMuc,
+      LoaiHangMuc,
+      TieuDeChiTiet,
+      MayMocThietBi,
+      NhanLucThiCong,
+      ThoiGianHoanThanh,
+      GhiChu
+    } = req.body;
+
+    // Validate required fields
+    if (!GoiThauID || !TenHangMuc) {
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => fs.unlinkSync(file.path));
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (GoiThauID, TenHangMuc)'
+      });
+    }
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // Insert main info
+    const [result] = await db.query(
+      `INSERT INTO hangmuc (
+        GoiThauID, TenHangMuc, LoaiHangMuc, TieuDeChiTiet,
+        MayMocThietBi, NhanLucThiCong, ThoiGianHoanThanh, GhiChu
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        GoiThauID,
+        TenHangMuc,
+        LoaiHangMuc || null,
+        TieuDeChiTiet || null,
+        MayMocThietBi || null,
+        NhanLucThiCong || null,
+        ThoiGianHoanThanh || null,
+        GhiChu || null
+      ]
+    );
+
+    const HangMucID = result.insertId;
+
+    // Handle file uploads
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'HANGMUC', String(HangMucID));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'HANGMUC',
+            HangMucID,
+            file.originalname,
+            'KHAC',
+            `/Uploads/HANGMUC/${HangMucID}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/HANGMUC/${HangMucID}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Thêm hạng mục thành công',
+      data: {
+        HangMucID,
+        taiLieu: taiLieuResults
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error creating hang muc:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi thêm hạng mục',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res) => {
+  try {
+    const {
+      HangMucID,
+      NhaThauID,
+      TenCongTac,
+      KhoiLuongKeHoach,
+      DonViTinh,
+      NgayBatDau,
+      NgayKetThuc,
+      GhiChu
+    } = req.body;
+
+    // Validate required fields
+    if (!HangMucID || !NhaThauID || !TenCongTac || !KhoiLuongKeHoach) {
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => fs.unlinkSync(file.path));
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (HangMucID, NhaThauID, TenCongTac, KhoiLuongKeHoach)'
+      });
+    }
+
+    // Start transaction
+    await db.query('START TRANSACTION');
+
+    // Insert main info
+    const [result] = await db.query(
+      `INSERT INTO quanlykehoach (
+        HangMucID, NhaThauID, TenCongTac, KhoiLuongKeHoach,
+        DonViTinh, NgayBatDau, NgayKetThuc, GhiChu
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        HangMucID,
+        NhaThauID,
+        TenCongTac,
+        KhoiLuongKeHoach,
+        DonViTinh || null,
+        NgayBatDau || null,
+        NgayKetThuc || null,
+        GhiChu || null
+      ]
+    );
+
+    const KeHoachID = result.insertId;
+
+    // Handle file uploads
+    const taiLieuResults = [];
+    if (req.files && req.files.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'KEHOACH', String(KeHoachID));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of req.files) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await db.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'KEHOACH',
+            KeHoachID,
+            file.originalname,
+            'KHAC',
+            `/Uploads/KEHOACH/${KeHoachID}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/KEHOACH/${KeHoachID}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Thêm kế hoạch thành công',
+      data: {
+        KeHoachID,
+        taiLieu: taiLieuResults
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error creating ke hoach:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi thêm kế hoạch',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.delete('/duan/:id', async (req, res) => {
+  try {
+    const duAnId = req.params.id;
+    
+    // Kiểm tra dự án tồn tại
+    const [results] = await pool.query('SELECT * FROM duan WHERE DuAnID = ?', [duAnId]);
+    if (results.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Dự án không tồn tại' 
+      });
+    }
+
+    // Xóa các file đính kèm liên quan trước (nếu cần)
+    const uploadPath = path.join(__dirname, 'Uploads', 'DUAN', duAnId);
+    if (fs.existsSync(uploadPath)) {
+      fs.rmSync(uploadPath, { recursive: true, force: true });
+    }
+
+    // Xóa dự án từ database
+    await pool.query('DELETE FROM duan WHERE DuAnID = ?', [duAnId]);
+
+    res.json({ 
+      success: true, 
+      message: 'Đã xóa dự án và tất cả dữ liệu liên quan' 
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa dự án:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server khi xóa dự án',
+      error: error.message 
+    });
+  }
+});
+app.delete('/goithau/:id', async (req, res) => {
+  try {
+      const goiThauId = req.params.id;
+      const result = await GoiThau.destroy({
+          where: { GoiThau_ID: goiThauId }
+      });
+
+      if (result === 0) {
+          return res.status(404).json({ success: false, message: 'Gói thầu không tồn tại' });
+      }
+
+      res.json({ 
+          success: true, 
+          message: 'Đã xóa gói thầu và tất cả dữ liệu liên quan' 
+      });
+  } catch (error) {
+      console.error('Lỗi khi xóa gói thầu:', error);
+      res.status(500).json({ 
+          success: false, 
+          message: 'Lỗi server khi xóa gói thầu' 
+      });
+  }
+});
+app.delete('/hangmuc/:id', async (req, res) => {
+  try {
+    const hangMucId = req.params.id;
+    
+    // Kiểm tra hạng mục tồn tại
+    const [results] = await pool.query('SELECT * FROM hangmuc WHERE HangMucID = ?', [hangMucId]);
+    if (results.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Hạng mục không tồn tại' 
+      });
+    }
+
+    // Xóa các kế hoạch liên quan trước (nếu cần cascade)
+    await pool.query('DELETE FROM kehoach WHERE HangMucID = ?', [hangMucId]);
+
+    // Xóa các file đính kèm liên quan (nếu có)
+    const uploadPath = path.join(__dirname, 'Uploads', 'HANGMUC', hangMucId);
+    if (fs.existsSync(uploadPath)) {
+      fs.rmSync(uploadPath, { recursive: true, force: true });
+    }
+
+    // Xóa hạng mục từ database
+    await pool.query('DELETE FROM hangmuc WHERE HangMucID = ?', [hangMucId]);
+
+    res.json({ 
+      success: true, 
+      message: 'Đã xóa hạng mục và tất cả kế hoạch liên quan' 
+    });
+  } catch (error) {
+    console.error('Lỗi khi xóa hạng mục:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server khi xóa hạng mục',
+      error: error.message 
+    });
+  }
+});
+
+
+
+// Middleware xử lý lỗi toàn cục
 app.use((err, req, res, next) => {
   console.error('Global error handler:', err);
   res.status(500).json({
     success: false,
-    message: 'Đã xảy ra lỗi hệ thống'
+    message: err.message || 'Đã xảy ra lỗi hệ thống'
   });
+});
+
+// Đóng kết nối pool khi server dừng
+process.on('SIGINT', () => {
+  pool.end()
+    .then(() => {
+      console.log('MySQL pool closed');
+      process.exit(0);
+    })
+    .catch(err => {
+      console.error('Error closing MySQL pool:', err);
+      process.exit(1);
+    });
 });
 
 // Khởi động server
 app.listen(port, () => {
   console.log(`Server đang chạy trên port ${port}`);
 });
+
+// Export pool để sử dụng trong các route
+module.exports = { pool };
