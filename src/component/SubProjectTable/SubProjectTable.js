@@ -4,6 +4,20 @@ import axios from 'axios';
 import { FaPlus, FaTrash, FaInfoCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
+import { Chart as ChartJS, LineElement, BarElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  LineElement,
+  BarElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Tooltip,
+  Legend
+);
+
 const SubProjectTable = ({ duAnThanhPhanId }) => {
   const { selectedProjectId, selectedSubProjectId } = useProject();
   const navigate = useNavigate();
@@ -20,10 +34,179 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
     progressData: []
   });
 
+  // Sample data for charts
+    const [chartData, setChartData] = useState({
+      lineData: {
+        labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
+        datasets: [
+          {
+            label: 'Tiến độ kế hoạch',
+            data: [10, 30, 50, 70, 90, 100],
+            borderColor: '#4CAF50', // Màu xanh lá đậm
+            backgroundColor: 'rgba(76, 175, 80, 0.2)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true
+          },
+          {
+            label: 'Tiến độ thực tế',
+            data: [5, 20, 40, 60, 80, 85],
+            borderColor: '#FF5722', // Màu cam đậm
+            backgroundColor: 'rgba(255, 87, 34, 0.2)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      },
+      barData: {
+        labels: ['Hạng mục A', 'Hạng mục B', 'Hạng mục C', 'Hạng mục D'],
+        datasets: [
+          {
+            label: 'Đã hoàn thành',
+            data: [12, 19, 3, 5],
+            backgroundColor: '#4CAF50', // Màu xanh lá
+            borderColor: '#388E3C',
+            borderWidth: 1
+          },
+          {
+            label: 'Đang thực hiện',
+            data: [8, 15, 12, 10],
+            backgroundColor: '#2196F3', // Màu xanh dương
+            borderColor: '#1976D2',
+            borderWidth: 1
+          }
+        ]
+      }
+    });
+  
+    // Enhanced chart options with better styling
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            font: {
+              size: 14,
+              weight: 'bold'
+            },
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          enabled: true,
+          bodyFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          titleFont: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          },
+          ticks: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            },
+            callback: function(value) {
+              return value + '%';
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          }
+        }
+      },
+      elements: {
+        point: {
+          radius: 5,
+          hoverRadius: 7
+        }
+      }
+    };
+  
+    const barOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            font: {
+              size: 14,
+              weight: 'bold'
+            },
+            padding: 20,
+            usePointStyle: true,
+            pointStyle: 'rect'
+          }
+        },
+        tooltip: {
+          enabled: true,
+          bodyFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          titleFont: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: 'rgba(0,0,0,0.1)'
+          },
+          ticks: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            font: {
+              size: 12,
+              weight: 'bold'
+            }
+          }
+        }
+      }
+    };
+
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/hangMuc/${duAnThanhPhanId}/detail`);
+        const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
         const result = await response.json();
         setData(result.data);
         setLoading(false);
@@ -62,7 +245,7 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
 
   const fetchProgressData = async (keHoachId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/tien-do/${keHoachId}`);
+      const response = await axios.get(`${API_BASE_URL}/tien-do/${keHoachId}`);
       return response.data.data;
     } catch (error) {
       console.error('Error fetching progress data:', error);
@@ -299,6 +482,28 @@ const SubProjectTable = ({ duAnThanhPhanId }) => {
     <div className="w-full overflow-x-auto p-2">
       <div className="hidden md:block">
     <div className="w-full overflow-x-auto">
+
+          {/* Chart Section */}
+          <div className="chart-section p-4 bg-white shadow-md rounded-lg my-4 mx-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Line Chart */}
+              <div className="chart-container bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3 text-center">Tiến độ dự án</h3>
+                <div className="h-64">
+                  <Line data={chartData.lineData} options={chartOptions} />
+                </div>
+              </div>
+              
+              {/* Bar Chart */}
+              <div className="chart-container bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3 text-center">Trạng thái hạng mục</h3>
+                <div className="h-64">
+                  <Bar data={chartData.barData} options={barOptions} />
+                </div>
+              </div>
+            </div>
+          </div>
+
     <table className="divide-y divide-gray-200 border text-sm">
         <thead className="bg-gray-50">
           <tr>
