@@ -266,10 +266,10 @@ const MapComponent = ({ projects = [] }) => {
   });
 
   return (
-    <div className="map-app-container" style={{ height: '100%', width: '100%' }}>
+    <div className="map-app-container">
       <div className="map-controls">
         <div className="map-type-selector">
-          <label htmlFor="map-type">Loại Bản đồ:</label>
+          <label className='text-white' htmlFor="map-type">Loại Bản đồ:</label>
           <select
             id="map-type"
             value={mapType}

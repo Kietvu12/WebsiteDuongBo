@@ -506,7 +506,7 @@ const SideProject = () => {
 
       <div className="px-6 pb-2 pt-2">
         <h2 className="text-l mt-6 md:mt-0 font-bold">
-          Danh sách dự án thành phần
+          {project.TenDuAn}
         </h2>
       </div>
 
@@ -726,6 +726,7 @@ const SideProject = () => {
               style={{ height: "calc(100vh - 300px)" }}
             >
               <div className="overflow-y-auto">
+                <h1 className="text-l mt-6 md:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>
                 <table className="min-w-full border border-gray-300 text-sm">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">

@@ -10,6 +10,7 @@ import { FaArrowLeft } from 'react-icons/fa'
 import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
 import SubProjectTable from '../../component/SubProjectTable/SubProjectTable';
+import ProductionChart from '../../component/Chart/Chart'
 const WorkItem = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -221,7 +222,7 @@ const WorkItem = () => {
 
               {/* Status Filter */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
+                {/* <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -231,14 +232,23 @@ const WorkItem = () => {
                   <option value="Chậm tiến độ">Chậm tiến độ</option>
                   <option value="Đang tiến hành">Đang tiến hành</option>
                   <option value="Đã hoàn thành">Đã hoàn thành</option>
-                </select>
+                </select> */}
               </div>
 
             </div>
           </div>
         </div>
       </div>
-
+      <div>
+      {selectedProjectId !== null ? (
+            <ProductionChart duAnThanhPhanId={selectedProjectId} />
+          ) : (
+            // Hiển thị thông báo nếu cả hai đều null
+            <div className="no-project-selected">
+              <p>Vui lòng tìm kiếm một dự án để xem</p>
+            </div>
+          )}
+      </div>
       <div className='content'>
         <div className='content'>
           {selectedProjectId !== null ? (

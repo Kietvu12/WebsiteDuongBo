@@ -223,7 +223,7 @@ const ProjectProgress = () => {
 
               {/* Status Filter */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
+                {/* <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
@@ -233,7 +233,7 @@ const ProjectProgress = () => {
                   <option value="Chậm tiến độ">Chậm tiến độ</option>
                   <option value="Đang tiến hành">Đang tiến hành</option>
                   <option value="Đã hoàn thành">Đã hoàn thành</option>
-                </select>
+                </select> */}
               </div>
 
             </div>

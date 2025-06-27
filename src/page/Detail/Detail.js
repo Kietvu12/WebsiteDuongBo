@@ -159,7 +159,7 @@ const Detail = () => {
                   <ContractorInfo data={packageData.thongTinChung} />
                 </div>
                 <div className="bg-white rounded-lg shadow p-4">
-                  <ConstructionVolume data={{ khoiLuongThiCong: packageData.thongTinChung.khoiLuongThiCong }} />
+                  <ConstructionVolume data={{ khoiLuongThiCong: packageData.thongTinChung.khoiLuongThiCong }}  packageId={selectedPackageId}/>
                 </div>
               </>
             )}

@@ -107,11 +107,11 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                             TenDuAn: projectData.TenDuAn || '',
                             TinhThanh: projectData.TinhThanh || '',
                             ChuDauTu: projectData.ChuDauTu || '',
-                            NgayKhoiCong: projectData.NgayKhoiCong || '',
+                            NgayKhoiCong: projectData.NgayKhoiCong?.split('T')[0] || '',
                             TrangThai: projectData.TrangThai || 'Đang chuẩn bị',
                             NguonVon: projectData.NguonVon || 'Ngân sách',
                             TongChieuDai: projectData.TongChieuDai || '',
-                            KeHoachHoanThanh: projectData.KeHoachHoanThanh || '',
+                            KeHoachHoanThanh: projectData.KeHoachHoanThanh?.split('T')[0] || '',
                             MoTaChung: projectData.MoTaChung || '',
                             ParentID: projectData.ParentID || DuAnID,
                             LoaiHinh_ID: projectData.LoaiHinh_ID || '',
@@ -240,6 +240,17 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
 
             return updated;
         });
+    };
+    const handleDateChangeISO = (name, dateValue) => {
+        // Chuyển đổi từ ISO string sang yyyy-MM-dd nếu cần
+        const formattedDate = dateValue.includes('T')
+            ? dateValue.split('T')[0]
+            : dateValue;
+
+        setFormData(prev => ({
+            ...prev,
+            [name]: formattedDate
+        }));
     };
 
     const handleThuocTinhChange = (thuocTinhId, value) => {
@@ -498,8 +509,9 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                                 <input
                                     type="date"
                                     className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
-                                    value={formData.NgayKhoiCong}
-                                    onChange={(e) => handleDateChange('NgayKhoiCong', e.target.value)}
+                                    value={formData.NgayKhoiCong || ''}
+                                    onChange={(e) => handleDateChangeISO('NgayKhoiCong', e.target.value)}
+                                    max={formData.KeHoachHoanThanh} // Ngày khởi công không được sau ngày hoàn thành
                                 />
                                 <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                             </div>
@@ -763,7 +775,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                         disabled={loading}
                     >
                         {loading ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
-                        <span>Tạo dự án</span>
+                        <span>{isEdit ? "Cập nhật dự án" : "Tạo mới dự án"}</span>
                     </button>
                 </div>
             </form>

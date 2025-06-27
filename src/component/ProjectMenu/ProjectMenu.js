@@ -327,7 +327,7 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                                         };
                                         
                                         handlePlanSelect(plan);
-                                        onPlanSelect( // Sử dụng trực tiếp prop đã destructure
+                                        onPlanSelect( 
                                           { ...plan, type: 'plan' },
                                           context
                                         );

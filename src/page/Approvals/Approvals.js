@@ -217,21 +217,6 @@ const Approvals = () => {
                 />
               </div>
 
-              {/* Status Filter */}
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm min-w-[140px] flex-1 sm:flex-none"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="Chậm tiến độ">Chậm tiến độ</option>
-                  <option value="Đang tiến hành">Đang tiến hành</option>
-                  <option value="Đã hoàn thành">Đã hoàn thành</option>
-                </select>
-              </div>
-
             </div>
           </div>
         </div>

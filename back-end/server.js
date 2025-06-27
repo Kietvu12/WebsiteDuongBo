@@ -3567,6 +3567,107 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
     });
   }
 });
+app.post('/khoiluong-thicong/them-moi', async (req, res) => {
+  try {
+    const {
+      GoiThau_ID,
+      NhaThauID,
+      TieuDe,
+      NoiDung,
+      VaiTro = 'Nhà thầu phụ' // Mặc định là Nhà thầu phụ
+    } = req.body;
+
+    // Validate required fields
+    if (!GoiThau_ID || !NhaThauID || !TieuDe || !NoiDung) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (GoiThau_ID, NhaThauID, TieuDe, NoiDung)'
+      });
+    }
+
+    // Bắt đầu transaction
+    await db.query('START TRANSACTION');
+
+    // 1. Kiểm tra gói thầu tồn tại
+    const [goiThau] = await db.query(
+      'SELECT GoiThau_ID FROM goithau WHERE GoiThau_ID = ?',
+      [GoiThau_ID]
+    );
+
+    if (goiThau.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy gói thầu với ID này'
+      });
+    }
+
+    // 2. Kiểm tra nhà thầu tồn tại
+    const [nhaThau] = await db.query(
+      'SELECT NhaThauID FROM nhathau WHERE NhaThauID = ?',
+      [NhaThauID]
+    );
+
+    if (nhaThau.length === 0) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy nhà thầu với ID này'
+      });
+    }
+
+    // 3. Thêm hoặc cập nhật vai trò nhà thầu trong gói thầu
+    try {
+      await db.query(
+        `INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE VaiTro = VALUES(VaiTro)`,
+        [GoiThau_ID, NhaThauID, VaiTro]
+      );
+    } catch (error) {
+      await db.query('ROLLBACK');
+      console.error('Lỗi khi thêm nhà thầu vào gói thầu:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Lỗi khi cập nhật vai trò nhà thầu',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+
+    // 4. Thêm khối lượng thi công (chỉ với các trường có trong bảng)
+    const [result] = await db.query(
+      `INSERT INTO khoiluong_thicong 
+      (GoiThau_ID, NhaThauID, TieuDe, NoiDung)
+      VALUES (?, ?, ?, ?)`,
+      [GoiThau_ID, NhaThauID, TieuDe, NoiDung]
+    );
+
+    // Commit transaction nếu mọi thứ thành công
+    await db.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Thêm khối lượng thi công và cập nhật vai trò nhà thầu thành công',
+      data: {
+        KhoiLuong_ID: result.insertId,
+        GoiThau_ID,
+        NhaThauID,
+        VaiTro,
+        TieuDe,
+        NoiDung
+      }
+    });
+
+  } catch (error) {
+    await db.query('ROLLBACK');
+    console.error('Error adding construction volume:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi thêm khối lượng thi công',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 app.get('/loaihinh', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM loaihinh');
