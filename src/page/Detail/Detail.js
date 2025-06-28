@@ -90,16 +90,7 @@ const Detail = () => {
         <button className="p-1 rounded-md hover:bg-gray-100 transition-colors">
           <img src={menuIcon} alt="Menu" className="w-5 h-5" />
         </button>
-      </div>
-      
-      <button
-        onClick={handleReport}
-        className="flex items-center px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors"
-      >
-        <FaFileWord className="w-4 h-4 sm:mr-2" />
-        <span className="hidden sm:inline">Xuất báo cáo Word</span>
-      </button>
-      
+      </div>      
       <button className="p-1 rounded-md hover:bg-gray-100 transition-colors">
         <img src={helpIcon} alt="Help" className="w-5 h-5" />
       </button>

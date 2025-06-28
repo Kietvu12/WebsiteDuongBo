@@ -506,7 +506,7 @@ const Dashboard = () => {
         <div className="flex items-center space-x-4">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
-          <span>Rdsic</span>
+          <span></span>
           <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
             R
           </div>
@@ -622,11 +622,9 @@ const Dashboard = () => {
           </div>
           <div className="flex gap-2 mb-2 mt-3">
             <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              XUẤT EXCEL
+              XUẤT BÁO CÁO
             </button>
-            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              NHẬP EXCEL
-            </button>
+
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
@@ -1093,20 +1091,20 @@ const Dashboard = () => {
         </div>
       )}
       {showEdit && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <AddNewSubProject
-              isEdit= {1}
-              ProjectID={selectedID}
-              DuAnID={selectedParentID}
-              onClose={() => setShowEdit(false)}
-              onSuccess={() => {
-                setShowEdit(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+      <AddNewSubProject
+        isEdit={1}
+        ProjectID={selectedID}
+        DuAnID={selectedParentID}
+        onClose={() => setShowEdit(false)}
+        onSuccess={() => {
+          setShowEdit(false);
+        }}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 };

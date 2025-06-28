@@ -60,7 +60,8 @@ const ProductionChart = ({duAnThanhPhanId}) => {
       }
     }
   }, [processedData]);
-
+  console.log("Hạng muc:", processedData);
+  
   useEffect(() => {
     if (selectedHangMuc && processedData) {
       updateLineChart();
@@ -223,59 +224,92 @@ const ProductionChart = ({duAnThanhPhanId}) => {
     });
   };
 
-const updateLineChart = () => {
-  const hangMuc = processedData.hangMucList.find(hm => hm.hangMucId === selectedHangMuc);
-  if (!hangMuc) return;
-
-  // Lấy năm hiện tại (hoặc có thể chọn năm từ dữ liệu)
-  const currentYear = new Date().getFullYear();
+  const updateLineChart = () => {
+    // Reset chart nếu không có dữ liệu
+    if (!processedData?.hangMucList?.length) {
+      setLineData({
+        labels: [],
+        datasets: []
+      });
+      return;
+    }
   
-  // Tạo mảng 12 tháng trong năm
-  const allMonths = Array.from({ length: 12 }, (_, i) => `${i + 1}/${currentYear}`);
-
-  // Tạo datasets cho từng kế hoạch
-  const datasets = hangMuc.danhSachKeHoach.map((kh, index) => {
-    const monthlyData = {};
-    kh.tienDoThucHien.forEach(td => {
-      const date = new Date(td.ngayCapNhat);
-      const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-      if (date.getFullYear() === currentYear) {
-        monthlyData[monthYear] = (monthlyData[monthYear] || 0) + td.khoiLuongThucHien;
+    const hangMuc = processedData.hangMucList.find(hm => hm.hangMucId === selectedHangMuc);
+    
+    // Nếu không tìm thấy hạng mục hoặc không có kế hoạch, reset chart
+    if (!hangMuc || !hangMuc.danhSachKeHoach?.length) {
+      setLineData({
+        labels: [],
+        datasets: []
+      });
+      return;
+    }
+  
+    const currentYear = new Date().getFullYear();
+    const allMonths = Array.from({ length: 12 }, (_, i) => `${i + 1}/${currentYear}`);
+  
+    const datasets = hangMuc.danhSachKeHoach.map((kh, index) => {
+      // Kiểm tra dữ liệu kế hoạch hợp lệ
+      if (!kh.tienDoThucHien || !Array.isArray(kh.tienDoThucHien)) {
+        return {
+          label: kh.tenCongTac || `Kế hoạch ${index + 1}`,
+          data: Array(12).fill(0),
+          borderColor: `hsl(${index * 360 / hangMuc.danhSachKeHoach.length}, 70%, 50%)`,
+          backgroundColor: `hsl(${index * 360 / hangMuc.danhSachKeHoach.length}, 70%, 50%)`,
+          tension: 0.1,
+          fill: false,
+          pointBackgroundColor: Array(12).fill('rgba(0,0,0,0)')
+        };
       }
-    });
-
-    // Tạo dữ liệu % hoàn thành cho tất cả 12 tháng
-    const data = allMonths.map(monthYear => {
+  
+      const monthlyData = {};
+      kh.tienDoThucHien.forEach(td => {
+        if (!td.ngayCapNhat || !td.khoiLuongThucHien) return;
+        
+        try {
+          const date = new Date(td.ngayCapNhat);
+          if (isNaN(date.getTime())) return;
+          
+          const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
+          if (date.getFullYear() === currentYear) {
+            monthlyData[monthYear] = (monthlyData[monthYear] || 0) + (td.khoiLuongThucHien || 0);
+          }
+        } catch (e) {
+          console.error('Lỗi xử lý ngày cập nhật:', e);
+        }
+      });
+  
+      const data = allMonths.map(monthYear => {
         const totalInMonth = monthlyData[monthYear] || 0;
-        if (kh.khoiLuongKeHoach > 0) {
-          const percentage = parseFloat((totalInMonth / kh.khoiLuongKeHoach * 100).toFixed(2));
-          return Math.min(100, percentage); // Giới hạn tối đa 100%
+        const khoiLuongKeHoach = parseFloat(kh.khoiLuongKeHoach) || 0;
+        
+        if (khoiLuongKeHoach > 0) {
+          const percentage = parseFloat((totalInMonth / khoiLuongKeHoach * 100).toFixed(2));
+          return Math.min(100, Math.max(0, percentage)); // Giới hạn 0-100%
         }
         return 0;
       });
-
-    // Màu sắc ngẫu nhiên cho mỗi kế hoạch
-    const color = `hsl(${index * 360 / hangMuc.danhSachKeHoach.length}, 70%, 50%)`;
-
-    return {
-      label: kh.tenCongTac,
-      data: data,
-      borderColor: color,
-      backgroundColor: color,
-      tension: 0.1,
-      fill: false,
-      // Thêm điểm đánh dấu cho các tháng có dữ liệu
-      pointBackgroundColor: allMonths.map(monthYear => {
-        return monthlyData[monthYear] ? color : 'rgba(0,0,0,0)';
-      })
-    };
-  });
-
-  setLineData({
-    labels: allMonths.map(month => `Tháng ${month.split('/')[0]}`), // Hiển thị "Tháng 1", "Tháng 2",...
-    datasets: datasets
-  });
-};
+  
+      const color = `hsl(${index * 360 / hangMuc.danhSachKeHoach.length}, 70%, 50%)`;
+  
+      return {
+        label: kh.tenCongTac || `Kế hoạch ${index + 1}`,
+        data: data,
+        borderColor: color,
+        backgroundColor: color,
+        tension: 0.1,
+        fill: false,
+        pointBackgroundColor: allMonths.map(monthYear => {
+          return monthlyData[monthYear] ? color : 'rgba(0,0,0,0)';
+        })
+      };
+    });
+  
+    setLineData({
+      labels: allMonths.map(month => `Tháng ${month.split('/')[0]}`),
+      datasets: datasets.filter(dataset => dataset !== null)
+    });
+  };
 
   const chartOptions = {
     responsive: true,

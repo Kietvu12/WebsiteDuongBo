@@ -17,6 +17,8 @@ body {
   height: 40vmin;
   pointer-events: none;
 }
+/* Zoom out toàn bộ trang web 80% */
+
 
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {

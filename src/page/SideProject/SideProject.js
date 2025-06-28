@@ -45,8 +45,8 @@ const SideProject = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [showAddProject, setShowAddProject] = useState(false);
-    const [showEdit, setShowEdit] = useState(false)
+  const [showAddSideProject, setShowAddSideProject] = useState(false);
+  const [showEdit, setShowEdit] = useState(false)
   const [showAddPackage, setShowAddPackage] = useState(false);
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
@@ -91,8 +91,8 @@ const SideProject = () => {
     "Tỉnh Cà Mau",
     "Tỉnh An Giang"
   ];
-    const [selectedID, setSelectedID] = useState(null)
-    const [selectedParentID, setSelectedParentID] = useState(null)
+  const [selectedID, setSelectedID] = useState(null)
+  const [selectedParentID, setSelectedParentID] = useState(null)
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
@@ -480,13 +480,6 @@ const SideProject = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-200">
       <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4">
-        <button
-          onClick={() => setShowAddProject(true)}
-          className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
-        >
-          <FiPlus className="w-3 h-3" />
-          <span>Tạo dự án mới</span>
-        </button>
 
         <div>
           <button
@@ -497,7 +490,7 @@ const SideProject = () => {
         <div className="flex items-center space-x-4">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
-          <span>Rdsic</span>
+          <span></span>
           <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
             R
           </div>
@@ -594,6 +587,12 @@ const SideProject = () => {
             <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
               NHẬP EXCEL
             </button>
+            <button
+              onClick={() => setShowAddSideProject(true)}
+              className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm"
+            >
+              TẠO DỰ ÁN MỚI
+            </button>
           </div>
           <div className="text-gray-500">Cập nhật lần cuối: 15:10</div>
 
@@ -635,8 +634,8 @@ const SideProject = () => {
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
                     className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
-                        ? `${s.color} border-red-600`
-                        : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
+                      ? `${s.color} border-red-600`
+                      : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
                       }`}
                   >
                     <div className="flex items-center gap-1">
@@ -662,7 +661,7 @@ const SideProject = () => {
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)
-                        ?.box || "bg-gray-200"
+                      ?.box || "bg-gray-200"
                       }`}
                   ></span>
                   {selectedStatus || "Tổng số dự án"}{" "}
@@ -702,8 +701,8 @@ const SideProject = () => {
                     <div
                       key={s.label}
                       className={`p-2 flex items-center gap-2 ${selectedStatus === s.label
-                          ? "bg-blue-50"
-                          : "hover:bg-gray-100"
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-100"
                         }`}
                       onClick={() => {
                         setSelectedStatus(s.label);
@@ -785,8 +784,8 @@ const SideProject = () => {
                               </button>
                               <button
                                 className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(subProject.DuAnID)
-                                    ? "bg-yellow-100"
-                                    : ""
+                                  ? "bg-yellow-100"
+                                  : ""
                                   }`}
                                 title="Ghim"
                                 onClick={(e) => {
@@ -973,23 +972,23 @@ const SideProject = () => {
                             />
                           </button>
                           <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Xoá"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProject(subProject.DuAnID);
-                                }}
-                              >
-                                <img
-                                  src={trash}
-                                  alt="Xoá"
-                                  className="w-5 h-5"
-                                />
-                              </button>
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Xoá"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteProject(subProject.DuAnID);
+                            }}
+                          >
+                            <img
+                              src={trash}
+                              alt="Xoá"
+                              className="w-5 h-5"
+                            />
+                          </button>
                           <button
                             className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID)
-                                ? "bg-yellow-100"
-                                : ""
+                              ? "bg-yellow-100"
+                              : ""
                               }`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1113,55 +1112,49 @@ const SideProject = () => {
       </div>
 
       {/* Popup thêm mới */}
-      {showAddProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <AddNewSubProject
-            DuAnID={project.DuAnID}
-            onClose={() => setShowAddProject(false)}
-            onSuccess={(newProject) => {
-              // Xử lý khi thêm thành công
-            }}
-          />
-        </div>
-      )}
-      {showAddPackage && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen p-4">
-            {/* Lớp phủ mờ */}
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50"
-              onClick={() => setShowAddPackage(false)}
-            ></div>
+      {showAddSideProject && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+      <AddNewSubProject
+        DuAnID={project.DuAnID}
+        onClose={() => setShowAddSideProject(false)}
+        onSuccess={(newProject) => {
+          // Xử lý khi thêm thành công
+        }}
+      />
+    </div>
+  </div>
+)}
 
-            {/* Container pop-up - đã điều chỉnh max-width và width */}
-            <div className="relative w-full max-w-6xl z-10"> {/* Tăng từ max-w-4xl lên max-w-6xl */}
-              <AddNewPackage
-                projectId={DuAnID}
-                onClose={() => setShowAddPackage(false)}
-                onSuccess={(newPackage) => {
+{showAddPackage && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+      <AddNewPackage
+        projectId={DuAnID}
+        onClose={() => setShowAddPackage(false)}
+        onSuccess={(newPackage) => {
+          // Xử lý khi thêm thành công
+        }}
+      />
+    </div>
+  </div>
+)}
 
-                }}
-                className="bg-white rounded-lg shadow-xl overflow-hidden"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-      {showEdit && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-                  <AddNewSubProject
-                    isEdit= {1}
-                    ProjectID={selectedID}
-                    DuAnID={selectedParentID}
-                    onClose={() => setShowEdit(false)}
-                    onSuccess={() => {
-                      setShowEdit(false);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+{showEdit && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+      <AddNewSubProject
+        isEdit={1}
+        ProjectID={selectedID}
+        DuAnID={selectedParentID}
+        onClose={() => setShowEdit(false)}
+        onSuccess={() => {
+          setShowEdit(false);
+        }}
+      />
+    </div>
+  </div>
+)}
     </div>
   );
 };

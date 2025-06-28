@@ -1,12 +1,280 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faFilePdf,
+  faFileWord,
+  faFileExcel,
+  faFileAlt,
+  faFileImage
+} from '@fortawesome/free-solid-svg-icons';
 
-const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => {
+const DocThongMinh = ({ onClose } = {}) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiResponse, setApiResponse] = useState(null);
+    const [error, setError] = useState(null);
+    const [userInput, setUserInput] = useState(null);
+    const [preview, setPreview] = useState({ url: null, icon: null });
+    const [dragActive, setDragActive] = useState(false);
+
+    const allowedFileTypes = [
+        'image/jpeg',
+        'image/png',
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain'
+    ];
+
+    const getFileIcon = (fileType) => {
+        if (fileType.startsWith('image/')) return faFileImage;
+        if (fileType.includes('pdf')) return faFilePdf;
+        if (fileType.includes('word')) return faFileWord;
+        if (fileType.includes('excel')) return faFileExcel;
+        return faFileAlt;
+    };
+
+    const getFileTypeName = (fileType) => {
+        const typeMap = {
+            'image/jpeg': 'JPEG Image',
+            'image/png': 'PNG Image',
+            'application/pdf': 'PDF Document',
+            'application/msword': 'Word Document',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
+            'application/vnd.ms-excel': 'Excel Spreadsheet',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
+            'text/plain': 'Text File'
+        };
+        return typeMap[fileType] || 'File';
+    };
+
+    const handleFileUpload = (file) => {
+        // Kiểm tra loại file
+        if (!allowedFileTypes.includes(file.type)) {
+            setError(`Loại file không được hỗ trợ. Các loại được hỗ trợ: ${allowedFileTypes.map(t => getFileTypeName(t)).join(', ')}`);
+            return false;
+        }
+
+        // Giới hạn kích thước file (5MB)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+            setError('Kích thước file quá lớn (tối đa 5MB)');
+            return false;
+        }
+
+        setUserInput(file);
+        setApiResponse(null);
+        setError(null);
+
+        // Xử lý preview
+        if (file.type.startsWith('image/')) {
+            setPreview({ url: URL.createObjectURL(file), icon: null });
+        } else {
+            setPreview({
+                url: null,
+                icon: (
+                    <div className="flex flex-col items-center p-4">
+                        <FontAwesomeIcon 
+                            icon={getFileIcon(file.type)} 
+                            className="text-4xl text-gray-400 mb-2" 
+                        />
+                        <span className="text-xs text-gray-500">
+                            {getFileTypeName(file.type)}
+                        </span>
+                    </div>
+                )
+            });
+        }
+
+        return true;
+    };
+
+    const handleDrag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === 'dragenter' || e.type === 'dragover') {
+            setDragActive(true);
+        } else if (e.type === 'dragleave') {
+            setDragActive(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFileUpload(e.dataTransfer.files[0]);
+        }
+    };
+
+    const handleChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            handleFileUpload(e.target.files[0]);
+        }
+    };
+
+    const handleCancel = () => {
+        if (preview.url) URL.revokeObjectURL(preview.url);
+        setUserInput(null);
+        setPreview({ url: null, icon: null });
+        setApiResponse(null);
+        setError(null);
+    };
+
+    const handleReadFile = async () => {
+        if (!userInput) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', userInput);
+            const response = await fetch('https://786d-42-119-222-118.ngrok-free.app/analyze-project/', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+            const data = await response.json();
+            setApiResponse({ status: "success", data });
+        } catch (err) {
+            console.error("Upload error:", err);
+            setError("Lỗi khi tải file lên server");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            if (preview.url) {
+                URL.revokeObjectURL(preview.url);
+            }
+        };
+    }, [preview.url]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Đọc thông tin từ file</h2>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                {userInput ? (
+                    <div className="space-y-4">
+                        <div className="border border-gray-200 rounded-lg p-4">
+                            <div className="flex flex-col items-center mb-4">
+                                {preview.url ? (
+                                    <img
+                                        src={preview.url}
+                                        alt="Preview"
+                                        className="max-h-60 max-w-full object-contain"
+                                    />
+                                ) : (
+                                    preview.icon
+                                )}
+                                <div className="mt-2 text-sm text-gray-600 text-center">
+                                    <p>{userInput.name}</p>
+                                    <p>{(userInput.size / 1024).toFixed(2)} KB</p>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-center space-x-3">
+                                <button
+                                    className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={handleReadFile}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? (
+                                        <span className="flex items-center">
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Đang xử lý...
+                                        </span>
+                                    ) : 'Đọc thông tin'}
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none transition-colors"
+                                    onClick={handleCancel}
+                                >
+                                    Chọn file khác
+                                </button>
+                            </div>
+                        </div>
+
+                        {apiResponse && (
+                            <div className={`p-4 rounded-lg ${apiResponse.status === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50'}`}>
+                                <h3 className="font-medium mb-2">
+                                    {apiResponse.status === 'success' ? 'Kết quả nhận dạng' : 'Lỗi'}
+                                </h3>
+                                <pre className="text-sm whitespace-pre-wrap max-h-60 overflow-auto bg-white p-3 rounded border border-gray-200">
+                                    {JSON.stringify(apiResponse, null, 2)}
+                                </pre>
+                            </div>
+                        )}
+
+                        {error && !apiResponse && (
+                            <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
+                                {error}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                        onDragEnter={handleDrag}
+                        onDragOver={handleDrag}
+                        onDragLeave={handleDrag}
+                        onDrop={handleDrop}
+                    >
+                        <label className="cursor-pointer block">
+                            <div className="flex flex-col items-center justify-center space-y-3">
+                                <svg className={`w-12 h-12 ${dragActive ? 'text-blue-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                </svg>
+                                <p className={`font-medium ${dragActive ? 'text-blue-600' : 'text-gray-600'}`}>
+                                    {dragActive ? 'Thả file vào đây' : 'Tải file lên'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                    Kéo thả file vào đây hoặc click để chọn
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    Hỗ trợ: JPEG, PNG, PDF, Word, Excel, TXT (tối đa 5MB)
+                                </p>
+                            </div>
+                            <input
+                                type="file"
+                                className="hidden"
+                                onChange={handleChange}
+                                accept=".jpeg,.jpg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                            />
+                        </label>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const AddNewProject = () => {
     const navigate = useNavigate();
     const [showAddAttribute, setShowAddAttribute] = useState(false);
     const [tinhThanhList, setTinhThanhList] = useState([]);
@@ -15,14 +283,15 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
     const [removedThuocTinh, setRemovedThuocTinh] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedLoaiHinh, setSelectedLoaiHinh] = useState(null);
+    const [expanded, setExpanded] = useState(false);
     const [availableThuocTinh, setAvailableThuocTinh] = useState([]);
     const [expandedInputs, setExpandedInputs] = useState({});
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
+    const [showDocThongMinh, setShowDocThongMinh] = useState(false);
     const [nhaThauList, setNhaThauList] = useState([]);
     const [fetchingContractors, setFetchingContractors] = useState(true);
     const [fetchError, setFetchError] = useState(null);
-    console.log(isEdit, ProjectID, DuAnID);
     const dropdownRef = useRef();
     const [selectedProvinces, setSelectedProvinces] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -73,7 +342,13 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
-    
+
+    const toggleExpand = (id) => {
+        setExpandedInputs(prev => ({
+            ...prev,
+            [id]: !prev[id],
+        }));
+    };
     const [formData, setFormData] = useState({
         TenDuAn: '',
         TinhThanh: '',
@@ -84,7 +359,6 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
         TongChieuDai: '',
         KeHoachHoanThanh: '',
         MoTaChung: '',
-        ParentID: DuAnID,
         LoaiHinh_ID: '',
         ThuocTinhValues: {}
     });
@@ -93,72 +367,8 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
     const handleFileChange = (e) => {
         setFiles([...e.target.files]);
     };
-    useEffect(() => {
-        const fetchData = async () => {
-            if (isEdit && ProjectID) {
-                try {
-                    setLoading(true);
-                    // Fetch dữ liệu dự án
-                    const response = await axios.get(`${API_BASE_URL}/duAnChiTiet/${ProjectID}`);
-    
-                    if (response.data.success) {
-                        const projectData = response.data.data;
-    
-                        // Cập nhật formData
-                        setFormData({
-                            TenDuAn: projectData.TenDuAn || '',
-                            TinhThanh: projectData.TinhThanh || '',
-                            ChuDauTu: projectData.ChuDauTu || '',
-                            NgayKhoiCong: projectData.NgayKhoiCong?.split('T')[0] || '',
-                            TrangThai: projectData.TrangThai || 'Đang chuẩn bị',
-                            NguonVon: projectData.NguonVon || 'Ngân sách',
-                            TongChieuDai: projectData.TongChieuDai || '',
-                            KeHoachHoanThanh: projectData.KeHoachHoanThanh?.split('T')[0] || '',
-                            MoTaChung: projectData.MoTaChung || '',
-                            ParentID: projectData.ParentID || DuAnID,
-                            LoaiHinh_ID: projectData.LoaiHinh_ID || '',
-                            ThuocTinhValues: projectData.ThuocTinhValues || {}
-                        });
-    
-                        // Load loại hình và thuộc tính tương ứng
-                        if (projectData.LoaiHinh_ID && loaiHinhList.length > 0) {
-                            const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == projectData.LoaiHinh_ID);
-                            if (loaiHinh) {
-                                setSelectedLoaiHinh(loaiHinh); // Chỉ set nếu loaiHinh tồn tại
-                            } else {
-                                console.warn('LoaiHinh_ID không tồn tại trong loaiHinhList:', projectData.LoaiHinh_ID);
-                            }
-    
-                            // Load thuộc tính của loại hình
-                            const thuocTinhResponse = await axios.get(`${API_BASE_URL}/loaihinh/${projectData.LoaiHinh_ID}/thuoctinh`);
-                            if (thuocTinhResponse.data.success) {
-                                setThuocTinhList(thuocTinhResponse.data.data.thuocTinh);
-                            }
-                        } else {
-                            console.warn('loaiHinhList chưa được load hoặc LoaiHinh_ID không hợp lệ.');
-                        }
-    
-                        // Load danh sách file đính kèm
-                        if (projectData.TaiLieu && projectData.TaiLieu.length > 0) {
-                            setFiles(projectData.TaiLieu.map(file => ({
-                                id: file.TaiLieuID,
-                                name: file.TenTaiLieu,
-                                url: file.DuongDan,
-                                isExisting: true
-                            })));
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching project details:', error);
-                    alert('Không thể tải thông tin dự án');
-                } finally {
-                    setLoading(false);
-                }
-            }
-        };
-    
-        fetchData();
-    }, [isEdit, ProjectID, loaiHinhList]);
+
+
     useEffect(() => {
         fetchLoaiHinh();
     }, []);
@@ -222,10 +432,13 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
     const removeThuocTinh = (thuocTinh) => {
         setThuocTinhList(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setRemovedThuocTinh(prev => [...prev, thuocTinh]);
+
+        // Xóa giá trị thuộc tính khỏi formData
         const newThuocTinhValues = { ...formData.ThuocTinhValues };
         delete newThuocTinhValues[thuocTinh.ThuocTinh_ID];
         setFormData({ ...formData, ThuocTinhValues: newThuocTinhValues });
     };
+
     const restoreThuocTinh = (thuocTinh) => {
         setRemovedThuocTinh(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setThuocTinhList(prev => [...prev, thuocTinh]);
@@ -250,17 +463,6 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
             return updated;
         });
     };
-    const handleDateChangeISO = (name, dateValue) => {
-        // Chuyển đổi từ ISO string sang yyyy-MM-dd nếu cần
-        const formattedDate = dateValue.includes('T')
-            ? dateValue.split('T')[0]
-            : dateValue;
-
-        setFormData(prev => ({
-            ...prev,
-            [name]: formattedDate
-        }));
-    };
 
     const handleThuocTinhChange = (thuocTinhId, value) => {
         setFormData({
@@ -271,6 +473,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
             }
         });
     };
+
     const handleDateChange = (name, date) => {
         setFormData({ ...formData, [name]: date });
     };
@@ -281,14 +484,15 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
         e.preventDefault();
         setLoading(true);
 
+        // Kiểm tra dữ liệu bắt buộc trước khi gửi
         if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
+            alert('Vui lòng điền tên dự án và chọn loại hình');
             setLoading(false);
             return;
         }
 
         const formattedValues = {
             ...formData,
-            ParentID: DuAnID,
             NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
             KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
         };
@@ -296,53 +500,60 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
         try {
             const formDataToSend = new FormData();
 
+            // Thêm từng trường dữ liệu vào FormData
             Object.entries(formattedValues).forEach(([key, value]) => {
-                if (value !== null && value !== undefined) {
-                    if (key === 'ThuocTinhValues') {
-                        formDataToSend.append(key, JSON.stringify(value));
-                    } else {
-                        formDataToSend.append(key, value);
-                    }
+                if (key === 'ThuocTinhValues') {
+                    formDataToSend.append(key, JSON.stringify(value));
+                } else {
+                    formDataToSend.append(key, value);
                 }
             });
+
+            // Thêm các file vào FormData
             files.forEach(file => {
-                if (!file.isExisting) {
-                    formDataToSend.append('files', file);
-                }
+                formDataToSend.append('files', file);
             });
 
-            // Thêm danh sách file cần xóa
-            const filesToDelete = files.filter(file => file.markedForDeletion);
-            if (filesToDelete.length > 0) {
-                formDataToSend.append('deletedFiles', JSON.stringify(filesToDelete.map(file => file.id)));
-            }
+            const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
+                method: 'POST',
+                body: formDataToSend,
+                // KHÔNG đặt header Content-Type để browser tự thiết lập
+            });
 
-            let response;
-            if (isEdit) {
-                response = await axios.put(`${API_BASE_URL}/duan/${ProjectID}`, formDataToSend, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
+            const data = await response.json();
+            if (data.success) {
+                setCreatedProjectId(data.data.DuAnID);
+                setShowSuccessModal(true);
+                setTimeout(() => setShowSuccessModal(false), 2000);
+                // Reset form
+                setFormData({
+                    TenDuAn: '',
+                    TinhThanh: '',
+                    ChuDauTu: '',
+                    NgayKhoiCong: '',
+                    TrangThai: 'dang_chuan_bi',
+                    NguonVon: 'ngan_sach',
+                    TongChieuDai: '',
+                    KeHoachHoanThanh: '',
+                    MoTaChung: '',
+                    LoaiHinh_ID: '',
+                    ThuocTinhValues: {}
                 });
+                setFiles([]);
             } else {
-                response = await axios.post(`${API_BASE_URL}/duan/tao-moi`, formDataToSend, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data'
-                    }
-                });
-            }
-
-            if (response.data.success) {
-                onSuccess(response.data.data);
-                onClose();
+                alert(data.message || 'Lỗi khi tạo dự án');
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert(isEdit ? 'Cập nhật dự án thất bại' : 'Tạo dự án thất bại');
+            alert('Lỗi kết nối đến server');
         } finally {
             setLoading(false);
         }
     };
+    const handleAddSubProject = () => {
+        setShowSuccessModal(false);
+        navigate('/duan/thanh-phan'); // nếu dùng react-router-dom
+    }
+
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
 
@@ -408,32 +619,28 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
     };
 
     return (
-        <div className="bg-white rounded-lg mx-auto p-2 max-w-screen-2xl">
+        <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl">
             {/* Header gọn */}
             <div className="flex justify-between items-center mb-2">
                 <h1 className="text-lg font-semibold text-gray-800 flex items-center">
                     <FaRoad className="mr-1 text-blue-500 text-sm" />
-                    {isEdit ? "Cập nhật dự án" : "Thêm mơi dự án"}
+                    Thêm dự án mới
                 </h1>
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
-                    >
-                        <span>Đọc thông minh</span>
-                        <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
-                            AI
-                        </span>
-                    </button>
-                    <button
-                        onClick={onClose}
-                        className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                        aria-label="Đóng"
-                    >
-                        <FaTimes className="w-5 h-5" />
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
+                    onClick={() => setShowDocThongMinh(true)}
+                >
+                    <span>Đọc thông minh</span>
+                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
+                        AI
+                    </span>
+                </button>
+
+                {showDocThongMinh && <DocThongMinh onClose={() => setShowDocThongMinh(false)} />}
             </div>
+
+            {/* Form chính - sử dụng grid để tối ưu không gian */}
             <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
                 {/* Chọn loại dự án */}
                 <div className="bg-white rounded p-2 border border-gray-200">
@@ -445,11 +652,11 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                         <select
                             className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
                             onChange={handleLoaiHinhChange}
-                            value={formData.LoaiHinh_ID ? String(formData.LoaiHinh_ID) : ""}
+                            value={formData.LoaiHinh_ID}
                         >
                             <option value="">Chọn loại hình dự án</option>
                             {loaiHinhList.map(loaiHinh => (
-                                <option key={loaiHinh.LoaiHinh_ID} value={String(loaiHinh.LoaiHinh_ID)}>
+                                <option key={loaiHinh.LoaiHinh_ID} value={loaiHinh.LoaiHinh_ID}>
                                     {loaiHinh.TenLoaiHinh}
                                 </option>
                             ))}
@@ -516,13 +723,14 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                                 <input
                                     type="date"
                                     className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
-                                    value={formData.NgayKhoiCong || ''}
-                                    onChange={(e) => handleDateChangeISO('NgayKhoiCong', e.target.value)}
-                                    max={formData.KeHoachHoanThanh} // Ngày khởi công không được sau ngày hoàn thành
+                                    value={formData.NgayKhoiCong}
+                                    onChange={(e) => handleDateChange('NgayKhoiCong', e.target.value)}
                                 />
                                 <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                             </div>
                         </div>
+
+                        {/* Chủ đầu tư */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -548,6 +756,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
 
                     {/* Right Column */}
                     <div className="space-y-2">
+                        {/* Tỉnh thành */}
                         <div className="flex flex-col relative" ref={dropdownRef}>
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-xs" />
@@ -668,10 +877,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                                 Thuộc tính dự án
                             </h2>
                             <button
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    setShowAddAttribute(true);
-                                }}
+                                onClick={() => setShowAddAttribute(true)}
                                 className="flex items-center px-2 py-0.5 bg-green-500 text-white rounded text-xxs hover:bg-green-600 transition-colors"
                             >
                                 <FaPlus className="mr-0.5 text-xs" />
@@ -772,23 +978,30 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                 {/* Nút submit */}
                 <div className="flex justify-end space-x-2 mt-2">
                     <button
+                        type="button"
+                        className="px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center text-xs"
+                        onClick={() => navigate('/home')}
+                    >
+                        <FaTimes className="mr-1 text-xs" />
+                        Hủy bỏ
+                    </button>
+                    <button
                         type="submit"
                         className={`px-2 py-1 rounded text-white flex items-center space-x-1 text-xs ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors`}
                         disabled={loading}
                     >
                         {loading ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
-                        <span>{isEdit ? "Cập nhật dự án" : "Tạo mới dự án"}</span>
+                        <span>Tạo dự án</span>
                     </button>
                 </div>
             </form>
-
 
             {/* Popup thêm thuộc tính */}
             {showAddAttribute && selectedLoaiHinh && (
                 <AddNewAttribute
                     loaiHinhId={selectedLoaiHinh.LoaiHinh_ID}
                     onClose={() => setShowAddAttribute(false)}
-                    onAddSuccess={() => setShowAddAttribute(false)}
+                    onAddSuccess={handleAddAttributeSuccess}
                 />
             )}
             {/* Overlay loading */}
@@ -811,22 +1024,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                         <h2 className="text-lg font-semibold mb-1">Tạo dự án thành công!</h2>
                         <p className="text-sm text-gray-600 mb-4">Bạn muốn tiếp tục thêm dự án thành phần?</p>
                         <div className="flex justify-center space-x-2">
-                            <button
-                                onClick={() => setShowSuccessModal(false)}
-                                className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400"
-                            >
-                                Đóng
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    // Chuyển hướng đến trang thêm dự án thành phần
-                                    navigate(`/add-new/${createdProjectId}`);
-                                }}
-                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                            >
-                                Thêm dự án thành phần
-                            </button>
+                
                         </div>
                     </div>
                 </div>
@@ -836,4 +1034,4 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
     );
 };
 
-export default AddNewSubProject;
+export default AddNewProject;

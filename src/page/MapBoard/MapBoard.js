@@ -507,7 +507,7 @@ const Dashboard = () => {
         <div className="flex items-center space-x-4">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
-          <span>Rdsic</span>
+          <span></span>
           <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
             R
           </div>

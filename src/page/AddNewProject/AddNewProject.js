@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
@@ -7,149 +8,259 @@ import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaI
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faFilePdf,
-  faFileWord,
-  faFileExcel,
-  faFileAlt,
-  faFileImage
+    faFilePdf,
+    faFileWord,
+    faFileExcel,
+    faFileAlt,
+    faFileImage
 } from '@fortawesome/free-solid-svg-icons';
 
-const DocThongMinh = ({ onClose } = {}) => {
+const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
+    setSelectedLoaiHinh = () => { },
+    setSelectedProvinces = () => { } } = {}, setThuocTinhList = () => {}, thuocTinhList = {}) => {
     const [isLoading, setIsLoading] = useState(false);
     const [apiResponse, setApiResponse] = useState(null);
     const [error, setError] = useState(null);
     const [userInput, setUserInput] = useState(null);
     const [preview, setPreview] = useState({ url: null, icon: null });
     const [dragActive, setDragActive] = useState(false);
+    const [textInput, setTextInput] = useState('');
+    const [jsonOutput, setJsonOutput] = useState(null);
 
-    const allowedFileTypes = [
-        'image/jpeg',
-        'image/png',
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/plain'
-    ];
+    const [projectInfo, setProjectInfo] = useState(null);
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+    const handleTextChange = (e) => {
+        // Lấy giá trị từ event và loại bỏ khoảng trắng thừa và xuống dòng
+        const rawValue = e.target.value;
+        const normalizedValue = rawValue
+            .replace(/\s+/g, ' ') // Thay thế nhiều khoảng trắng bằng 1 khoảng trắng
+            .replace(/\n/g, ' ') // Thay thế xuống dòng bằng khoảng trắng
+            .trim(); // Loại bỏ khoảng trắng ở đầu và cuối
 
-    const getFileIcon = (fileType) => {
-        if (fileType.startsWith('image/')) return faFileImage;
-        if (fileType.includes('pdf')) return faFilePdf;
-        if (fileType.includes('word')) return faFileWord;
-        if (fileType.includes('excel')) return faFileExcel;
-        return faFileAlt;
-    };
-
-    const getFileTypeName = (fileType) => {
-        const typeMap = {
-            'image/jpeg': 'JPEG Image',
-            'image/png': 'PNG Image',
-            'application/pdf': 'PDF Document',
-            'application/msword': 'Word Document',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'Word Document',
-            'application/vnd.ms-excel': 'Excel Spreadsheet',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'Excel Spreadsheet',
-            'text/plain': 'Text File'
-        };
-        return typeMap[fileType] || 'File';
-    };
-
-    const handleFileUpload = (file) => {
-        // Kiểm tra loại file
-        if (!allowedFileTypes.includes(file.type)) {
-            setError(`Loại file không được hỗ trợ. Các loại được hỗ trợ: ${allowedFileTypes.map(t => getFileTypeName(t)).join(', ')}`);
-            return false;
-        }
-
-        // Giới hạn kích thước file (5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-            setError('Kích thước file quá lớn (tối đa 5MB)');
-            return false;
-        }
-
-        setUserInput(file);
-        setApiResponse(null);
+        setTextInput(normalizedValue);
         setError(null);
+        setJsonOutput(null);
+    };
 
-        // Xử lý preview
-        if (file.type.startsWith('image/')) {
-            setPreview({ url: URL.createObjectURL(file), icon: null });
-        } else {
-            setPreview({
-                url: null,
-                icon: (
-                    <div className="flex flex-col items-center p-4">
-                        <FontAwesomeIcon 
-                            icon={getFileIcon(file.type)} 
-                            className="text-4xl text-gray-400 mb-2" 
-                        />
-                        <span className="text-xs text-gray-500">
-                            {getFileTypeName(file.type)}
-                        </span>
-                    </div>
-                )
-            });
+    const normalizeText = (text) => {
+        return text
+            .replace(/\s+/g, ' ')
+            .replace(/\n/g, ' ')
+            .trim();
+    };
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return '';
+
+        // Xử lý định dạng dd/mm/yyyy
+        if (dateStr.includes('/')) {
+            const [day, month, year] = dateStr.split('/');
+            return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
         }
 
-        return true;
+        return dateStr;
+    };
+    const convertLengthToFloat = (lengthStr) => {
+        if (!lengthStr) return null;
+        
+        // Loại bỏ các ký tự không phải số, dấu phẩy/thập phân
+        const numericStr = lengthStr
+            .replace(/[^\d,.]/g, '')  // Giữ lại chỉ số, dấu phẩy và dấu chấm
+            .replace(',', '.');        // Chuyển dấu phẩy thành dấu chấm để parseFloat
+        
+        // Chuyển sang số
+        const floatValue = parseFloat(numericStr);
+        
+        // Kiểm tra nếu kết quả là số hợp lệ
+        return isNaN(floatValue) ? null : floatValue;
     };
 
-    const handleDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === 'dragenter' || e.type === 'dragover') {
-            setDragActive(true);
-        } else if (e.type === 'dragleave') {
-            setDragActive(false);
-        }
-    };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileUpload(e.dataTransfer.files[0]);
-        }
-    };
-
-    const handleChange = (e) => {
-        if (e.target.files && e.target.files[0]) {
-            handleFileUpload(e.target.files[0]);
-        }
-    };
-
-    const handleCancel = () => {
-        if (preview.url) URL.revokeObjectURL(preview.url);
-        setUserInput(null);
-        setPreview({ url: null, icon: null });
-        setApiResponse(null);
-        setError(null);
-    };
-
-    const handleReadFile = async () => {
-        if (!userInput) return;
-
+    const handleParseText = async () => {
         setIsLoading(true);
-        setError(null);
-
         try {
-            const formData = new FormData();
-            formData.append('file', userInput);
-            const response = await fetch('https://786d-42-119-222-118.ngrok-free.app/analyze-project/', {
+            const normalizedText = normalizeText(textInput);
+            const response = await fetch('https://2ef7-58-187-51-165.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: textInput
+                })
             });
-
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
             const data = await response.json();
-            setApiResponse({ status: "success", data });
+            console.log('Full API Response:', data);
+
+            if (!response.ok || !data.project_info) {
+                throw new Error(data.project_info?.message || 'Không thể phân tích dữ liệu');
+            }
+
+            // Lấy danh sách loại hình từ API
+            const loaiHinhResponse = await fetch(`${API_BASE_URL}/loaihinh`);
+            const loaiHinhData = await loaiHinhResponse.json();
+
+            if (!loaiHinhResponse.ok || !loaiHinhData.success) {
+                throw new Error('Không thể lấy danh sách loại hình');
+            }
+
+            // Tìm loại hình phù hợp
+            const matchedLoaiHinh = loaiHinhData.data.find(
+                lh => lh.TenLoaiHinh.toLowerCase() === data.project_info.loai_hinh.toLowerCase()
+            );
+
+            if (!matchedLoaiHinh) {
+                throw new Error(`Không tìm thấy loại hình "${data.project_info.loai_hinh}" trong hệ thống`);
+            }
+
+            // Lấy danh sách thuộc tính hiện có của loại hình
+            const thuocTinhResponse = await fetch(`${API_BASE_URL}/loaihinh/${matchedLoaiHinh.LoaiHinh_ID}/thuoctinh`);
+            const thuocTinhData = await thuocTinhResponse.json();
+
+            if (!thuocTinhResponse.ok || !thuocTinhData.success) {
+                throw new Error('Không thể lấy danh sách thuộc tính loại hình');
+            }
+
+            // Chuẩn bị danh sách thuộc tính cần thêm
+            const thuocTinhToAdd = [];
+            const existingThuocTinh = thuocTinhData.data.thuocTinh || [];
+
+            if (data.project_info.thuoc_tinh) {
+                for (const tt of data.project_info.thuoc_tinh) {
+                    const isExist = existingThuocTinh.some(
+                        ett => ett.TenThuocTinh.toLowerCase() === tt.TenThuocTinh.toLowerCase()
+                    );
+
+                    if (!isExist) {
+                        thuocTinhToAdd.push({
+                            LoaiHinh_ID: matchedLoaiHinh.LoaiHinh_ID,
+                            TenThuocTinh: tt.TenThuocTinh,
+                            DonVi: tt.DonVi || null,
+                            GiaTri: tt.GiaTri
+                        });
+                    }
+                }
+            }
+
+            const normalizedData = {
+                ...data.project_info,
+                TenDuAn: data.project_info.ten_du_an,
+                LoaiHinh: data.project_info.loai_hinh,
+                LoaiHinh_ID: matchedLoaiHinh.LoaiHinh_ID,
+                TinhThanh: data.project_info.tinh_thanh,
+                TrangThai: 'Đang chuẩn bị',
+                NguonVon: data.project_info.nguon_von,
+                ChuDauTu: data.project_info.chu_dau_tu,
+                NgayKhoiCong: formatDate(data.project_info.ngay_khoi_cong),
+                KeHoachHoanThanh: formatDate(data.project_info.ke_hoach_hoan_thanh),
+                TongChieuDai: convertLengthToFloat(data.project_info.tong_chieu_dai),
+                MoTaChung: data.project_info.mo_ta_chung,
+                thuocTinhToAdd, // Danh sách thuộc tính cần thêm
+                existingThuocTinh // Danh sách thuộc tính hiện có
+            };
+
+            setProjectInfo(normalizedData);
+            setError(null);
+
         } catch (err) {
-            console.error("Upload error:", err);
-            setError("Lỗi khi tải file lên server");
+            console.error('API Error:', err);
+            setError(`Lỗi: ${err.message}`);
+            setProjectInfo(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+
+    const handleApplyToForm = async () => {
+        if (!projectInfo) return;
+    
+        try {
+            setIsLoading(true);
+            
+            // Xử lý thêm thuộc tính mới nếu có
+            if (projectInfo.thuocTinhToAdd && projectInfo.thuocTinhToAdd.length > 0) {
+                const addedAttributes = [];
+                
+                for (const tt of projectInfo.thuocTinhToAdd) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/loaihinh/them-thuoctinh`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                LoaiHinh_ID: tt.LoaiHinh_ID,
+                                TenThuocTinh: tt.TenThuocTinh,
+                                DonVi: tt.DonVi,
+                                KieuDuLieu: 'varchar',
+                                BatBuoc: 0
+                            })
+                        });
+    
+                        const result = await response.json();
+                        if (response.ok) {
+                            addedAttributes.push({
+                                ...tt,
+                                ThuocTinh_ID: result.data?.ThuocTinh_ID // Giả sử API trả về ID mới tạo
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`Lỗi khi thêm thuộc tính ${tt.TenThuocTinh}:`, error);
+                    }
+                }
+    
+                // Cập nhật danh sách thuộc tính hiện có
+                if (addedAttributes.length > 0) {
+                    const thuocTinhResponse = await fetch(`${API_BASE_URL}/loaihinh/${projectInfo.LoaiHinh_ID}/thuoctinh`);
+                    const thuocTinhData = await thuocTinhResponse.json();
+                    
+                    if (thuocTinhResponse.ok && thuocTinhData.success) {
+                        setThuocTinhList(thuocTinhData.data.thuocTinh || []);
+                    }
+                }
+            }
+            const thuocTinhValues = {};
+            if (projectInfo.thuoc_tinh) {
+                for (const tt of projectInfo.thuoc_tinh) {
+                    thuocTinhValues[tt.TenThuocTinh] = tt.GiaTri;
+                }
+            }
+    
+            const thuocTinhWithValues = {};
+            if (projectInfo.existingThuocTinh) {
+                for (const ett of projectInfo.existingThuocTinh) {
+                    if (projectInfo.thuoc_tinh) {
+                        const matchedTt = projectInfo.thuoc_tinh.find(
+                            tt => tt.TenThuocTinh.toLowerCase() === ett.TenThuocTinh.toLowerCase()
+                        );
+                        if (matchedTt) {
+                            thuocTinhWithValues[ett.ThuocTinh_ID] = matchedTt.GiaTri;
+                        }
+                    }
+                }
+            }
+            setFormData(prev => ({
+                ...prev,
+                ...projectInfo,
+                LoaiHinh_ID: projectInfo.LoaiHinh_ID,
+                ThuocTinhValues: {
+                    ...prev.ThuocTinhValues,
+                    ...thuocTinhWithValues
+                }
+            }));
+            const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID === projectInfo.LoaiHinh_ID);
+            setSelectedLoaiHinh(loaiHinh);
+    
+            if (projectInfo.TinhThanh) {
+                const provinces = projectInfo.TinhThanh.split(/,\s*|\s-\s/);
+                setSelectedProvinces(provinces);
+            }
+    
+            onClose();
+        } catch (err) {
+            console.error('Error applying to form:', err);
+            setError(`Lỗi khi áp dụng dữ liệu: ${err.message}`);
         } finally {
             setIsLoading(false);
         }
@@ -167,7 +278,7 @@ const DocThongMinh = ({ onClose } = {}) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">Đọc thông tin từ file</h2>
+                    <h2 className="text-xl font-semibold">Nhập thông tin dự án từ văn bản</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -176,99 +287,79 @@ const DocThongMinh = ({ onClose } = {}) => {
                     </button>
                 </div>
 
-                {userInput ? (
-                    <div className="space-y-4">
-                        <div className="border border-gray-200 rounded-lg p-4">
-                            <div className="flex flex-col items-center mb-4">
-                                {preview.url ? (
-                                    <img
-                                        src={preview.url}
-                                        alt="Preview"
-                                        className="max-h-60 max-w-full object-contain"
-                                    />
-                                ) : (
-                                    preview.icon
-                                )}
-                                <div className="mt-2 text-sm text-gray-600 text-center">
-                                    <p>{userInput.name}</p>
-                                    <p>{(userInput.size / 1024).toFixed(2)} KB</p>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-center space-x-3">
-                                <button
-                                    className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    onClick={handleReadFile}
-                                    disabled={isLoading}
-                                >
-                                    {isLoading ? (
-                                        <span className="flex items-center">
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Đang xử lý...
-                                        </span>
-                                    ) : 'Đọc thông tin'}
-                                </button>
-                                <button
-                                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none transition-colors"
-                                    onClick={handleCancel}
-                                >
-                                    Chọn file khác
-                                </button>
-                            </div>
-                        </div>
-
-                        {apiResponse && (
-                            <div className={`p-4 rounded-lg ${apiResponse.status === 'error' ? 'bg-red-50 text-red-600' : 'bg-gray-50'}`}>
-                                <h3 className="font-medium mb-2">
-                                    {apiResponse.status === 'success' ? 'Kết quả nhận dạng' : 'Lỗi'}
-                                </h3>
-                                <pre className="text-sm whitespace-pre-wrap max-h-60 overflow-auto bg-white p-3 rounded border border-gray-200">
-                                    {JSON.stringify(apiResponse, null, 2)}
-                                </pre>
-                            </div>
-                        )}
-
-                        {error && !apiResponse && (
-                            <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
-                                {error}
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    <div
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
-                        onDragEnter={handleDrag}
-                        onDragOver={handleDrag}
-                        onDragLeave={handleDrag}
-                        onDrop={handleDrop}
-                    >
-                        <label className="cursor-pointer block">
-                            <div className="flex flex-col items-center justify-center space-y-3">
-                                <svg className={`w-12 h-12 ${dragActive ? 'text-blue-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
-                                </svg>
-                                <p className={`font-medium ${dragActive ? 'text-blue-600' : 'text-gray-600'}`}>
-                                    {dragActive ? 'Thả file vào đây' : 'Tải file lên'}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                    Kéo thả file vào đây hoặc click để chọn
-                                </p>
-                                <p className="text-xs text-gray-400">
-                                    Hỗ trợ: JPEG, PNG, PDF, Word, Excel, TXT (tối đa 5MB)
-                                </p>
-                            </div>
-                            <input
-                                type="file"
-                                className="hidden"
-                                onChange={handleChange}
-                                accept=".jpeg,.jpg,.png,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-                            />
+                <div className="space-y-4">
+                    <div className="border border-gray-200 rounded-lg p-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Nhập văn bản mô tả dự án:
                         </label>
+                        <textarea
+                            value={textInput}
+                            onChange={handleTextChange}
+                            onPaste={(e) => {
+                                e.preventDefault();
+                                const pastedText = e.clipboardData.getData('text/plain');
+                                const normalizedText = pastedText
+                                    .replace(/\s+/g, ' ')
+                                    .replace(/\n/g, ' ')
+                                    .trim();
+                                setTextInput(normalizedText);
+                            }}
+                            className="w-full h-40 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Nhập thông tin dự án..."
+                        />
                     </div>
-                )}
+
+                    <div className="flex justify-center space-x-3">
+                        <button
+                            className={`px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            onClick={handleParseText}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <span className="flex items-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Đang phân tích...
+                                </span>
+                            ) : 'Phân tích văn bản'}
+                        </button>
+                        <button
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 focus:outline-none transition-colors"
+                            onClick={() => {
+                                setTextInput('');
+                                setJsonOutput(null);
+                                setError(null);
+                            }}
+                        >
+                            Xóa
+                        </button>
+                    </div>
+
+                    {projectInfo && (
+                        <div className="p-4 rounded-lg bg-gray-50">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-medium">Kết quả phân tích</h3>
+                                <button
+                                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                                    onClick={handleApplyToForm}
+                                >
+                                    Áp dụng vào form
+                                </button>
+                            </div>
+                            <pre className="text-sm whitespace-pre-wrap max-h-60 overflow-auto bg-white p-3 rounded border border-gray-200">
+                                {JSON.stringify(projectInfo, null, 2)}
+                            </pre>
+                        </div>
+                    )}
+
+                    {error && !jsonOutput && (
+                        <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
+                            {error}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -343,12 +434,6 @@ const AddNewProject = () => {
         };
     }, []);
 
-    const toggleExpand = (id) => {
-        setExpandedInputs(prev => ({
-            ...prev,
-            [id]: !prev[id],
-        }));
-    };
     const [formData, setFormData] = useState({
         TenDuAn: '',
         TinhThanh: '',
@@ -363,12 +448,6 @@ const AddNewProject = () => {
         ThuocTinhValues: {}
     });
     const [files, setFiles] = useState([]);
-
-    const handleFileChange = (e) => {
-        setFiles([...e.target.files]);
-    };
-
-
     useEffect(() => {
         fetchLoaiHinh();
     }, []);
@@ -428,22 +507,17 @@ const AddNewProject = () => {
             })
             .catch(err => console.error("Lỗi khi lấy tỉnh thành: ", err));
     }, []);
-
     const removeThuocTinh = (thuocTinh) => {
         setThuocTinhList(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setRemovedThuocTinh(prev => [...prev, thuocTinh]);
-
-        // Xóa giá trị thuộc tính khỏi formData
         const newThuocTinhValues = { ...formData.ThuocTinhValues };
         delete newThuocTinhValues[thuocTinh.ThuocTinh_ID];
         setFormData({ ...formData, ThuocTinhValues: newThuocTinhValues });
     };
-
     const restoreThuocTinh = (thuocTinh) => {
         setRemovedThuocTinh(prev => prev.filter(tt => tt.ThuocTinh_ID !== thuocTinh.ThuocTinh_ID));
         setThuocTinhList(prev => [...prev, thuocTinh]);
     };
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
@@ -483,9 +557,7 @@ const AddNewProject = () => {
     const onFinish = async (e) => {
         e.preventDefault();
         setLoading(true);
-
-        // Kiểm tra dữ liệu bắt buộc trước khi gửi
-        if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
+        if (!formData.TenDuAn || !formData.LoaiHinh) {
             alert('Vui lòng điền tên dự án và chọn loại hình');
             setLoading(false);
             return;
@@ -517,7 +589,6 @@ const AddNewProject = () => {
             const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
                 method: 'POST',
                 body: formDataToSend,
-                // KHÔNG đặt header Content-Type để browser tự thiết lập
             });
 
             const data = await response.json();
@@ -536,7 +607,7 @@ const AddNewProject = () => {
                     TongChieuDai: '',
                     KeHoachHoanThanh: '',
                     MoTaChung: '',
-                    LoaiHinh_ID: '',
+                    LoaiHinh: '',
                     ThuocTinhValues: {}
                 });
                 setFiles([]);
@@ -549,10 +620,6 @@ const AddNewProject = () => {
             setLoading(false);
         }
     };
-    const handleAddSubProject = () => {
-        setShowSuccessModal(false);
-        navigate('/duan/thanh-phan'); // nếu dùng react-router-dom
-    }
 
     const renderInputByType = (thuocTinh) => {
         const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
@@ -637,12 +704,19 @@ const AddNewProject = () => {
                     </span>
                 </button>
 
-                {showDocThongMinh && <DocThongMinh onClose={() => setShowDocThongMinh(false)} />}
+                {showDocThongMinh && (
+                    <DocThongMinh
+                        onClose={() => setShowDocThongMinh(false)}
+                        setFormData={setFormData}
+                        loaiHinhList={loaiHinhList}
+                        setSelectedLoaiHinh={setSelectedLoaiHinh}
+                        setSelectedProvinces={setSelectedProvinces}
+                        setThuocTinhList={setThuocTinhList}
+                        thuocTinhList={thuocTinhList}
+                    />
+                )}
             </div>
-
-            {/* Form chính - sử dụng grid để tối ưu không gian */}
             <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
-                {/* Chọn loại dự án */}
                 <div className="bg-white rounded p-2 border border-gray-200">
                     <div className="flex items-center space-x-2">
                         <label className="text-xs font-medium text-gray-700 flex items-center">
@@ -669,8 +743,6 @@ const AddNewProject = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Thông tin cơ bản - sử dụng grid 2 cột */}
                 <div className="bg-white rounded p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="col-span-2">
                         <h2 className="text-xs font-semibold text-gray-700 pb-1 border-b border-gray-200 flex items-center">
@@ -678,10 +750,7 @@ const AddNewProject = () => {
                             Thông tin điển hình
                         </h2>
                     </div>
-
-                    {/* Left Column */}
                     <div className="space-y-2">
-                        {/* Tên dự án */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -696,8 +765,6 @@ const AddNewProject = () => {
                                 required
                             />
                         </div>
-
-                        {/* Tổng chiều dài */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -712,8 +779,6 @@ const AddNewProject = () => {
                                 required
                             />
                         </div>
-
-                        {/* Ngày khởi công */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaCalendarAlt className="mr-1.5 text-gray-500 text-xs" />
@@ -729,8 +794,6 @@ const AddNewProject = () => {
                                 <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                             </div>
                         </div>
-
-                        {/* Chủ đầu tư */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -749,21 +812,14 @@ const AddNewProject = () => {
                                     </option>
                                 ))}
                             </select>
-
                         </div>
-
                     </div>
-
-                    {/* Right Column */}
                     <div className="space-y-2">
-                        {/* Tỉnh thành */}
                         <div className="flex flex-col relative" ref={dropdownRef}>
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-xs" />
                                 Tỉnh thành
                             </label>
-
-                            {/* Ô hiển thị */}
                             <div
                                 className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs bg-white cursor-pointer"
                                 onClick={() => setShowDropdown(!showDropdown)}
@@ -794,8 +850,6 @@ const AddNewProject = () => {
                                 </div>
                             )}
                         </div>
-
-                        {/* Nguồn vốn */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaMoneyBillWave className="mr-1.5 text-gray-500 text-xs" />
@@ -813,8 +867,6 @@ const AddNewProject = () => {
                                 <option value="Nước ngoài">Nước ngoài</option>
                             </select>
                         </div>
-
-                        {/* Kế hoạch hoàn thành */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <FaCalendarAlt className="mr-1.5 text-gray-500 text-xs" />
@@ -830,8 +882,6 @@ const AddNewProject = () => {
                                 <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
                             </div>
                         </div>
-
-                        {/* Trạng thái */}
                         <div className="flex flex-col">
                             <label className="text-xs text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
@@ -850,8 +900,6 @@ const AddNewProject = () => {
                             </select>
                         </div>
                     </div>
-
-                    {/* Mô tả chung */}
                     <div className="col-span-2">
                         <label className="text-xs text-gray-700 flex items-center mb-px">
                             <span className="w-2 mr-1">•</span>
@@ -866,9 +914,6 @@ const AddNewProject = () => {
                         />
                     </div>
                 </div>
-
-
-                {/* Thuộc tính tùy chọn - sử dụng grid 2 cột */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="bg-white rounded p-2 border border-gray-200 lg:col-span-9 bg-white rounded-lg border border-gray-200 shadow-sm">
                         <div className="flex justify-between items-center mb-1">
@@ -877,7 +922,10 @@ const AddNewProject = () => {
                                 Thuộc tính dự án
                             </h2>
                             <button
-                                onClick={() => setShowAddAttribute(true)}
+                                 onClick={(e) => {
+                                    e.preventDefault();
+                                     
+                                    setShowAddAttribute(true)}}
                                 className="flex items-center px-2 py-0.5 bg-green-500 text-white rounded text-xxs hover:bg-green-600 transition-colors"
                             >
                                 <FaPlus className="mr-0.5 text-xs" />
@@ -953,29 +1001,6 @@ const AddNewProject = () => {
                         </div>
                     </div>
                 </div>
-                <div className="mb-4">
-                    {/* <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Tài liệu đính kèm (có thể chọn nhiều file)
-                    </label>
-                    <input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange}
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
-                        className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
-                    />
-                    {files.length > 0 && (
-                        <div className="mt-2">
-                            <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
-                            <ul className="list-disc pl-5 text-sm text-gray-600">
-                                {files.map((file, index) => (
-                                    <li key={index}>{file.name}</li>
-                                ))}
-                            </ul>
-                        </div>
-                    )} */}
-                </div>
-                {/* Nút submit */}
                 <div className="flex justify-end space-x-2 mt-2">
                     <button
                         type="button"
@@ -995,8 +1020,6 @@ const AddNewProject = () => {
                     </button>
                 </div>
             </form>
-
-            {/* Popup thêm thuộc tính */}
             {showAddAttribute && selectedLoaiHinh && (
                 <AddNewAttribute
                     loaiHinhId={selectedLoaiHinh.LoaiHinh_ID}
