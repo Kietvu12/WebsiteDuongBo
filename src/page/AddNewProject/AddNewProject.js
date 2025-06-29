@@ -17,7 +17,7 @@ import {
 
 const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
     setSelectedLoaiHinh = () => { },
-    setSelectedProvinces = () => { } } = {}, setThuocTinhList = () => {}, thuocTinhList = {}) => {
+    setSelectedProvinces = () => { } } = {}, setThuocTinhList = () => {}, thuocTinhList = []) => {
     const [isLoading, setIsLoading] = useState(false);
     const [apiResponse, setApiResponse] = useState(null);
     const [error, setError] = useState(null);
@@ -79,7 +79,7 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
         setIsLoading(true);
         try {
             const normalizedText = normalizeText(textInput);
-            const response = await fetch('https://2ef7-58-187-51-165.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
+            const response = await fetch('https://f37d-1-53-44-48.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -170,15 +170,20 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
             setIsLoading(false);
         }
     };
-    
-
     const handleApplyToForm = async () => {
         if (!projectInfo) return;
     
         try {
             setIsLoading(true);
-            
-            // Xử lý thêm thuộc tính mới nếu có
+    
+            // 1. Tạo mapping giữa tên thuộc tính và giá trị từ API
+            const thuocTinhValueMap = {};
+            projectInfo.thuoc_tinh.forEach(tt => {
+                thuocTinhValueMap[tt.TenThuocTinh] = tt.GiaTri;
+            });
+    
+            // 2. Xử lý thêm thuộc tính mới nếu có
+            let newThuocTinhValues = {};
             if (projectInfo.thuocTinhToAdd && projectInfo.thuocTinhToAdd.length > 0) {
                 const addedAttributes = [];
                 
@@ -202,55 +207,55 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
                         if (response.ok) {
                             addedAttributes.push({
                                 ...tt,
-                                ThuocTinh_ID: result.data?.ThuocTinh_ID // Giả sử API trả về ID mới tạo
+                                ThuocTinh_ID: result.data?.ThuocTinh_ID
                             });
+                            // Thêm giá trị của thuộc tính mới vào mapping
+                            if (thuocTinhValueMap[tt.TenThuocTinh]) {
+                                newThuocTinhValues[result.data?.ThuocTinh_ID] = thuocTinhValueMap[tt.TenThuocTinh];
+                            }
                         }
                     } catch (error) {
                         console.error(`Lỗi khi thêm thuộc tính ${tt.TenThuocTinh}:`, error);
                     }
                 }
-    
-                // Cập nhật danh sách thuộc tính hiện có
-                if (addedAttributes.length > 0) {
-                    const thuocTinhResponse = await fetch(`${API_BASE_URL}/loaihinh/${projectInfo.LoaiHinh_ID}/thuoctinh`);
-                    const thuocTinhData = await thuocTinhResponse.json();
-                    
-                    if (thuocTinhResponse.ok && thuocTinhData.success) {
-                        setThuocTinhList(thuocTinhData.data.thuocTinh || []);
-                    }
-                }
-            }
-            const thuocTinhValues = {};
-            if (projectInfo.thuoc_tinh) {
-                for (const tt of projectInfo.thuoc_tinh) {
-                    thuocTinhValues[tt.TenThuocTinh] = tt.GiaTri;
-                }
             }
     
-            const thuocTinhWithValues = {};
-            if (projectInfo.existingThuocTinh) {
-                for (const ett of projectInfo.existingThuocTinh) {
-                    if (projectInfo.thuoc_tinh) {
-                        const matchedTt = projectInfo.thuoc_tinh.find(
-                            tt => tt.TenThuocTinh.toLowerCase() === ett.TenThuocTinh.toLowerCase()
-                        );
-                        if (matchedTt) {
-                            thuocTinhWithValues[ett.ThuocTinh_ID] = matchedTt.GiaTri;
-                        }
-                    }
+            // 3. Xử lý thuộc tính đã tồn tại
+            projectInfo.existingThuocTinh.forEach(tt => {
+                if (thuocTinhValueMap[tt.TenThuocTinh]) {
+                    newThuocTinhValues[tt.ThuocTinh_ID] = thuocTinhValueMap[tt.TenThuocTinh];
                 }
-            }
+            });
+    
+            // 4. Cập nhật formData với tất cả thông tin
             setFormData(prev => ({
                 ...prev,
-                ...projectInfo,
+                TenDuAn: projectInfo.TenDuAn,
+                TinhThanh: projectInfo.TinhThanh,
+                ChuDauTu: projectInfo.ChuDauTu,
+                NgayKhoiCong: projectInfo.NgayKhoiCong,
+                KeHoachHoanThanh: projectInfo.KeHoachHoanThanh,
+                TongChieuDai: projectInfo.TongChieuDai,
+                MoTaChung: projectInfo.MoTaChung,
                 LoaiHinh_ID: projectInfo.LoaiHinh_ID,
                 ThuocTinhValues: {
                     ...prev.ThuocTinhValues,
-                    ...thuocTinhWithValues
+                    ...newThuocTinhValues
                 }
             }));
+    
+            // 5. Cập nhật UI
             const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID === projectInfo.LoaiHinh_ID);
-            setSelectedLoaiHinh(loaiHinh);
+            if (loaiHinh) {
+                setSelectedLoaiHinh(loaiHinh);
+                
+                // Load lại thuộc tính của loại hình này
+                const response = await fetch(`${API_BASE_URL}/loaihinh/${loaiHinh.LoaiHinh_ID}/thuoctinh`);
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    setThuocTinhList(data.data.thuocTinh || []);
+                }
+            }
     
             if (projectInfo.TinhThanh) {
                 const provinces = projectInfo.TinhThanh.split(/,\s*|\s-\s/);
@@ -499,6 +504,7 @@ const AddNewProject = () => {
             alert('Lỗi khi tải thuộc tính loại hình');
         }
     };
+    
     useEffect(() => {
         fetch("https://provinces.open-api.vn/api/p/")
             .then(res => res.json())
@@ -537,6 +543,18 @@ const AddNewProject = () => {
             return updated;
         });
     };
+    useEffect(() => {
+        if (formData.LoaiHinh_ID) {
+            // Load danh sách thuộc tính khi loại hình thay đổi
+            fetch(`${API_BASE_URL}/loaihinh/${formData.LoaiHinh_ID}/thuoctinh`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        setThuocTinhList(data.data.thuocTinh || []);
+                    }
+                });
+        }
+    }, [formData.LoaiHinh_ID]);
 
     const handleThuocTinhChange = (thuocTinhId, value) => {
         setFormData({
@@ -552,27 +570,28 @@ const AddNewProject = () => {
         setFormData({ ...formData, [name]: date });
     };
     const handleAddAttributeSuccess = (newAttribute) => {
+          setThuocTinhList(prev => [...prev, newAttribute]);
         setAvailableThuocTinh(prev => [...prev, newAttribute]);
     };
     const onFinish = async (e) => {
         e.preventDefault();
         setLoading(true);
-        if (!formData.TenDuAn || !formData.LoaiHinh) {
+    
+        // Validate TenDuAn and LoaiHinh_ID
+        if (!formData.TenDuAn || !formData.LoaiHinh_ID) {
             alert('Vui lòng điền tên dự án và chọn loại hình');
             setLoading(false);
             return;
         }
-
+    
         const formattedValues = {
             ...formData,
             NgayKhoiCong: formData.NgayKhoiCong ? moment(formData.NgayKhoiCong).format('YYYY-MM-DD') : null,
             KeHoachHoanThanh: formData.KeHoachHoanThanh ? moment(formData.KeHoachHoanThanh).format('YYYY-MM-DD') : null,
         };
-
+    
         try {
             const formDataToSend = new FormData();
-
-            // Thêm từng trường dữ liệu vào FormData
             Object.entries(formattedValues).forEach(([key, value]) => {
                 if (key === 'ThuocTinhValues') {
                     formDataToSend.append(key, JSON.stringify(value));
@@ -580,17 +599,17 @@ const AddNewProject = () => {
                     formDataToSend.append(key, value);
                 }
             });
-
+    
             // Thêm các file vào FormData
             files.forEach(file => {
                 formDataToSend.append('files', file);
             });
-
+    
             const response = await fetch(`${API_BASE_URL}/duan/tao-moi`, {
                 method: 'POST',
                 body: formDataToSend,
             });
-
+    
             const data = await response.json();
             if (data.success) {
                 setCreatedProjectId(data.data.DuAnID);
@@ -607,7 +626,7 @@ const AddNewProject = () => {
                     TongChieuDai: '',
                     KeHoachHoanThanh: '',
                     MoTaChung: '',
-                    LoaiHinh: '',
+                    LoaiHinh_ID: '', // Reset LoaiHinh_ID
                     ThuocTinhValues: {}
                 });
                 setFiles([]);
@@ -620,9 +639,9 @@ const AddNewProject = () => {
             setLoading(false);
         }
     };
-
     const renderInputByType = (thuocTinh) => {
-        const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
+        const value = formData.ThuocTinhValues?.[thuocTinh.ThuocTinh_ID] 
+        || (thuocTinh.GiaTriMacDinh ? thuocTinh.GiaTriMacDinh : '');
 
         const baseClass = "w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500";
         const textareaClass = `${baseClass} resize-y min-h-[32px] max-h-[200px] overflow-auto`;
@@ -707,6 +726,7 @@ const AddNewProject = () => {
                 {showDocThongMinh && (
                     <DocThongMinh
                         onClose={() => setShowDocThongMinh(false)}
+                        formData={formData}
                         setFormData={setFormData}
                         loaiHinhList={loaiHinhList}
                         setSelectedLoaiHinh={setSelectedLoaiHinh}

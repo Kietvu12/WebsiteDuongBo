@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import downIcon from '../../assets/img/down.png';
 import axios from 'axios';
 import { FaPlus, FaTrash, FaInfoCircle } from 'react-icons/fa';
@@ -51,6 +51,8 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [progressPopup, setProgressPopup] = useState({
     visible: false,
     plan: null,
@@ -59,24 +61,31 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   console.log("Gói thầu bên này:", packageId);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
-        const result = await response.json();
-        setData(result.data);
-        console.log('json: ', result.data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setLoading(false);
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
+      
+      const result = await response.json();
+      setData(result.data);
+      console.log('Data fetched:', result.data);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [duAnThanhPhanId]); // Phụ thuộc vào duAnThanhPhanId
 
-    console.log('data: ', data);
-
+  // Sử dụng trong useEffect
+  useEffect(() => {
     fetchData();
-  }, [duAnThanhPhanId]);
+  }, [fetchData]); 
 
   const toggleItem = (type, id) => {
     setExpandedItems(prev => ({
@@ -137,6 +146,59 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       progressData: progressData?.danhSachTienDo || [] // Chỉ lấy danh sách tiến độ
     });
   };
+  const handleDeleteHangMuc = async (hangMucId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
+        return;
+    }
+
+    try {
+        setDeletingId(hangMucId); // Để hiển thị loading cho item cụ thể
+        
+        const response = await fetch(`${API_BASE_URL}/hangmuc/${hangMucId}`, {
+            method: 'DELETE'
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.message || 'Xóa không thành công');
+        }
+
+        // Gọi lại fetchData để cập nhật danh sách
+        fetchData();
+    } catch (error) {
+        console.error('Delete error:', error);
+    } finally {
+        setDeletingId(null);
+    }
+};
+const handleDeleteKeHoach = async (hangMucId) => {
+  if (!window.confirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
+      return;
+  }
+
+  try {
+      setDeletingId(hangMucId); // Để hiển thị loading cho item cụ thể
+      
+      const response = await fetch(`${API_BASE_URL}/kehoach/${hangMucId}`, {
+          method: 'DELETE'
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+          throw new Error(result.message || 'Xóa không thành công');
+      }
+
+      // Gọi lại fetchData để cập nhật danh sách
+      fetchData();
+  } catch (error) {
+      console.error('Delete error:', error);
+  } finally {
+      setDeletingId(null);
+  }
+};
+
   const ProgressPopup = ({ visible, plan, progressData, onClose }) => {
     if (!visible) return null;
 
@@ -434,52 +496,53 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
                       return (
                         <React.Fragment key={`item-${item.hangMucId}`}>
-                          <tr className={`group ${bgColor} hover:${bgColor.replace('100', '200')}`}>
-                            <td className="px-3 py-2 whitespace-nowrap pl-12">{`${packageIndex + 1}.${itemIndex + 1}`}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">HM-{item.hangMucId}</td>
-                            <td className="px-3 py-2 font-medium">
-                              <button
-                                onClick={() => toggleItem('items', item.hangMucId)}
-                                className="flex items-center focus:outline-none"
-                              >
-                                <img
-                                  src={downIcon}
-                                  alt="Toggle"
-                                  className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
-                                />
-                                <span className="truncate"> Hạng mục: {item.tenHangMuc}</span>
-                              </button>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {item.danhSachKeHoach?.[0]?.donViTinh || ''}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap font-medium">
-                              {progress.toFixed(0)}%
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              <div className="flex space-x-2">
-                                <button
-                                  className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                                  title="Thêm kế hoạch"
-                                  onClick={() => handleAddPlanClick(item.hangMucId)}
-                                >
-                                  <FaPlus size={14} />
-                                </button>
+<tr className={`group ${bgColor} hover:${bgColor.replace('100', '200')}`}>
+                <td className="px-3 py-2 whitespace-nowrap pl-12">{`${packageIndex + 1}.${itemIndex + 1}`}</td>
+                <td className="px-3 py-2 whitespace-nowrap">HM-{item.hangMucId}</td>
+                <td className="px-3 py-2 font-medium">
+                    <button
+                        onClick={() => toggleItem('items', item.hangMucId)}
+                        className="flex items-center focus:outline-none"
+                    >
+                        <img
+                            src={downIcon}
+                            alt="Toggle"
+                            className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
+                        />
+                        <span className="truncate"> Hạng mục: {item.tenHangMuc}</span>
+                    </button>
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
+                <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                    {item.danhSachKeHoach?.[0]?.donViTinh || ''}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap font-medium">
+                    {progress.toFixed(0)}%
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap"></td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex space-x-2">
+                        <button
+                            className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                            title="Thêm kế hoạch"
+                            onClick={() => handleAddPlanClick(item.hangMucId)}
+                        >
+                            <FaPlus size={14} />
+                        </button>
 
-                                <button
-                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                  title="Xóa"
-                                >
-                                  <FaTrash size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
+                        <button
+                            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                            title="Xóa hạng mục"
+                            onClick={() => handleDeleteHangMuc(item.hangMucId)}
+                        >
+                            <FaTrash size={14} />
+                        </button>
+                    </div>
+                </td>
+            </tr>
 
 
                           {/* Level 3: Plans - Only show if expanded */}
@@ -534,7 +597,19 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                               </td>
                               <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayBatDau)}</td>
                               <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayKetThuc)}</td>
-                              <td className="px-3 py-2 whitespace-nowrap"></td>
+                              <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="flex space-x-2">
+
+
+                        <button
+                            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                            title="Xóa hạng mục"
+                            onClick={() => handleDeleteKeHoach(plan.keHoachId)}
+                        >
+                            <FaTrash size={14} />
+                        </button>
+                    </div>
+                </td>
                             </tr>
 
                           ))}

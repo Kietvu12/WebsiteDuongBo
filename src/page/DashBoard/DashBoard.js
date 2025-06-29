@@ -1080,8 +1080,6 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-
-      {/* Popup thêm mới */}
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>
           <div
@@ -1090,9 +1088,25 @@ const Dashboard = () => {
           ></div>
         </div>
       )}
-      {showEdit && (
+{showEdit && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+    <div
+      className="
+        w-full 
+        max-w-6xl 
+        bg-white 
+        rounded-lg 
+        shadow-xl 
+        overflow-hidden 
+        p-6 
+        sm:p-4 
+        md:p-6 
+        lg:p-8 
+        h-auto 
+        max-h-[90vh] 
+        overflow-y-auto
+      "
+    >
       <AddNewSubProject
         isEdit={1}
         ProjectID={selectedID}

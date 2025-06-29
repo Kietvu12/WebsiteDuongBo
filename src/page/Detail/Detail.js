@@ -27,21 +27,22 @@ const Detail = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddPackage, setShowAddPackage] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  useEffect(() => {
-    const fetchPackageDetails = async () => {
-      if (!selectedPackageId) return;
+  const fetchPackageDetails = async () => {
+    if (!selectedPackageId) return;
 
-      try {
-        setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/goiThau/chiTiet/${selectedPackageId}`);
-        setPackageData(response.data.data);
-        setSelectedProject(response.data.data);
-      } catch (error) {
-        console.error('Error fetching package details:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/goiThau/chiTiet/${selectedPackageId}`);
+      setPackageData(response.data.data);
+      setSelectedProject(response.data.data);
+    } catch (error) {
+      console.error('Error fetching package details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+
 
     fetchPackageDetails();
   }, [selectedPackageId]);
@@ -184,28 +185,44 @@ const Detail = () => {
         </div>
       </div>
       {showAddPackage && (
-  <div className="fixed inset-0 z-50 overflow-y-auto">
-    <div className="flex items-center justify-center min-h-screen p-4">
-      {/* Lớp phủ mờ */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50"
-        onClick={() => setShowAddPackage(false)}
-      ></div>
-      
-      {/* Container pop-up - đã điều chỉnh max-width và width */}
-      <div className="relative w-full max-w-6xl z-10"> {/* Tăng từ max-w-4xl lên max-w-6xl */}
+  <div className="fixed inset-0 z-50">
+    {/* Lớp phủ nền mờ - xử lý đóng popup khi click */}
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50"
+      onClick={() => setShowAddPackage(false)}
+    />
+
+    {/* Container popup */}
+    <div className="relative z-50 flex items-center justify-center min-h-screen p-4">
+      <div
+        className="
+          relative 
+          w-full 
+          max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl 
+          bg-white 
+          rounded-lg 
+          shadow-xl 
+          overflow-hidden 
+          max-h-screen 
+          overflow-y-auto 
+          animate-fadeIn
+        "
+        onClick={(e) => e.stopPropagation()} 
+      >
         <AddNewPackage
           projectId={subProjectId}
           onClose={() => setShowAddPackage(false)}
-          onSuccess={(newPackage) => {
-            
+          onSuccess={() => {
+            fetchPackageDetails();
+            setShowAddPackage(false);
           }}
-          className="bg-white rounded-lg shadow-xl overflow-hidden"
         />
       </div>
     </div>
   </div>
 )}
+
+
     </div>
 
   );

@@ -4109,6 +4109,90 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
     });
   }
 });
+app.delete('/kehoach/:id', async (req, res) => {
+  const keHoachId = req.params.id;
+  
+  try {
+    // Kiểm tra kế hoạch tồn tại
+    const [keHoachResults] = await db.query(
+      'SELECT * FROM quanlykehoach WHERE KeHoachID = ?', 
+      [keHoachId]
+    );
+    
+    if (keHoachResults.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy kế hoạch'
+      });
+    }
+
+    // Bắt đầu transaction
+    await db.query('START TRANSACTION');
+
+    // 1. Xóa tất cả tiến độ liên quan
+    await db.query(
+      'DELETE FROM tiendothuchien WHERE KeHoachID = ?',
+      [keHoachId]
+    );
+
+    // 2. Xóa tất cả khó khăn vướng mắc liên quan
+    await db.query(
+      'DELETE FROM vuongmac WHERE KeHoachID = ?',
+      [keHoachId]
+    );
+
+    // 3. Lấy danh sách tài liệu đính kèm để xóa file vật lý
+    const [taiLieuResults] = await db.query(
+      'SELECT * FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
+      [keHoachId]
+    );
+
+    // 4. Xóa các tài liệu từ database
+    await db.query(
+      'DELETE FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
+      [keHoachId]
+    );
+
+    // 5. Xóa kế hoạch chính
+    await db.query(
+      'DELETE FROM quanlykehoach WHERE KeHoachID = ?',
+      [keHoachId]
+    );
+
+    // Commit transaction
+    await db.query('COMMIT');
+
+    // Xóa các file vật lý sau khi commit thành công
+    if (taiLieuResults.length > 0) {
+      const uploadPath = path.join(__dirname, 'Uploads', 'KEHOACH', keHoachId);
+      
+      try {
+        if (fs.existsSync(uploadPath)) {
+          fs.rmSync(uploadPath, { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.error('Lỗi khi xóa thư mục tài liệu:', err);
+        // Không throw error vì đã xóa thành công trong database
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Đã xóa kế hoạch và tất cả dữ liệu liên quan'
+    });
+
+  } catch (error) {
+    // Rollback nếu có lỗi
+    await db.query('ROLLBACK');
+    
+    console.error('Lỗi khi xóa kế hoạch:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi xóa kế hoạch',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 app.delete('/duan/:id', async (req, res) => {
   try {
     const duAnId = req.params.id;
@@ -4181,7 +4265,7 @@ app.delete('/hangmuc/:id', async (req, res) => {
     }
 
     // Xóa các kế hoạch liên quan trước (nếu cần cascade)
-    await pool.query('DELETE FROM kehoach WHERE HangMucID = ?', [hangMucId]);
+    await pool.query('DELETE FROM quanlykehoach WHERE HangMucID = ?', [hangMucId]);
 
     // Xóa các file đính kèm liên quan (nếu có)
     const uploadPath = path.join(__dirname, 'Uploads', 'HANGMUC', hangMucId);
@@ -4205,7 +4289,188 @@ app.delete('/hangmuc/:id', async (req, res) => {
     });
   }
 });
+app.post('/vuongmac/tao-moi', async (req, res) => {
+  try {
+    const {
+      KeHoachID,
+      LoaiVuongMac,
+      MoTaChiTiet,
+      NgayPhatSinh,
+      NgayKetThuc,
+      MucDo,
+      BienPhapXuLy
+    } = req.body;
 
+    // Validate required fields
+    if (!KeHoachID || !LoaiVuongMac || !MoTaChiTiet || !NgayPhatSinh) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (KeHoachID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh)'
+      });
+    }
+
+    // Validate enum values
+    const validLoaiVuongMac = ['GPMB', 'ThietBi', 'NhanLuc', 'VatTu', 'ThoiTiet', 'Khac'];
+    if (!validLoaiVuongMac.includes(LoaiVuongMac)) {
+      return res.status(400).json({
+        success: false,
+        message: 'LoaiVuongMac không hợp lệ'
+      });
+    }
+
+    // Validate MucDo if provided
+    if (MucDo && !['Nho', 'TrungBinh', 'NghiemTrong'].includes(MucDo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'MucDo không hợp lệ'
+      });
+    }
+
+    // Kiểm tra kế hoạch tồn tại
+    const [keHoach] = await db.query(
+      'SELECT 1 FROM quanlykehoach WHERE KeHoachID = ? LIMIT 1',
+      [KeHoachID]
+    );
+    
+    if (keHoach.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy kế hoạch'
+      });
+    }
+
+    // Thêm vướng mắc mới
+    const [result] = await db.query(
+      `INSERT INTO vuongmac (
+        KeHoachID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh,
+        NgayKetThuc, MucDo, BienPhapXuLy
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        KeHoachID,
+        LoaiVuongMac,
+        MoTaChiTiet,
+        NgayPhatSinh,
+        NgayKetThuc || null,
+        MucDo || 'Nho',
+        BienPhapXuLy || null
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Tạo vướng mắc thành công',
+      data: {
+        VuongMacID: result.insertId
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi tạo vướng mắc:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo vướng mắc',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.delete('/vuongmac/:id', async (req, res) => {
+  const vuongMacId = req.params.id;
+
+  try {
+    // Kiểm tra vướng mắc tồn tại
+    const [vuongMac] = await db.query(
+      'SELECT * FROM vuongmac WHERE VuongMacID = ?',
+      [vuongMacId]
+    );
+
+    if (vuongMac.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy vướng mắc'
+      });
+    }
+
+    // Xóa vướng mắc
+    await db.query(
+      'DELETE FROM vuongmac WHERE VuongMacID = ?',
+      [vuongMacId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Đã xóa vướng mắc thành công'
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi xóa vướng mắc:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi xóa vướng mắc',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.get('/hangmuc/:hangMucId/kehoach', async (req, res) => {
+  try {
+    const hangMucId = req.params.hangMucId;
+
+    // 1. Kiểm tra hạng mục tồn tại
+    const [hangMucCheck] = await db.query(
+      'SELECT HangMucID FROM hangmuc WHERE HangMucID = ?', 
+      [hangMucId]
+    );
+
+    if (hangMucCheck.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy hạng mục'
+      });
+    }
+
+    // 2. Lấy danh sách kế hoạch
+    const [keHoachList] = await db.query(`
+      SELECT 
+        k.KeHoachID,
+        k.TenCongTac,
+        k.KhoiLuongKeHoach,
+        k.DonViTinh,
+        k.NgayBatDau,
+        k.NgayKetThuc,
+        k.GhiChu,
+        nt.TenNhaThau,
+        COUNT(t.KeHoachID) AS SoTienTrinh,
+        SUM(t.KhoiLuongThucHien) AS TongKhoiLuongThucHien
+      FROM quanlykehoach k
+      LEFT JOIN nhathau nt ON k.NhaThauID = nt.NhaThauID
+      LEFT JOIN tiendothuchien t ON k.KeHoachID = t.KeHoachID
+      WHERE k.HangMucID = ?
+      GROUP BY k.KeHoachID
+      ORDER BY k.NgayBatDau ASC
+    `, [hangMucId]);
+
+    // 3. Lấy danh sách tài liệu đính kèm cho mỗi kế hoạch
+    for (const keHoach of keHoachList) {
+      const [taiLieu] = await db.query(
+        'SELECT * FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
+        [keHoach.KeHoachID]
+      );
+      keHoach.TaiLieu = taiLieu;
+    }
+
+    res.json({
+      success: true,
+      data: keHoachList
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách kế hoạch:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi lấy danh sách kế hoạch',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 
 // Middleware xử lý lỗi toàn cục

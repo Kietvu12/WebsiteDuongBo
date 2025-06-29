@@ -140,28 +140,7 @@ const AddNewCategories = ({ goiThauId, onClose, onSuccess }) => {
                 rows={2}
               />
             </div>
-            {/* <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tài liệu đính kèm</label>
-              <input
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
-              />
-              {files.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
-                  <ul className="list-disc pl-5 text-sm text-gray-600">
-                    {files.map((file, index) => (
-                      <li key={index}>{file.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div> */}
           </div>
-
           <div className="flex justify-end gap-2">
             <button
               type="button"

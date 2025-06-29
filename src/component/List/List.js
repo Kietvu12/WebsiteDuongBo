@@ -22,33 +22,30 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
     }
   };
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/duAn/goiThau/${subProjectId}`);
-        if (response.data && Array.isArray(response.data.data)) {
-          const fetchedPackages = response.data.data;
-          setPackages(fetchedPackages);
+  const fetchPackages = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_BASE_URL}/duAn/goiThau/${subProjectId}`);
+      if (response.data && Array.isArray(response.data.data)) {
+        const fetchedPackages = response.data.data;
+        setPackages(fetchedPackages);
 
-          if (fetchedPackages.length > 0) {
-            handlePackageClick(fetchedPackages[0].GoiThau_ID);
-          }
-        } else {
-          setPackages([]);
-          throw new Error('Invalid response format');
+        if (fetchedPackages.length > 0) {
+          handlePackageClick(fetchedPackages[0].GoiThau_ID);
         }
-      } catch (err) {
-        setError(err.message);
-        console.error('Error:', err);
-      } finally {
-        setLoading(false);
+      } else {
+        setPackages([]);
+        throw new Error('Invalid response format');
       }
-    };
-
-    if (subProjectId !== null && subProjectId !== undefined) {
-      fetchPackages();
+    } catch (err) {
+      setError(err.message);
+      console.error('Error:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+  useEffect(() => {
+      fetchPackages();
   }, [subProjectId]);
 
   if (loading) return <div className="p-4 text-center">Loading...</div>;

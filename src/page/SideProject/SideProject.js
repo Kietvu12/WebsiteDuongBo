@@ -34,7 +34,6 @@ const SideProject = () => {
   const [subProjects, setSubProjects] = useState([]);
   const { setSelectedSubProjectId } = useProject();
   const [loading, setLoading] = useState(true);
-  const [showAddPopup, setShowAddPopup] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [status, setStatus] = useState("all");
@@ -93,7 +92,17 @@ const SideProject = () => {
   ];
   const [selectedID, setSelectedID] = useState(null)
   const [selectedParentID, setSelectedParentID] = useState(null)
-
+  const modalContainerClass = `
+  w-full 
+  max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl
+  bg-white 
+  rounded-lg 
+  shadow-xl 
+  overflow-hidden 
+  max-h-[90vh] 
+  overflow-y-auto 
+  p-4 sm:p-6 lg:p-8
+`;
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
     { label: "Tổng số dự án", count: statusCounts.total },
@@ -334,78 +343,73 @@ const SideProject = () => {
 
     // Xóa query params sau khi đã lấy
   }, [location.search, DuAnID]);
+  const fetchProjectDetails = async () => {
+    try {
+      // Trường hợp 1: Có danh sách ID dự án con cần hiển thị
+      if (selectedDuAnConIds.length > 0) {
+        console.log("Đang xử lý nhiều dự án con:", selectedDuAnConIds);
 
-  useEffect(() => {
-    const fetchProjectDetails = async () => {
-      try {
-        // Trường hợp 1: Có danh sách ID dự án con cần hiển thị
-        if (selectedDuAnConIds.length > 0) {
-          console.log("Đang xử lý nhiều dự án con:", selectedDuAnConIds);
+        // Tạo mảng các promises cho các request API
+        const promises = selectedDuAnConIds.map((conId) =>
+          axios.get(`${API_BASE_URL}/duAntp/${conId}`)
+        );
 
-          // Tạo mảng các promises cho các request API
-          const promises = selectedDuAnConIds.map((conId) =>
-            axios.get(`${API_BASE_URL}/duAntp/${conId}`)
-          );
+        // Chạy tất cả các requests cùng lúc
+        const results = await Promise.all(promises);
 
-          // Chạy tất cả các requests cùng lúc
-          const results = await Promise.all(promises);
+        // Xử lý kết quả và cập nhật state hiển thị
+        const duAnConData = results.map((res, index) => ({
+          ...res.data.data,
+          DuAnID: selectedDuAnConIds[index],
+        }));
 
-          // Xử lý kết quả và cập nhật state hiển thị
-          const duAnConData = results.map((res, index) => ({
-            ...res.data.data,
-            DuAnID: selectedDuAnConIds[index],
-          }));
+        // Cập nhật subProjects để hiển thị trong bảng
+        setSubProjects(duAnConData);
+        setLoading(false);
 
-          // Cập nhật subProjects để hiển thị trong bảng
-          setSubProjects(duAnConData);
-          setLoading(false);
+      }
+      // Trường hợp 2: Có một ID dự án con duy nhất
+      else if (selectedDuAnConId) {
+        console.log("Đang xử lý một dự án con:", selectedDuAnConId);
 
-          // Xóa IDs khỏi URL sau khi đã lấy dữ liệu
-          // window.history.replaceState({}, '', `/side-project/${DuAnID}`);
-          // setSelectedDuAnConIds([]);
+        const response = await axios.get(
+          `${API_BASE_URL}/duAntp/${selectedDuAnConId}`
+        );
+        const duAnConData = [
+          {
+            ...response.data.data,
+            DuAnID: selectedDuAnConId,
+          },
+        ];
+
+        // Cập nhật subProjects để hiển thị trong bảng
+        setSubProjects(duAnConData);
+        setLoading(false);
+
+        // Xóa ID khỏi URL sau khi đã lấy dữ liệu
+        window.history.replaceState({}, "", `/side-project/${DuAnID}`);
+        setSelectedDuAnConId(null);
+      }
+      // Trường hợp 3: Tải tất cả dự án con (trường hợp mặc định)
+      else {
+        console.log("Đang tải tất cả dự án con của dự án cha:", DuAnID);
+
+        // Tải dữ liệu dự án cha và danh sách dự án con
+        const response = await axios.get(
+          `${API_BASE_URL}/duAnThanhPhan/${DuAnID}`
+        );
+        if (response.data.data) {
+          setProject(response.data.data.duAnTong);
+          setSubProjects(response.data.data.duAnThanhPhan);
         }
-        // Trường hợp 2: Có một ID dự án con duy nhất
-        else if (selectedDuAnConId) {
-          console.log("Đang xử lý một dự án con:", selectedDuAnConId);
-
-          const response = await axios.get(
-            `${API_BASE_URL}/duAntp/${selectedDuAnConId}`
-          );
-          const duAnConData = [
-            {
-              ...response.data.data,
-              DuAnID: selectedDuAnConId,
-            },
-          ];
-
-          // Cập nhật subProjects để hiển thị trong bảng
-          setSubProjects(duAnConData);
-          setLoading(false);
-
-          // Xóa ID khỏi URL sau khi đã lấy dữ liệu
-          window.history.replaceState({}, "", `/side-project/${DuAnID}`);
-          setSelectedDuAnConId(null);
-        }
-        // Trường hợp 3: Tải tất cả dự án con (trường hợp mặc định)
-        else {
-          console.log("Đang tải tất cả dự án con của dự án cha:", DuAnID);
-
-          // Tải dữ liệu dự án cha và danh sách dự án con
-          const response = await axios.get(
-            `${API_BASE_URL}/duAnThanhPhan/${DuAnID}`
-          );
-          if (response.data.data) {
-            setProject(response.data.data.duAnTong);
-            setSubProjects(response.data.data.duAnThanhPhan);
-          }
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu dự án:", error);
         setLoading(false);
       }
-    };
-
+    } catch (error) {
+      console.error("Lỗi khi lấy dữ liệu dự án:", error);
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
     fetchProjectDetails();
   }, [DuAnID, selectedDuAnConIds, selectedDuAnConId]);
 
@@ -997,6 +1001,16 @@ const SideProject = () => {
                           >
                             <img src={pin} alt="Ghim" className="w-5 h-5" />
                           </button>
+                          <button
+                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                                title="Sửa thông tin"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(subProject.DuAnID, subProject.ParentID);
+                                }}
+                              >
+                                <img src={edit} alt="Ghim" className="w-5 h-5" />
+                              </button>
                         </div>
                       </div>
 
@@ -1114,12 +1128,13 @@ const SideProject = () => {
       {/* Popup thêm mới */}
       {showAddSideProject && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className={modalContainerClass}>
       <AddNewSubProject
         DuAnID={project.DuAnID}
         onClose={() => setShowAddSideProject(false)}
         onSuccess={(newProject) => {
-          // Xử lý khi thêm thành công
+          fetchProjectDetails();
+          setShowAddSideProject(false);
         }}
       />
     </div>
@@ -1128,7 +1143,7 @@ const SideProject = () => {
 
 {showAddPackage && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className={modalContainerClass}>
       <AddNewPackage
         projectId={DuAnID}
         onClose={() => setShowAddPackage(false)}
@@ -1142,19 +1157,21 @@ const SideProject = () => {
 
 {showEdit && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className="w-full max-w-6xl bg-white rounded-lg shadow-xl overflow-hidden">
+    <div className={modalContainerClass}>
       <AddNewSubProject
         isEdit={1}
         ProjectID={selectedID}
         DuAnID={selectedParentID}
         onClose={() => setShowEdit(false)}
         onSuccess={() => {
+          fetchProjectDetails();
           setShowEdit(false);
         }}
       />
     </div>
   </div>
 )}
+
     </div>
   );
 };
