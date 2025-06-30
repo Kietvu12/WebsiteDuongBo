@@ -9,7 +9,7 @@ import Plan from './page/Plan/Plan';
 import SideProject from './page/SideProject/SideProject';
 import ProjectReport from './page/ProjectReport/ProjectReport';
 import WorkItem from './page/WorkItem/WorkItem';
-import { ProjectProvider } from './contexts/ProjectContext';
+import { ProjectProvider, useProject } from './contexts/ProjectContext';
 import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
 import Approvals from './page/Approvals/Approvals';
@@ -17,7 +17,8 @@ import MapBoard from './page/MapBoard/MapBoard';
 import AddNewProject from './page/AddNewProject/AddNewProject';
 import AddNewSubProject from './page/AddNewSubProject/AddNewSubProject';
 import AddNewPackage from './page/AddNewPackage/AddNewPackage';
-import AddNewContructors from './page/AddNewContructors/AddNewContructors';
+import { useEffect } from 'react';
+
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -50,7 +51,24 @@ const LayoutWithSidebar = ({ children }) => {
   );
 };
 
+function AppWrapper() {
+  return (
+    <ProjectProvider>
+      <App />
+    </ProjectProvider>
+  );
+}
+
 function App() {
+  const { fetchUserProfile, loading, authChecked } = useProject();
+  
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  if (loading || !authChecked) return <div>Đang tải thông tin người dùng...</div>;
+  
+
   return (
     <ProjectProvider>
     <Router>
@@ -58,69 +76,88 @@ function App() {
         <Route path='/' element={<Login />} />
 
         <Route path='/home' element={
-          <LayoutWithSidebar>
-            <DashBoard />
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <DashBoard />
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/map-views' element={
-          <LayoutWithSidebar>
-            <MapBoard />
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <MapBoard />
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/detail' element={
-          <LayoutWithSidebar>
-            <Detail />
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <Detail />
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/plan' element={
-          <LayoutWithSidebar>
-            <Plan/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <Plan/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/side-project/:DuAnID' element={
-          <LayoutWithSidebar>
-            <SideProject/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <SideProject/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/project-report/:projectId' element={
-          <LayoutWithSidebar>
-            <ProjectReport/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <ProjectReport/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/work-items' element={
-          <LayoutWithSidebar>
-            <WorkItem/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <WorkItem/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/project-progress' element={
-          <LayoutWithSidebar>
-            <ProjectProgress/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <ProjectProgress/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/approvals' element={
-          <LayoutWithSidebar>
-            <Approvals/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <Approvals/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/add-new' element={
-          <LayoutWithSidebar>
-            <AddNewProject/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <AddNewProject/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/add-new/:projectId' element={
-          <LayoutWithSidebar>
-            <AddNewSubProject/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <AddNewSubProject/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
         <Route path='/add-new-package/:projectId' element={
-          <LayoutWithSidebar>
-            <AddNewPackage/>
-          </LayoutWithSidebar>
-        } />
-        <Route path='/add-new-contructor' element={
-          <LayoutWithSidebar>
-            <AddNewContructors/>
-          </LayoutWithSidebar>
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <AddNewPackage/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
         } />
       </Routes>
     </Router>
@@ -128,4 +165,9 @@ function App() {
   );
 }
 
-export default App;
+const ProtectedRoute = ({ children }) => {
+  const { user } = useProject();
+  return user ? children : <Navigate to="/" />;
+};
+
+export default AppWrapper;

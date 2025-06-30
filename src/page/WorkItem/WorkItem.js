@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import './WorkItem.css'
 import menuIcon from '../../assets/img/menu-icon.png';
 import helpIcon from '../../assets/img/help-icon.png';
@@ -11,6 +11,23 @@ import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
 import SubProjectTable from '../../component/SubProjectTable/SubProjectTable';
 import ProductionChart from '../../component/Chart/Chart'
+import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
+
+const useClickOutside = (ref, callback) => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [ref, callback]);
+};
+
 const WorkItem = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -26,6 +43,15 @@ const WorkItem = () => {
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+  const { logout } = useProject();
+  const [showMenu, setShowMenu] = useState(false);
+
+  const menuRef = useRef(null);
+
+  useClickOutside(menuRef, () => {
+    setShowMenu(false);
+  });
   
   // Khôi phục state từ localStorage khi component mount
   useEffect(() => {
@@ -134,7 +160,7 @@ const WorkItem = () => {
 
   return (
     <div className='plan'>
-      <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3">
+      <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
         {/* Top Nav */}
              <div className="flex justify-between items-center gap-2">
           {/* Nút back */}
@@ -146,18 +172,38 @@ const WorkItem = () => {
             <FaArrowLeft className="w-4 h-4" />
           </button>
         
-          {/* Tiêu đề - căn giữa và chiếm không gian còn lại */}
-          <h1 className="flex-1 text-left text-sm font-bold text-gray-800 truncate px-2">
-            {renderTitle()}
-          </h1>
-        
           {/* Nhóm icon bên phải */}
           <div className="flex items-center gap-2">
-            <img src={menuIcon} alt="Menu" className="w-4 h-4" />
-            <img src={helpIcon} alt="Help" className="w-4 h-4 rounded-full" />
-            <img src={userIcon} alt="User" className="w-4 h-4 rounded-full" />
+            <span className="text-gray-500">Thông báo</span>
+            <FaRegBell />
+            <span></span>
+            <div className="inline-block" ref={menuRef}>
+                <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  R
+                </button>
+                {showMenu && (
+              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                <button
+                  className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                >
+                  Đăng xuất
+                  </button>
+              </div>
+            )}
+            </div>
           </div>
         </div>
+
+        <h1 className="flex-1 text-left font-bold text-gray-800 px-2 mt-3">
+          {renderTitle()}
+        </h1>
+
         <div className="mt-3 sm:mt-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex-1 relative">
@@ -166,7 +212,7 @@ const WorkItem = () => {
                   <input
                     type="text"
                     placeholder="Tìm kiếm dự án..."
-                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 "
                     value={searchTerm}
                     onChange={handleSearchChange}
                     onFocus={() => setShowSuggestions(true)}
@@ -177,7 +223,7 @@ const WorkItem = () => {
                       {filteredProjects.map(project => (
                         <li
                           key={project.DuAnID}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer "
                           onClick={() => handleProjectSelect(project)}
                         >
                           {project.TenDuAn}
@@ -188,7 +234,7 @@ const WorkItem = () => {
                 </div>
                 <button
                   type="submit"
-                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 text-sm whitespace-nowrap"
+                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300  whitespace-nowrap"
                   disabled={isLoadingProjects}
                 >
                   {isLoadingProjects ? (
@@ -203,7 +249,7 @@ const WorkItem = () => {
                 </button>
               </form>
               {isLoadingProjects && (
-                <p className="text-xs text-gray-500 mt-1">Đang tải danh sách dự án...</p>
+                <p className=" text-gray-500 mt-1">Đang tải danh sách dự án...</p>
               )}
             </div>
 
@@ -212,29 +258,29 @@ const WorkItem = () => {
 
               {/* Date Filter */}
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Thời gian:</span>
+                <span className=" sm: text-gray-700 whitespace-nowrap">Thời gian:</span>
                 <input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm w-[130px]"
+                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
                 />
-                <span className="text-xs sm:text-sm text-gray-700">đến</span>
+                <span className=" sm: text-gray-700">đến</span>
                 <input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm w-[130px]"
+                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
                 />
               </div>
 
               {/* Status Filter */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                {/* <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Trạng thái:</span>
+                {/* <span className=" sm: text-gray-700 whitespace-nowrap">Trạng thái:</span>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm min-w-[140px] flex-1 sm:flex-none"
+                  className="border border-gray-300 rounded px-2 py-1  sm: min-w-[140px] flex-1 sm:flex-none"
                 >
                   <option value="all">Tất cả</option>
                   <option value="Chậm tiến độ">Chậm tiến độ</option>

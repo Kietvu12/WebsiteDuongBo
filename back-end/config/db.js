@@ -27,10 +27,10 @@ const sequelize = new Sequelize({
 // Kiểm tra kết nối
 sequelize.authenticate()
   .then(() => {
-    .log('Kết nối database thành công.');
+    console.log('Kết nối database thành công.');
   })
   .catch(err => {
-    .error('Không thể kết nối database:', err);
+    console.error('Không thể kết nối database:', err);
   });
-  .log('DB_USER:', process.env.DB_USER);
+  console.log('DB_USER:', process.env.DB_USER);
 module.exports = sequelize;

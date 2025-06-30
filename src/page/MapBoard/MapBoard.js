@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
+import { FaRegCalendarAlt, FaRegBell, FaFilter } from "react-icons/fa";
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
@@ -13,6 +13,21 @@ import axios from "axios";
 import { useProject } from "../../contexts/ProjectContext";
 import AddNewSubProject from "../AddNewSubProject/AddNewSubProject";
 import MapComponent from '../../component/MapComponent/MapComponent';
+
+const useClickOutside = (ref, callback) => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [ref, callback]);
+};
 
 const Dashboard = () => {
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
@@ -41,6 +56,18 @@ const Dashboard = () => {
   const [showEdit, setShowEdit] = useState(false)
   const [selectedID, setSelectedID] = useState(null)
   const [selectedParentID, setSelectedParentID] = useState(null)
+
+  const { logout } = useProject();
+  const [showMenu, setShowMenu] = useState(false);
+
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useClickOutside(menuRef, () => {
+    setShowMenu(false);
+  });
+  
+
   const mergedProvinces = [
     "Thành phố Hà Nội",
     "Thành phố Huế",
@@ -77,30 +104,21 @@ const Dashboard = () => {
     "Tỉnh Cà Mau",
     "Tỉnh An Giang"
   ];
+
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
-    "Đang triển khai": 0,
-    "Đã hoàn thành": 0,
-    "Chậm tiến độ": 0,
-    "Đã phê duyệt – chờ khởi công": 0,
-    "Đã phê duyệt – chậm tiến độ": 0,
-    "Dự kiến khởi công": 0,
+    "Đang chuẩn bị": 0,
+    "Đang thi công": 0,
+    "Hoàn thành": 0,
+    "Tạm dừng": 0
   });
 
   const statuses = [
     { label: "Tổng số dự án", count: statusCounts.total },
-    { label: "Đang triển khai", count: statusCounts["Đang triển khai"] },
-    { label: "Đã hoàn thành", count: statusCounts["Đã hoàn thành"] },
-    { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"] },
-    {
-      label: "Đã phê duyệt – chờ khởi công",
-      count: statusCounts["Đã phê duyệt – chờ khởi công"],
-    },
-    {
-      label: "Đã phê duyệt – chậm tiến độ",
-      count: statusCounts["Đã phê duyệt – chậm tiến độ"],
-    },
-    { label: "Dự kiến khởi công", count: statusCounts["Dự kiến khởi công"] },
+    { label: "Đang chuẩn bị", count: statusCounts["Đang chuẩn bị"] },
+    { label: "Đang thi công", count: statusCounts["Đang thi công"] },
+    { label: "Hoàn thành", count: statusCounts["Hoàn thành"] },
+    { label: "Tạm dừng", count: statusCounts["Tạm dừng"] },
   ];
 
   const [activeStatus, setActiveStatus] = useState("Tổng số dự án");
@@ -113,41 +131,29 @@ const Dashboard = () => {
       box: "bg-red-600",
     },
     {
-      label: "Đang triển khai",
-      count: statusCounts["Đang triển khai"],
+      label: "Đang chuẩn bị",
+      count: statusCounts["Đang chuẩn bị"],
       color: "text-red-600",
       box: "bg-blue-600",
     },
     {
-      label: "Đã hoàn thành",
-      count: statusCounts["Đã hoàn thành"],
+      label: "Đang thi công",
+      count: statusCounts["Đang thi công"],
       color: "text-red-600",
       box: "bg-green-600",
     },
     {
-      label: "Chậm tiến độ",
-      count: statusCounts["Chậm tiến độ"],
+      label: "Hoàn thành",
+      count: statusCounts["Hoàn thành"],
       color: "text-red-600",
       box: "bg-yellow-500",
     },
     {
-      label: "Đã phê duyệt – chờ khởi công",
-      count: statusCounts["Đã phê duyệt – chờ khởi công"],
+      label: "Tạm dừng",
+      count: statusCounts["Tạm dừng"],
       color: "text-red-600",
       box: "bg-purple-500",
-    },
-    {
-      label: "Đã phê duyệt – chậm tiến độ",
-      count: statusCounts["Đã phê duyệt – chậm tiến độ"],
-      color: "text-red-600",
-      box: "bg-orange-500",
-    },
-    {
-      label: "Dự kiến khởi công",
-      count: statusCounts["Dự kiến khởi công"],
-      color: "text-red-600",
-      box: "bg-gray-500",
-    },
+    }
   ];
 
   const getStatusColor = (status) => {
@@ -158,12 +164,10 @@ const Dashboard = () => {
   const calculateStatusCounts = (projects) => {
     const counts = {
       total: projects.length,
-      "Đang triển khai": 0,
-      "Đã hoàn thành": 0,
-      "Chậm tiến độ": 0,
-      "Đã phê duyệt – chờ khởi công": 0,
-      "Đã phê duyệt – chậm tiến độ": 0,
-      "Dự kiến khởi công": 0,
+      "Đang chuẩn bị": 0,
+      "Đang thi công": 0,
+      "Hoàn thành": 0,
+      "Tạm dừng": 0
     };
 
     projects.forEach((project) => {
@@ -502,27 +506,187 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200">
-      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4">
-        <div className="flex items-center space-x-4">
+    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
+      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
+        <div className="flex items-center space-x-4 pt-0 md:pt-1">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
           <span></span>
-          <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
-            R
+          <div className="inline-block" ref={menuRef}>
+              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                onClick={() => setShowMenu(!showMenu)}
+              >
+                R
+              </button>
+              {showMenu && (
+            <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+              <button
+                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+              >
+                Đăng xuất
+                </button>
+            </div>
+          )}
           </div>
         </div>
       </header>
 
+      {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
+      <div className="md:hidden flex justify-between items-center px-4 mb-2">
+        <button 
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+          className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
+        >
+          <FaFilter className="text-gray-600" />
+          <span>Bộ lọc</span>
+        </button>
+        
+        <button 
+          onClick={handleExportReport}
+          className="bg-green-700 text-white px-4 py-1 rounded font-bold"
+        >
+          XUẤT BÁO CÁO
+        </button>
+      </div>
+
+      {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
+      {showMobileFilters && (
+        <div className="md:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
+          {/* Các phần tử filter giống như bản desktop nhưng responsive cho mobile */}
+          <div>
+            <div>
+              <input
+                type="text"
+                placeholder="Tìm dự án"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-3 pr-10 py-1 border rounded w-full"
+              />
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
+                  {searchSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectSuggestion(suggestion)}
+                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                    >
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-gray-700 bg-white w-full">
+              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent w-[120px]"
+              />
+              <span className="mx-1">-</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent w-[120px]"
+              />
+            </div>
+          </div>
+
+
+          <div>
+            <select
+              value={selectedProvince}
+              onChange={handleProvinceChange}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="">Tất cả tỉnh</option>
+              {mergedProvinces.map((province, index) => (
+                <option key={index} value={province}>
+                  {province}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status */}
+          <div>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+              <option value="Đang thi công">Đang thi công</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Tạm dừng">Tạm dừng</option>
+            </select>
+          </div>
+
+          {/* Contractor */}
+          <div>
+            <select
+              value={contractor}
+              onChange={(e) => setContractor(e.target.value)}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="all">Tất cả nhà thầu</option>
+              {contractorList.map((nhathau) => (
+                <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
+                  {nhathau.TenNhaThau}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Completion Level */}
+          <div>
+            <select
+              value={completionLevel}
+              onChange={(e) => setCompletionLevel(e.target.value)}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="all">Mọi tiến độ</option>
+              <option value="20">&gt;20%</option>
+              <option value="50">&gt;50%</option>
+              <option value="80">&gt;80%</option>
+              <option value="100">100%</option>
+            </select>
+          </div>
+
+          {/* Reset Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                resetFilters();
+                setShowMobileFilters(false);
+              }}
+              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded font-medium"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="px-6 pb-2 pt-2">
-        <h2 className="text-l mt-6 md:mt-0 font-bold">
+        <h2 className="font-bold">
           Danh sách dự án đường bộ
         </h2>
       </div>
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-          <div className="flex flex-col md:flex-row items-center gap-2">
+          <div className="hidden md:flex flex-col md:flex-row items-center gap-2">
             <div className=" w-full md:w-64">
               <input
                 type="text"
@@ -579,17 +743,10 @@ const Dashboard = () => {
               className="px-3 py-1 border rounded w-full md:w-48"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="Chậm tiến độ">Chậm tiến độ</option>
-              <option value="Đang triển khai">Đang triển khai</option>
-              <option value="Đang tiến hành">Đang tiến hành</option>
-              <option value="Đã hoàn thành">Đã hoàn thành</option>
-              <option value="Đã phê duyệt – chờ khởi công">
-                Đã phê duyệt-chờ khởi công
-              </option>
-              <option value="Đã phê duyệt – chậm tiến độ">
-                Đã phê duyệt-chậm tiến độ
-              </option>
-              <option value="Dự kiến khởi công">Dự kiến khởi công</option>
+              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+              <option value="Đang thi công">Đang thi công</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Tạm dừng">Tạm dừng</option>
             </select>
             <select
               value={contractor}
@@ -621,12 +778,9 @@ const Dashboard = () => {
               Xóa lọc
             </button>
           </div>
-          <div className="flex gap-2 mb-2 mt-3">
+          <div className="hidden md:flex gap-2 mb-2 mt-3">
             <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              XUẤT EXCEL
-            </button>
-            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              NHẬP EXCEL
+              XUẤT BÁO CÁO
             </button>
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
@@ -688,7 +842,7 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3 ">
+            <div className="md:hidden mb-3" ref={triggerRef}>
               <div
                 className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
                 onClick={() => setIsSelectOpen(!isSelectOpen)}
@@ -718,7 +872,11 @@ const Dashboard = () => {
               </div>
 
               {isSelectOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                  style={{
+                    top: `calc(${triggerRef.current?.getBoundingClientRect().bottom}px + 8px)`
+                  }}
+                >
                   <div
                     className={`p-2 flex items-center gap-2 ${!selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
                       }`}

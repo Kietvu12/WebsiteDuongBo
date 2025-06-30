@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import "./SideProject.css";
@@ -16,11 +16,26 @@ import { useProject } from "../../contexts/ProjectContext";
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
-import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
+import { FaRegCalendarAlt, FaRegBell, FaFilter } from "react-icons/fa";
 import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
 import AddNewPackage from '../AddNewPackage/AddNewPackage';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
 import edit from "../../assets/img/edit.png"
+
+const useClickOutside = (ref, callback) => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [ref, callback]);
+};
 
 
 const SideProject = () => {
@@ -47,12 +62,27 @@ const SideProject = () => {
   const [showAddSideProject, setShowAddSideProject] = useState(false);
   const [showEdit, setShowEdit] = useState(false)
   const [showAddPackage, setShowAddPackage] = useState(false);
+  
+  const { logout } = useProject();
+  const [showMenu, setShowMenu] = useState(false);
+
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useClickOutside(menuRef, () => {
+    setShowMenu(false);
+  });
+  
+  const handleExportReport = () => {
+    navigate("/bao-cao-tong");
+  };
+
   const [statusCounts, setStatusCounts] = useState({
     total: 0,
-    "Đang hoạt động": 0,
-    "Đang hoàn thiện hồ sơ đầu tư": 0,
-    "Chậm tiến độ – đang hoàn thiện": 0,
-    "Đang thực hiện": 0,
+    "Đang chuẩn bị": 0,
+    "Đang thi công": 0,
+    "Hoàn thành": 0,
+    "Tạm dừng": 0
   });
   const mergedProvinces = [
     "Thành phố Hà Nội",
@@ -106,17 +136,12 @@ const SideProject = () => {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
     { label: "Tổng số dự án", count: statusCounts.total },
-    { label: "Đang hoạt động", count: statusCounts["Đang hoạt động"] },
-    {
-      label: "Đang hoàn thiện hồ sơ đầu tư",
-      count: statusCounts["Đang hoàn thiện hồ sơ đầu tư"],
-    },
-    {
-      label: "Chậm tiến độ – đang hoàn thiện",
-      count: statusCounts["Chậm tiến độ – đang hoàn thiện"],
-    },
-    { label: "Đang thực hiện", count: statusCounts["Đang thực hiện"] },
+    { label: "Đang chuẩn bị", count: statusCounts["Đang chuẩn bị"] },
+    { label: "Đang thi công", count: statusCounts["Đang thi công"] },
+    { label: "Hoàn thành", count: statusCounts["Hoàn thành"] },
+    { label: "Tạm dừng", count: statusCounts["Tạm dừng"] },
   ];
+
 
   const [activeStatus, setActiveStatus] = useState("Tổng số dự án");
 
@@ -128,29 +153,29 @@ const SideProject = () => {
       box: "bg-red-600",
     },
     {
-      label: "Đang hoạt động",
-      count: statusCounts["Đang hoạt động"],
+      label: "Đang chuẩn bị",
+      count: statusCounts["Đang chuẩn bị"],
       color: "text-red-600",
       box: "bg-blue-600",
     },
     {
-      label: "Đang hoàn thiện hồ sơ đầu tư",
-      count: statusCounts["Đang hoàn thiện hồ sơ đầu tư"],
+      label: "Đang thi công",
+      count: statusCounts["Đang thi công"],
       color: "text-red-600",
       box: "bg-green-600",
     },
     {
-      label: "Chậm tiến độ – đang hoàn thiện",
-      count: statusCounts["Chậm tiến độ – đang hoàn thiện"],
+      label: "Hoàn thành",
+      count: statusCounts["Hoàn thành"],
       color: "text-red-600",
       box: "bg-yellow-500",
     },
     {
-      label: "Đang thực hiện",
-      count: statusCounts["Đang thực hiện"],
+      label: "Tạm dừng",
+      count: statusCounts["Tạm dừng"],
       color: "text-red-600",
       box: "bg-purple-500",
-    },
+    }
   ];
 
   const getStatusColor = (status) => {
@@ -161,10 +186,10 @@ const SideProject = () => {
   const calculateStatusCounts = (subProjects) => {
     const counts = {
       total: subProjects.length,
-      "Đang hoạt động": 0,
-      "Đang hoàn thiện hồ sơ đầu tư": 0,
-      "Chậm tiến độ – đang hoàn thiện": 0,
-      "Đang thực hiện": 0,
+      "Đang chuẩn bị": 0,
+      "Đang thi công": 0,
+      "Hoàn thành": 0,
+      "Tạm dừng": 0
     };
 
     subProjects.forEach((subProject) => {
@@ -482,44 +507,82 @@ const SideProject = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200">
-      <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4">
-
+    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
+      <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
         <div>
           <button
             className="p-2 rounded hover:bg-gray-200"
             aria-label="Navigation menu"
           ></button>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 pt-0 md:pt-1">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
           <span></span>
-          <div className="bg-gray-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center">
-            R
+          <div className="inline-block" ref={menuRef}>
+              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                onClick={() => setShowMenu(!showMenu)}
+              >
+                R
+              </button>
+              {showMenu && (
+            <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+              <button
+                className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+              >
+                Đăng xuất
+                </button>
+            </div>
+          )}
           </div>
         </div>
       </header>
 
-      <div className="px-6 pb-2 pt-2">
-        <h2 className="text-l mt-6 md:mt-0 font-bold">
-          {project.TenDuAn}
-        </h2>
+
+      {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
+      <div className="md:hidden flex justify-between items-center px-4 mb-2">
+        <button 
+          onClick={() => setShowMobileFilters(!showMobileFilters)}
+          className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
+        >
+          <FaFilter className="text-gray-600" />
+          <span>Bộ lọc</span>
+        </button>
+        
+        <button 
+          onClick={handleExportReport}
+          className="bg-green-700 text-white px-4 py-1 rounded font-bold mr-2 ml-2"
+        >
+          XUẤT BÁO CÁO
+        </button>
+
+        <button
+          onClick={() => setShowAddSideProject(true)}
+          className="bg-teal-900 text-white px-4 py-1 rounded font-bold "
+        >
+          TẠO DỰ ÁN MỚI
+        </button>
       </div>
 
-      <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
-        <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-          <div className="flex flex-col md:flex-row items-center gap-2">
-            <div className="w-full md:w-64">
+      {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
+      {showMobileFilters && (
+        <div className="md:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
+          {/* Các phần tử filter giống như bản desktop nhưng responsive cho mobile */}
+          <div>
+            <div>
               <input
                 type="text"
                 placeholder="Tìm dự án"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-3 pr-10 py-1 border rounded w-full text-sm"
+                className="pl-3 pr-10 py-1 border rounded w-full"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
@@ -532,20 +595,117 @@ const SideProject = () => {
                 </ul>
               )}
             </div>
-            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-sm text-gray-700 bg-white w-full md:w-auto">
+          </div>
+
+          <div>
+            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-gray-700 bg-white w-full">
               <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[120px]"
               />
               <span className="mx-1">-</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[120px]"
+              />
+            </div>
+          </div>  
+
+          {/* Status */}
+          <div>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+              <option value="Đang thi công">Đang thi công</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Tạm dừng">Tạm dừng</option>
+            </select>
+          </div>
+
+          {/* Completion Level */}
+          <div>
+            <select
+              value={completionLevel}
+              onChange={(e) => setCompletionLevel(e.target.value)}
+              className="px-3 py-1 border rounded w-full"
+            >
+              <option value="all">Mọi tiến độ</option>
+              <option value="20">>20%</option>
+              <option value="50">>50%</option>
+              <option value="80">>80%</option>
+              <option value="100">100%</option>
+            </select>
+          </div>
+
+          {/* Reset Button */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                resetFilters();
+                setShowMobileFilters(false);
+              }}
+              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded font-medium"
+            >
+              Xóa lọc
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="px-6 pb-2 pt-2">
+        <h2 className="font-bold">
+          {project.TenDuAn}
+        </h2>
+      </div>
+
+      <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
+        <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
+          <div className="hidden md:flex flex-col md:flex-row items-center gap-2">
+            <div className="w-full md:w-64">
+              <input
+                type="text"
+                placeholder="Tìm dự án"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="pl-3 pr-10 py-1 border rounded w-full "
+              />
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto ">
+                  {searchSuggestions.map((suggestion, index) => (
+                    <li
+                      key={index}
+                      onClick={() => selectSuggestion(suggestion)}
+                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                    >
+                      {suggestion}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5  text-gray-700 bg-white w-full md:w-auto">
+              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
+              />
+              <span className="mx-1">-</span>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
               />
             </div>
             <select
@@ -554,17 +714,10 @@ const SideProject = () => {
               className="px-3 py-1 border rounded w-full md:w-48"
             >
               <option value="all">Tất cả trạng thái</option>
-              <option value="Chậm tiến độ">Chậm tiến độ</option>
-              <option value="Đang triển khai">Đang triển khai</option>
-              <option value="Đang tiến hành">Đang tiến hành</option>
-              <option value="Đã hoàn thành">Đã hoàn thành</option>
-              <option value="Đã phê duyệt - chờ khởi công">
-                Đã phê duyệt-chờ khởi công
-              </option>
-              <option value="Đã phê duyệt - chậm tiến độ">
-                Đã phê duyệt-chậm tiến độ
-              </option>
-              <option value="Dự kiến khởi công">Dự kiến khởi công</option>
+              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+              <option value="Đang thi công">Đang thi công</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="Tạm dừng">Tạm dừng</option>
             </select>
             <select
               value={completionLevel}
@@ -579,21 +732,18 @@ const SideProject = () => {
             </select>
             <button
               onClick={resetFilters}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
+              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded  font-medium md:col-start-4"
             >
               Xóa lọc
             </button>
           </div>
-          <div className="flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              XUẤT EXCEL
-            </button>
-            <button className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              NHẬP EXCEL
+          <div className="hidden md:flex gap-2 mb-2 mt-3">
+            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold " onClick={handleExportReport}>
+              XUẤT BÁO CÁO
             </button>
             <button
               onClick={() => setShowAddSideProject(true)}
-              className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm"
+              className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold "
             >
               TẠO DỰ ÁN MỚI
             </button>
@@ -619,8 +769,8 @@ const SideProject = () => {
                   `}
                 >
                   <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className="text-sm font-bold">{status.label}</div>
-                  <div className="text-sm text-gray-500">{status.count}</div>
+                  <div className=" font-bold">{status.label}</div>
+                  <div className=" text-gray-500">{status.count}</div>
                 </div>
               ))}
             </div>
@@ -628,7 +778,7 @@ const SideProject = () => {
 
           <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
 
-          <div className="p-2 font-sans text-[13px]">
+          <div className="p-2 font-sans">
             {/* Status Bar - hidden on mobile */}
             <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
               {statusesLabel.map((s) => {
@@ -637,7 +787,7 @@ const SideProject = () => {
                   <div
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
+                    className={`cursor-pointer px-2 py-1  font-semibold border-b-[3px] transition-colors duration-150 ${isActive
                       ? `${s.color} border-red-600`
                       : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
                       }`}
@@ -657,9 +807,9 @@ const SideProject = () => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3 ">
+            <div className="md:hidden mb-3" ref={triggerRef}>
               <div
-                className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
+                className="w-full p-2 border rounded-md  flex items-center justify-between cursor-pointer bg-white"
                 onClick={() => setIsSelectOpen(!isSelectOpen)}
               >
                 <div className="flex items-center gap-2">
@@ -692,7 +842,11 @@ const SideProject = () => {
               </div>
 
               {isSelectOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                  style={{
+                    top: `calc(${triggerRef.current?.getBoundingClientRect().bottom}px + 8px)`
+                  }}
+                >
                   <div
                     className={`p-2 flex items-center gap-2 ${!selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
                       }`}
@@ -730,16 +884,16 @@ const SideProject = () => {
             >
               <div className="overflow-y-auto">
                 <h1 className="text-l mt-6 md:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>
-                <table className="min-w-full border border-gray-300 text-sm">
+                <table className="min-w-full border border-gray-300 ">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">
-                      <th className="border px-2 py-1 w-6 text-sm">CHỌN</th>
-                      <th className="border px-2 py-1 text-sm">THAO TÁC</th>
-                      <th className="border px-2 py-1 text-sm">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-1 text-sm">TÊN DỰ ÁN</th>
-                      <th className="border px-2 py-1 text-sm">DÀI TUYẾN</th>
-                      <th className="border px-2 py-1 text-sm">TRẠNG THÁI</th>
-                      <th className="border px-2 py-1 text-sm">TIẾN ĐỘ</th>
+                      <th className="border px-2 py-1 w-6 ">CHỌN</th>
+                      <th className="border px-2 py-1 ">THAO TÁC</th>
+                      <th className="border px-2 py-1 ">MÃ DỰ ÁN</th>
+                      <th className="border px-2 py-1 ">TÊN DỰ ÁN</th>
+                      <th className="border px-2 py-1 ">DÀI TUYẾN</th>
+                      <th className="border px-2 py-1 ">TRẠNG THÁI</th>
+                      <th className="border px-2 py-1 ">TIẾN ĐỘ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -813,7 +967,7 @@ const SideProject = () => {
                             <td className="border px-1 py-2 text-blue-600 font-medium">
                               <div>{subProject.DuAnID}</div>
                               <div
-                                className="text-blue-400 text-xs cursor-pointer hover:underline"
+                                className="text-blue-400  cursor-pointer hover:underline"
                                 onClick={() => handleDetail(subProject.DuAnID)}
                               >
                                 Xem chi tiết
@@ -828,7 +982,7 @@ const SideProject = () => {
 
                             <td className="border px-1 py-2">
                               <span
-                                className={`px-2 py-[2px] text-white text-xs rounded-full ${getStatusColor(
+                                className={`px-2 py-[2px] text-white  rounded-full ${getStatusColor(
                                   subProject.TrangThai
                                 )}`}
                               >
@@ -846,7 +1000,7 @@ const SideProject = () => {
                                     alt="Kế hoạch"
                                     className="flex-shrink-0"
                                   />
-                                  <span className="text-xs text-blue-600 font-bold">
+                                  <span className=" text-blue-600 font-bold">
                                     Kế hoạch:{" "}
                                     <strong className="font-medium">
                                       {subProject.phanTramKeHoach || "0"}%
@@ -861,7 +1015,7 @@ const SideProject = () => {
                                     alt="Hoàn thành"
                                     className="flex-shrink-0"
                                   />
-                                  <span className="text-xs text-green-600 font-bold">
+                                  <span className=" text-green-600 font-bold">
                                     Hoàn thành:{" "}
                                     <strong className="font-medium">
                                       {subProject.phanTramHoanThanh || "0"}%
@@ -876,7 +1030,7 @@ const SideProject = () => {
                                     alt="Chậm tiến độ"
                                     className="flex-shrink-0"
                                   />
-                                  <span className="text-xs text-yellow-600 font-bold">
+                                  <span className=" text-yellow-600 font-bold">
                                     Chậm tiến độ:{" "}
                                     <strong className="font-medium">
                                       {subProject.phanTramChamTienDo || "0"}%
@@ -889,17 +1043,17 @@ const SideProject = () => {
                         ))
                     ) : (
                       <tr>
-                        <td colSpan="8" className="p-4 text-center text-sm text-gray-500">
+                        <td colSpan="8" className="p-4 text-center  text-gray-500">
                           <div className="text-center text-gray-500 py-4">
                             Không tìm thấy dự án nào phù hợp
-                            <div className="mt-2 text-sm text-gray-500">
+                            <div className="mt-2  text-gray-500">
                               <p>Dự án này hiện chưa có dự án thành phần nào.</p>
                               <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
                             </div>
                             <div className="mt-6">
                               <button
                                 type="button"
-                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                 onClick={() => setShowAddPackage(true)}
                               >
                                 <svg
@@ -1033,7 +1187,7 @@ const SideProject = () => {
                           Trạng thái:
                         </div>
                         <span
-                          className={`px-2 py-[2px] text-white text-xs rounded-full ${getStatusColor(
+                          className={`px-2 py-[2px] text-white  rounded-full ${getStatusColor(
                             subProject.TrangThai
                           )}`}
                         >
@@ -1052,7 +1206,7 @@ const SideProject = () => {
                             height="16"
                             alt="Kế hoạch"
                           />
-                          <span className="text-xs text-blue-600 font-bold">
+                          <span className=" text-blue-600 font-bold">
                             Kế hoạch:{" "}
                             <strong>
                               {subProject.phanTramKeHoach || "0"}%
@@ -1066,7 +1220,7 @@ const SideProject = () => {
                             height="16"
                             alt="Hoàn thành"
                           />
-                          <span className="text-xs text-green-600 font-bold">
+                          <span className=" text-green-600 font-bold">
                             Hoàn thành:{" "}
                             <strong>
                               {subProject.phanTramHoanThanh || "0"}%
@@ -1080,7 +1234,7 @@ const SideProject = () => {
                             height="16"
                             alt="Chậm tiến độ"
                           />
-                          <span className="text-xs text-yellow-600 font-bold">
+                          <span className=" text-yellow-600 font-bold">
                             Chậm tiến độ:{" "}
                             <strong>
                               {subProject.phanTramChamTienDo || "0"}%
@@ -1093,14 +1247,14 @@ const SideProject = () => {
               ) : (
                 <div className="text-center text-gray-500 py-4">
                   Không tìm thấy dự án nào phù hợp
-                  <div className="mt-2 text-sm text-gray-500">
+                  <div className="mt-2  text-gray-500">
                     <p>Dự án này hiện chưa có dự án thành phần nào.</p>
                     <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
                   </div>
                   <div className="mt-6">
                     <button
                       type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       onClick={() => setShowAddPackage(true)}
                     >
                       <svg

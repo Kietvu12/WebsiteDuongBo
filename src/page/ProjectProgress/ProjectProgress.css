@@ -1,0 +1,15 @@
+.plan{
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #fff;
+    width: 100%;
+    font-size: 16px;
+    padding-top: 3rem; /* tương đương pt-12 */
+}
+
+@media (min-width: 768px) {
+  .plan {
+    padding-top: 0rem; /* tương đương md:pt-0 */
+  }
+}
