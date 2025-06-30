@@ -1,85 +1,163 @@
+require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const winston = require('winston');
+const { combine, timestamp, printf } = winston.format;
+
+// 1. Cấu hình logging
+const logFormat = printf(({ level, message, timestamp }) => {
+  return `${timestamp} [${level.toUpperCase()}]: ${message}`;
+});
+
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: combine(
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    logFormat
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ 
+      filename: 'logs/error.log', 
+      level: 'error',
+      maxsize: 5 * 1024 * 1024
+    }),
+    new winston.transports.File({ 
+      filename: 'logs/combined.log',
+      maxsize: 10 * 1024 * 1024
+    })
+  ],
+  exceptionHandlers: [
+    new winston.transports.File({ filename: 'logs/exceptions.log' })
+  ]
+});
+
+// Tạo thư mục logs nếu chưa tồn tại
+if (!fs.existsSync('logs')) {
+  fs.mkdirSync('logs');
+}
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// 2. Middleware
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Tạo connection pool thay vì single connection
+// 3. Cấu hình MySQL Pool
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '123456',
-  database: 'dulieuduongbo',
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '123456',
+  database: process.env.DB_NAME || 'dulieuduongbo',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: parseInt(process.env.DB_POOL_LIMIT) || 20,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 30000,
+  timezone: '+00:00'
 }).promise();
 
-// Xử lý kết nối pool
+// 4. Xử lý sự kiện kết nối
 pool.on('connection', (connection) => {
-  console.log('MySQL connection established');
+  logger.info(`MySQL connection established (ID: ${connection.threadId})`);
+  setInterval(() => connection.ping(), 30000);
+});
+
+pool.on('acquire', (connection) => {
+  logger.debug(`Connection acquired (ID: ${connection.threadId})`);
+});
+
+pool.on('release', (connection) => {
+  logger.debug(`Connection released (ID: ${connection.threadId})`);
 });
 
 pool.on('error', (err) => {
-  console.error('MySQL pool error:', err);
+  logger.error('MySQL Pool Error:', {
+    code: err.code,
+    message: err.message,
+    stack: err.stack
+  });
 });
+
+// 5. Hàm kiểm tra kết nối database
+async function checkDatabaseConnection() {
+  let connection;
+  try {
+    connection = await pool.getConnection();
+    const [rows] = await connection.query('SELECT 1');
+    logger.info('Database connection check: OK');
+    return true;
+  } catch (err) {
+    logger.error('Database connection check failed:', {
+      code: err.code,
+      message: err.message
+    });
+    return false;
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
+// 6. Middleware xử lý upload file
 function createUploadMiddleware(loaiDoiTuong, doiTuongID = 'temp') {
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      const folderName = loaiDoiTuong.toUpperCase();
-      const objectId = String(doiTuongID);
-
-      const uploadPath = path.join(__dirname, 'Uploads', folderName, objectId);
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath, { recursive: true });
+      const folderPath = path.join(__dirname, 'uploads', loaiDoiTuong.toUpperCase(), String(doiTuongID));
+      
+      if (!fs.existsSync(folderPath)) {
+        fs.mkdirSync(folderPath, { recursive: true });
       }
 
-      cb(null, uploadPath);
+      cb(null, folderPath);
     },
     filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
+      const ext = path.extname(file.originalname).toLowerCase();
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      cb(null, filename);
     }
   });
 
-  return multer({ 
+  return multer({
     storage,
-    limits: { fileSize: 100 * 1024 * 1024 },
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
     fileFilter: (req, file, cb) => {
-      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.png', '.zip'];
-      const extname = path.extname(file.originalname).toLowerCase();
-      if (allowedTypes.includes(extname)) {
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      
+      if (allowedTypes.includes(ext)) {
         cb(null, true);
       } else {
-        cb(new Error('Loại file không được hỗ trợ'), false);
+        cb(new Error(`Loại file ${ext} không được hỗ trợ`));
       }
     }
-  }).array('files', 5); // Cho phép tối đa 5 file
+  }).array('files', 5); // Tối đa 5 files
 }
 
-// Kết nối với MySQL
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '123456',
-  database: 'dulieuduongbo',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-}).promise();
+// 7. Health Check Endpoint
+app.get('/health', async (req, res) => {
+  const dbStatus = await checkDatabaseConnection();
+  const status = dbStatus ? 200 : 503;
 
-app.use(cors());
-app.use(express.json());
+  res.status(status).json({
+    status: dbStatus ? 'healthy' : 'unhealthy',
+    database: dbStatus ? 'connected' : 'disconnected',
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+    timestamp: new Date().toISOString()
+  });
+});
 app.post('/api/nhathau', async (req, res) => {
   try {
     const {
@@ -4709,32 +4787,101 @@ app.get('/hangmuc/:hangMucId/kehoach', async (req, res) => {
 });
 
 
-// Middleware xử lý lỗi toàn cục
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  res.status(500).json({
+  logger.error('Request Error:', {
+    method: req.method,
+    path: req.path,
+    error: {
+      message: err.message,
+      stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+    }
+  });
+
+  const statusCode = err.statusCode || 500;
+  const response = {
     success: false,
-    message: err.message || 'Đã xảy ra lỗi hệ thống'
+    message: err.message || 'Internal Server Error'
+  };
+
+  if (process.env.NODE_ENV !== 'production') {
+    response.stack = err.stack;
+  }
+
+  res.status(statusCode).json(response);
+});
+
+// 9. Graceful Shutdown
+function gracefulShutdown() {
+  logger.info('Starting graceful shutdown...');
+  
+  // Đóng server HTTP trước
+  server.close(async (err) => {
+    if (err) {
+      logger.error('HTTP server close error:', err);
+      process.exit(1);
+    }
+
+    logger.info('HTTP server closed');
+    
+    // Đóng pool kết nối MySQL
+    try {
+      await pool.end();
+      logger.info('MySQL pool closed');
+      process.exit(0);
+    } catch (dbErr) {
+      logger.error('MySQL pool close error:', dbErr);
+      process.exit(1);
+    }
+  });
+
+  // Force shutdown sau 30s nếu chưa hoàn thành
+  setTimeout(() => {
+    logger.error('Forcing shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+}
+
+// 10. Xử lý tín hiệu shutdown
+process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection:', {
+    promise: promise,
+    reason: reason instanceof Error ? {
+      message: reason.message,
+      stack: reason.stack
+    } : reason
   });
 });
 
-// Đóng kết nối pool khi server dừng
-process.on('SIGINT', () => {
-  pool.end()
-    .then(() => {
-      console.log('MySQL pool closed');
-      process.exit(0);
-    })
-    .catch(err => {
-      console.error('Error closing MySQL pool:', err);
-      process.exit(1);
-    });
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', {
+    message: err.message,
+    stack: err.stack
+  });
+  
+  // Chỉ thoát nếu lỗi nghiêm trọng
+  if (err.code === 'ECONNREFUSED' || err.code === 'EADDRINUSE') {
+    process.exit(1);
+  }
 });
 
-// Khởi động server
-app.listen(port, () => {
-  console.log(`Server đang chạy trên port ${port}`);
+// 11. Khởi động server
+const server = app.listen(port, async () => {
+  logger.info(`Server started on port ${port}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Kiểm tra kết nối database khi khởi động
+  const dbConnected = await checkDatabaseConnection();
+  if (!dbConnected) {
+    logger.warn('Server started without database connection');
+  }
 });
 
-// Export pool để sử dụng trong các route
-module.exports = { pool };
+// 12. Export để sử dụng trong các module khác
+module.exports = {
+  app,
+  pool,
+  logger,
+  createUploadMiddleware
+};

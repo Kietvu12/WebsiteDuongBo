@@ -1017,7 +1017,7 @@ const AddNewProject = () => {
                     <button
                         type="button"
                         className="px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center text-xs"
-                        onClick={() => navigate('/duan')}
+                        onClick={() => navigate('/home')}
                     >
                         <FaTimes className="mr-1 text-xs" />
                         Hủy bỏ
@@ -1057,7 +1057,6 @@ const AddNewProject = () => {
                             <FaCheckCircle />
                         </div>
                         <h2 className="text-lg font-semibold mb-1">Tạo dự án thành công!</h2>
-                        <p className="text-sm text-gray-600 mb-4">Bạn muốn tiếp tục thêm dự án thành phần?</p>
                         <div className="flex justify-center space-x-2">
                             <button
                                 onClick={() => setShowSuccessModal(false)}
@@ -1065,16 +1064,7 @@ const AddNewProject = () => {
                             >
                                 Đóng
                             </button>
-                            <button
-                                onClick={() => {
-                                    setShowSuccessModal(false);
-                                    // Chuyển hướng đến trang thêm dự án thành phần
-                                    navigate(`/add-new/${createdProjectId}`);
-                                }}
-                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                            >
-                                Thêm dự án thành phần
-                            </button>
+                           
                         </div>
                     </div>
                 </div>
