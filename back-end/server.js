@@ -1462,6 +1462,242 @@ async function getNhaThauInfo(nhaThauId) {
   );
   return nhaThau.length > 0 ? nhaThau[0] : null;
 };
+app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
+  try {
+    const duAnId = req.params.duAnId;
+
+    // 1. Lấy thông tin cơ bản của dự án (bao gồm cả thông tin nhà thầu nếu có)
+    const [duAn] = await db.query(
+      `SELECT d.*, nt.* 
+       FROM duan d
+       LEFT JOIN nhathau nt ON d.ChuDauTu = nt.NhaThauID
+       WHERE d.DuAnID = ?`,
+      [duAnId]
+    );
+
+    if (duAn.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy dự án với ID này'
+      });
+    }
+
+    const currentDuAn = duAn[0];
+    const isDuAnTong = currentDuAn.ParentID === null;
+
+    // 2. Lấy loại hình dự án
+    const [loaiHinh] = await db.query(
+      `SELECT lh.* FROM loaihinh lh
+       JOIN doituongloaihinh dlh ON lh.LoaiHinh_ID = dlh.LoaiHinh_ID
+       WHERE dlh.DoiTuong_ID = ? AND dlh.LoaiDoiTuong = 'duan'`,
+      [duAnId]
+    );
+
+    // 3. Lấy thuộc tính loại hình và giá trị
+    const [thuocTinh] = await db.query(
+      `SELECT tt.*, gt.GiaTri 
+       FROM thuoctinhloaihinh tt
+       LEFT JOIN giatrithuoctinh gt ON tt.ThuocTinh_ID = gt.ThuocTinh_ID 
+         AND gt.DoiTuong_ID = ? AND gt.LoaiDoiTuong = 'duan'
+       WHERE tt.LoaiHinh_ID = ?`,
+      [duAnId, loaiHinh[0]?.LoaiHinh_ID]
+    );
+
+    // 4. Chuẩn bị thông tin chủ đầu tư
+    let chuDauTuInfo = null;
+    if (currentDuAn.NhaThauID) {
+      chuDauTuInfo = {
+        nhaThauId: currentDuAn.NhaThauID,
+        tenNhaThau: currentDuAn.TenNhaThau,
+        maSoThue: currentDuAn.MaSoThue,
+        diaChiTruSo: currentDuAn.DiaChiTruSo,
+        soDienThoai: currentDuAn.SoDienThoai,
+        email: currentDuAn.Email,
+        nguoiDaiDien: currentDuAn.NguoiDaiDien,
+        chucVuNguoiDaiDien: currentDuAn.ChucVuNguoiDaiDien
+      };
+    }
+
+    // 5. Xác định danh sách dự án cần xử lý
+    let duAnList = [];
+    if (isDuAnTong) {
+      // Lấy tất cả dự án thành phần nếu là dự án tổng
+      const [duAnThanhPhan] = await db.query(
+        'SELECT * FROM duan WHERE ParentID = ?',
+        [duAnId]
+      );
+      duAnList = [currentDuAn, ...duAnThanhPhan];
+    } else {
+      // Nếu là dự án thành phần, chỉ lấy chính nó
+      duAnList = [currentDuAn];
+    }
+
+    // 6. Lấy tất cả gói thầu liên quan
+    const [allGoiThau] = await db.query(
+      `SELECT gt.*, nt.* 
+       FROM goithau gt
+       LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
+       WHERE gt.DuAn_ID IN (${duAnList.map(da => da.DuAnID).join(',')})`
+    );
+
+    // 7. Lấy tất cả hạng mục
+    const [allHangMuc] = await db.query(
+      `SELECT hm.* FROM hangmuc hm
+       WHERE hm.GoiThauID IN (${allGoiThau.map(gt => gt.GoiThau_ID).join(',') || 'NULL'})`
+    );
+
+    // 8. Lấy tất cả kế hoạch
+    const [allKeHoach] = await db.query(
+      `SELECT kh.* FROM quanlykehoach kh
+       WHERE kh.HangMucID IN (${allHangMuc.map(hm => hm.HangMucID).join(',') || 'NULL'})`
+    );
+
+    // 9. Lấy tất cả tiến độ thực hiện
+    const [allTienDo] = await db.query(
+      `SELECT td.* FROM tiendothuchien td
+       WHERE td.KeHoachID IN (${allKeHoach.map(kh => kh.KeHoachID).join(',') || 'NULL'})`
+    );
+
+    // 10. Lấy tất cả vướng mắc
+    const [allVuongMac] = await db.query(
+      `SELECT vm.* FROM vuongmac vm
+       WHERE vm.KeHoachID IN (${allKeHoach.map(kh => kh.KeHoachID).join(',') || 'NULL'})`
+    );
+
+    // 11. Lấy tất cả tài liệu liên quan
+    const [allTaiLieu] = await db.query(
+      `SELECT * FROM tailieu 
+       WHERE (LoaiDoiTuong = 'DUAN' AND DoiTuongID IN (${duAnList.map(da => da.DuAnID).join(',')}))
+         OR (LoaiDoiTuong = 'GOITHAU' AND DoiTuongID IN (${allGoiThau.map(gt => gt.GoiThau_ID).join(',') || 'NULL'}))
+         OR (LoaiDoiTuong = 'HANGMUC' AND DoiTuongID IN (${allHangMuc.map(hm => hm.HangMucID).join(',') || 'NULL'}))
+         OR (LoaiDoiTuong = 'KEHOACH' AND DoiTuongID IN (${allKeHoach.map(kh => kh.KeHoachID).join(',') || 'NULL'}))`
+    );
+
+    // 12. Tạo cấu trúc phân cấp (ngoại trừ level dự án)
+    const phanCapGoiThau = allGoiThau.map(gt => {
+      const hangMuc = allHangMuc.filter(hm => hm.GoiThauID === gt.GoiThau_ID);
+      
+      const hangMucWithDetails = hangMuc.map(hm => {
+        const keHoach = allKeHoach.filter(kh => kh.HangMucID === hm.HangMucID);
+        
+        const keHoachWithDetails = keHoach.map(kh => {
+          const tienDo = allTienDo.filter(td => td.KeHoachID === kh.KeHoachID);
+          const vuongMac = allVuongMac.filter(vm => vm.KeHoachID === kh.KeHoachID);
+          
+          return {
+            ...kh,
+            tienDo,
+            vuongMac
+          };
+        });
+        
+        return {
+          ...hm,
+          keHoach: keHoachWithDetails
+        };
+      });
+      
+      return {
+        ...gt,
+        hangMuc: hangMucWithDetails
+      };
+    });
+
+    // 13. Tổng hợp dữ liệu theo cấu trúc yêu cầu
+    const result = {
+      success: true,
+      data: {
+        // Thông tin dự án (không phân cấp)
+        thongTinDuAn: {
+          ...currentDuAn,
+          loaiHinh: loaiHinh[0] || null,
+          thuocTinh: thuocTinh.map(tt => ({
+            thuocTinhId: tt.ThuocTinh_ID,
+            tenThuocTinh: tt.TenThuocTinh,
+            kieuDuLieu: tt.KieuDuLieu,
+            donVi: tt.DonVi,
+            giaTri: tt.GiaTri
+          })),
+          chuDauTu: chuDauTuInfo
+        },
+        
+        // Danh sách phẳng (như cũ)
+        danhSachDuAn: duAnList.map(da => ({
+          duAnId: da.DuAnID,
+          tenDuAn: da.TenDuAn,
+          parentId: da.ParentID,
+          isDuAnTong: da.ParentID === null
+        })),
+        danhSachGoiThau: allGoiThau.map(gt => ({
+          goiThauId: gt.GoiThau_ID,
+          tenGoiThau: gt.TenGoiThau,
+          duAnId: gt.DuAn_ID,
+          giaTriHopDong: gt.GiaTriHĐ,
+          nhaThau: gt.NhaThauID ? {
+            nhaThauId: gt.NhaThauID,
+            tenNhaThau: gt.TenNhaThau,
+            maSoThue: gt.MaSoThue
+          } : null,
+          trangThai: gt.TrangThai
+        })),
+        danhSachHangMuc: allHangMuc.map(hm => ({
+          hangMucId: hm.HangMucID,
+          tenHangMuc: hm.TenHangMuc,
+          goiThauId: hm.GoiThauID,
+          loaiHangMuc: hm.LoaiHangMuc
+        })),
+        danhSachKeHoach: allKeHoach.map(kh => ({
+          keHoachId: kh.KeHoachID,
+          tenCongTac: kh.TenCongTac,
+          hangMucId: kh.HangMucID,
+          khoiLuongKeHoach: kh.KhoiLuongKeHoach,
+          donViTinh: kh.DonViTinh,
+          ngayBatDau: kh.NgayBatDau,
+          ngayKetThuc: kh.NgayKetThuc
+        })),
+        danhSachTienDo: allTienDo.map(td => ({
+          tienDoId: td.TienDoID,
+          keHoachId: td.KeHoachID,
+          ngayCapNhat: td.NgayCapNhat,
+          khoiLuongThucHien: td.KhoiLuongThucHien,
+          donViTinh: td.DonViTinh
+        })),
+        danhSachVuongMac: allVuongMac.map(vm => ({
+          vuongMacId: vm.VuongMacID,
+          keHoachId: vm.KeHoachID,
+          loaiVuongMac: vm.LoaiVuongMac,
+          moTaChiTiet: vm.MoTaChiTiet,
+          ngayPhatSinh: vm.NgayPhatSinh,
+          ngayKetThuc: vm.NgayKetThuc,
+          mucDo: vm.MucDo
+        })),
+        danhSachTaiLieu: allTaiLieu.map(tl => ({
+          taiLieuId: tl.TaiLieuID,
+          loaiDoiTuong: tl.LoaiDoiTuong,
+          doiTuongId: tl.DoiTuongID,
+          tenTaiLieu: tl.TenTaiLieu,
+          loaiTaiLieu: tl.LoaiTaiLieu,
+          duongDan: tl.DuongDan
+        })),
+        
+        // Dữ liệu phân cấp (ngoại trừ level dự án)
+        phanCap: {
+          goiThau: phanCapGoiThau
+        }
+      }
+    };
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('Database error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 app.get('/duAn/:duAnId/detail', async (req, res) => {
   try {
     const duAnId = req.params.duAnId;

@@ -523,7 +523,7 @@ const Dashboard = () => {
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
           <div className="flex flex-col md:flex-row items-center gap-2">
-            <div className="relative w-full md:w-64">
+            <div className=" w-full md:w-64">
               <input
                 type="text"
                 placeholder="Tìm dự án"
@@ -688,7 +688,7 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3 relative">
+            <div className="md:hidden mb-3 ">
               <div
                 className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
                 onClick={() => setIsSelectOpen(!isSelectOpen)}

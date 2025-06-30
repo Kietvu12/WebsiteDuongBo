@@ -120,7 +120,7 @@ const Detail = () => {
 
         {/* Phần content (hai cột thông tin) */}
         <div
-          className="flex-1 flex flex-col lg:flex-row min-w-0 max-w-full lg:max-w-[1200px] mx-auto overflow-y-auto overflow-x-auto relative"
+          className="flex-1 flex flex-col lg:flex-row min-w-0 max-w-full lg:max-w-[1200px] mx-auto overflow-y-auto overflow-x-auto "
         >
           {/* Cột thông tin 1 (BasicInfo, ProgressChart, ConstructionProgress) */}
           {!isExpanded && (

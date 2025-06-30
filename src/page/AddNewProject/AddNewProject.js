@@ -6,14 +6,6 @@ import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
 import axios from 'axios';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faFilePdf,
-    faFileWord,
-    faFileExcel,
-    faFileAlt,
-    faFileImage
-} from '@fortawesome/free-solid-svg-icons';
 
 const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
     setSelectedLoaiHinh = () => { },
@@ -626,7 +618,7 @@ const AddNewProject = () => {
                     TongChieuDai: '',
                     KeHoachHoanThanh: '',
                     MoTaChung: '',
-                    LoaiHinh_ID: '', // Reset LoaiHinh_ID
+                    LoaiHinh_ID: '', 
                     ThuocTinhValues: {}
                 });
                 setFiles([]);

@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { saveAs } from "file-saver";
 import { FaBold, FaItalic, FaUnderline, FaAlignLeft, FaAlignCenter, FaAlignRight, FaListUl, FaListOl, FaIndent, FaOutdent } from 'react-icons/fa';
 import htmlDocx from 'html-docx-js/dist/html-docx';
+import { FaFileExport } from 'react-icons/fa';
+import axios from 'axios';
 function ProjectReport() {
   const editorRef = useRef(null);
   const [isBold, setIsBold] = useState(false);
@@ -9,6 +11,71 @@ function ProjectReport() {
   const [isUnderline, setIsUnderline] = useState(false);
   const [alignment, setAlignment] = useState('left');
   const [fontSize, setFontSize] = useState('16px');
+  const [duAnList, setDuAnList] = useState([]);
+  const [selectedDuAnId, setSelectedDuAnId] = useState('');
+  const [duAnDetail, setDuAnDetail] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  useEffect(() => {
+    const fetchDuAnList = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_BASE_URL}/duAnList`);
+        setDuAnList(response.data.data);
+      } catch (err) {
+        setError('Lỗi khi tải danh sách dự án');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDuAnList();
+  }, []);
+  useEffect(() => {
+    if (selectedDuAnId) {
+      const fetchDuAnDetail = async () => {
+        try {
+          setLoading(true);
+          const response = await axios.get(`${API_BASE_URL}/du-an/${selectedDuAnId}/tong-hop`);
+          setDuAnDetail(response.data.data);
+        } catch (err) {
+          setError('Lỗi khi tải chi tiết dự án');
+          console.error(err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchDuAnDetail();
+    }
+  }, [selectedDuAnId]);
+  const handleExport = () => {
+    if (editorRef.current) {
+      // Lấy nội dung HTML đã được định dạng
+      const htmlContent = editorRef.current.innerHTML;
+      
+      // Tạo một blob từ nội dung HTML
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      
+      // Tạo URL tạm thời
+      const url = URL.createObjectURL(blob);
+      
+      // Tạo thẻ a để tải xuống
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Bao-cao-${duAnDetail.thongTinDuAn.TenDuAn}.html`;
+      
+      // Kích hoạt sự kiện click
+      document.body.appendChild(a);
+      a.click();
+      
+      // Dọn dẹp
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
   const formatText = (command, value = null) => {
     document.execCommand(command, false, value);
     updateToolbarState();
@@ -47,6 +114,11 @@ function ProjectReport() {
       selection.addRange(range);
     }
   };
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+  };
   const exportToWord = (e) => {
     e.preventDefault();
     
@@ -76,6 +148,25 @@ function ProjectReport() {
   };
   return (
      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+      <div className="mb-4">
+        <label htmlFor="duAnSelect" className="block mb-2 font-medium">
+          Chọn dự án:
+        </label>
+        <select
+          id="duAnSelect"
+          className="w-full p-2 border rounded"
+          value={selectedDuAnId}
+          onChange={(e) => setSelectedDuAnId(e.target.value)}
+          disabled={loading || error}
+        >
+          <option value="">-- Chọn dự án --</option>
+          {duAnList.map((duAn) => (
+            <option key={duAn.DuAnID} value={duAn.DuAnID}>
+              {duAn.TenDuAn}
+            </option>
+          ))}
+        </select>
+      </div>
       {/* Toolbar */}
       <div className="bg-gray-100 p-2 border-b flex flex-wrap items-center gap-1 sm:gap-2">
     {/* Font Style */}
@@ -182,10 +273,11 @@ function ProjectReport() {
       <option value="5">Large</option>
       <option value="7">Extra Large</option>
     </select>
+
+    <div className="h-6 border-l border-gray-300 mx-1"></div>
+
   </div>
-
-
-      {/* Editor */}
+  {duAnDetail && (
       <div
     className="p-4 sm:p-6 min-h-[300px] sm:min-h-[500px] outline-none"
     contentEditable
@@ -197,13 +289,12 @@ function ProjectReport() {
     onKeyUp={updateToolbarState}
     spellCheck="false"
   >
-
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold uppercase">BÁO CÁO</h1>
+        <h1 className="text-2xl font-bold uppercase">BÁO CÁO {duAnDetail.thongTinDuAn.TenDuAn}</h1>
       </div>
       <div className="mb-8">
         <h2 className="text-lg font-semibold mb-2">
-          Tình hình triển khai Dự án thành phần đoạn Vũng Ăng - Bùng thuộc Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025
+          Tình hình triển khai {duAnDetail.thongTinDuAn.TenDuAn}
         </h2>
         <p className="italic text-sm">
           (Kèm theo Báo cáo số .../BC-BQLD46 ngày /04/2025 của Ban QLDA 6)
@@ -214,19 +305,19 @@ function ProjectReport() {
 
         <ul className="list-disc pl-6 space-y-2">
           <li>
-            <span className="font-medium">Tên dự án:</span> Dự án thành phần đoạn Vũng Ăng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025.
+            <span className="font-medium">Tên dự án:</span> {duAnDetail.thongTinDuAn.TenDuAn}
           </li>
           <li>
-            <span className="font-medium">Tổng chiều dài tuyến:</span> 55,34km; chiều dài qua địa bàn tỉnh Hà Tĩnh khoảng 12,9km (huyện Kỳ Anh và TX. Kỳ Anh); chiều dài qua địa bàn tỉnh Quảng Bình khoảng 42,44km (huyện Quảng Trạch, TX. Ba Đồn và huyện Bố Trạch).
+            <span className="font-medium">Tổng chiều dài tuyến:</span> {duAnDetail.thongTinDuAn.TongChieuDai}km; {duAnDetail.thongTinDuAn.MoTaChung}
           </li>
           <li>
             <span className="font-medium">Tổng mức đầu tư:</span> 12.548 tỷ đồng.
           </li>
           <li>
-            <span className="font-medium">Chủ đầu tư:</span> Ban Quản lý dự án 6.
+            <span className="font-medium">Chủ đầu tư:</span> {duAnDetail.thongTinDuAn.TenNhaThau}
           </li>
           <li>
-            <span className="font-medium">Ngày khởi công:</span> 01/01/2023; hoàn thành vào tháng 30/6/2025 (kế hoạch theo hợp đồng: tháng 10 và 12/2025).
+            <span className="font-medium">Ngày khởi công:</span> {formatDate(duAnDetail.thongTinDuAn.NgayKhoiCong)}; hoàn thành vào tháng {formatDate(duAnDetail.thongTinDuAn.KeHoachHoanThanh)} (kế hoạch theo hợp đồng: tháng 10 và 12/2025).
           </li>
           <li>
             <span className="font-medium">Một số khối lượng thi công chính:</span>
@@ -377,6 +468,7 @@ function ProjectReport() {
 
         <div className="overflow-x-auto mb-6">
           <table className="min-w-full border border-gray-300">
+
             <thead>
               <tr className="bg-gray-100">
                 <th className="border border-gray-300 px-4 py-2 font-medium">TT</th>
@@ -388,61 +480,31 @@ function ProjectReport() {
                 <th className="border border-gray-300 px-4 py-2 font-medium">Thời gian thực hiện Hợp đồng</th>
               </tr>
             </thead>
+            
             <tbody>
-              <tr>
+            {duAnDetail.phanCap?.goiThau?.map((goiThau, index)=>(
+              <tr key={goiThau.goiThauId}>
                 <td className="border border-gray-300 px-4 py-2 text-center">1</td>
                 <td className="border border-gray-300 px-4 py-2">
-                  XL01: Thi công xây dựng đoạn Km508+200 - Km600+700 (bao gồm khảo sát, TKEVTC)
+                  {goiThau.TenGoiThau}
                 </td>
                 <td className="border border-gray-300 px-4 py-2">
-                  Liên danh Công ty TNHH Tập đoàn Sơn Hải - Tổng công ty CP Xuất nhập khẩu và xây dựng Việt Nam - Công ty CP 484 - Công ty CP Xây lắp 368 - Công ty CP 479 Hòa Bình
+                  {goiThau.TenNhaThau}
                 </td>
                 <td className="border border-gray-300 px-4 py-2">
                   Liên danh Công ty CP Tư vấn xây dựng A22 và Công ty CP Tư vấn công ty nghề, thiết bị và kiểm định xây dựng-Comitco
                 </td>
                 <td className="border border-gray-300 px-4 py-2">
-                  <ul className="list-[+] pl-4 space-y-1">
-                    <li>Cầu: 15 cầu/3.464,9m;</li>
-                    <li>Cống: 272 cái;</li>
-                    <li>Hầm: 01 cái/ nhánh phải 840m, nhánh trái 716m;</li>
-                    <li>Hầm chui: 19 cái;</li>
-                    <li>Xử lý đất yếu: 191m;</li>
-                    <li>Đào: 5,5 triệu m3;</li>
-                    <li>Đắp: 2,7 triệu m3;</li>
-                    <li>Móng, mặt đường: 0,62 triệu m2;</li>
-                    <li>Đường gom: 26,58km.</li>
+                  {goiThau.hangMuc.map((hangMuc, index)=>(
+                  <ul key={hangMuc.hangMucID} className="list-[+] pl-4 space-y-1">
+                    <li>{hangMuc.TenHangMuc}</li>
                   </ul>
+                  ))}
                 </td>
-                <td className="border border-gray-300 px-4 py-2 text-center">4.766<br />(bao gồm dự phòng)</td>
-                <td className="border border-gray-300 px-4 py-2 text-center">Trung kỳ 22/02/2023 đến ngày 08/12/2025 (1.020 ngày)</td>
+                <td className="border border-gray-300 px-4 py-2 text-center">{goiThau.GiaTriHĐ}<br />(bao gồm dự phòng)</td>
+                <td className="border border-gray-300 px-4 py-2 text-center">Trung kỳ {formatDate(goiThau.NgayKhoiCong)} đến ngày {formatDate(goiThau.NgayHoanThanh)} (1.020 ngày)</td>
               </tr>
-              <tr>
-                <td className="border border-gray-300 px-4 py-2 text-center">2</td>
-                <td className="border border-gray-300 px-4 py-2">
-                  XL02: Thi công xây dựng đoạn Km600+700 - Km624+228,79 (bao gồm khảo sát, TKEVTC)
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
-                  Liên danh Công ty Cổ phần Đầu tư và xây dựng giao thông Phương Thành - Công ty Cổ phần Lizen
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
-                  Liên danh Tổng công ty TVTK GTVT-CTC P (TEDI) và Công ty CP TVTK GTVT 4
-                </td>
-                <td className="border border-gray-300 px-4 py-2">
-                  <ul className="list-[+] pl-4 space-y-1">
-                    <li>Cầu: 18 cầu/5.596m;</li>
-                    <li>Cống: 134 cái;</li>
-                    <li>Hầm: Không có;</li>
-                    <li>Hầm chui: 18 cái;</li>
-                    <li>Xử lý đất yếu: 5.630,25m;</li>
-                    <li>Đào: 7,98 triệu m3;</li>
-                    <li>Đắp: 4,25 triệu m3;</li>
-                    <li>Móng, mặt đường: 1,04 triệu m2;</li>
-                    <li>Đường gom: 9,01km.</li>
-                  </ul>
-                </td>
-                <td className="border border-gray-300 px-4 py-2 text-center">5.098<br />(bao gồm dự phòng)</td>
-                <td className="border border-gray-300 px-4 py-2 text-center">Trung kỳ 01/01/2023 đến ngày 17/10/2025 (1.020 ngày)</td>
-              </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -1015,6 +1077,7 @@ function ProjectReport() {
         </div>
       </div>
     </div>
+  )}
 </div>
   )
 }
