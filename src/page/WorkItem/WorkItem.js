@@ -158,11 +158,11 @@ const WorkItem = () => {
             <img src={userIcon} alt="User" className="w-4 h-4 rounded-full" />
           </div>
         </div>
-        <div className="mt-3 sm:mt-4">
+        <div className="mt-10 sm:mt-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex-1 relative">
+            <div className="flex-1">
               <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
-                <div className="relative flex-grow">
+                <div className=" flex-grow">
                   <input
                     type="text"
                     placeholder="Tìm kiếm dự án..."

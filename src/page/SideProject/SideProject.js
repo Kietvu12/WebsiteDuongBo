@@ -484,7 +484,13 @@ const SideProject = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-200">
       <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4">
-
+      <button
+        onClick={() => navigate(-1)}
+        className="p-2 rounded hover:bg-gray-200"
+        aria-label="Quay lại"
+      >
+        <FiArrowLeft className="w-4 h-4" />
+      </button>
         <div>
           <button
             className="p-2 rounded hover:bg-gray-200"

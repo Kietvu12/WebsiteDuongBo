@@ -79,6 +79,32 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
       setDeletingId(null);
     }
   };
+  const handleDeleteKeHoach = async (kehoachId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vướng mắc này?')) {
+      return;
+    }
+
+    try {
+      setDeletingId(kehoachId); // Để hiển thị loading cho item cụ thể
+
+      const response = await fetch(`${API_BASE_URL}/vuongmac/${kehoachId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Xóa không thành công');
+      }
+
+      // Gọi lại fetchData để cập nhật danh sách
+      fetchData();
+    } catch (error) {
+      console.error('Delete error:', error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handleCategoryAdded = (newCategory) => {
     fetchData();
@@ -252,6 +278,7 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                             <td className="px-2 sm:px-4 py-2">
                               <div className="flex space-x-1">
                                 <button
+                                onClick={() => handleDeleteKeHoach(vuongMac.vuongMacId)}
                                   className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
                                   title="Xóa"
                                 >
@@ -315,11 +342,11 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
             )}</div>
           </div>
 
-          <div className="mt-2 flex justify-end">
+          {/* <div className="mt-2 flex justify-end">
             <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
               <FaPlus size={14} />
             </button>
-          </div>
+          </div> */}
         </div>
 
         {/* Level 2 - Gói thầu */}
@@ -353,12 +380,13 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
               </div>
 
               <div className="mt-2 flex justify-end space-x-1">
-                <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                  <FaPlus size={14} />
-                </button>
-                <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                  <FaTrash size={14} />
-                </button>
+              <button
+                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                          title="Thêm hạng mục"
+                          onClick={() => handleAddCategoryClick(goiThau.goiThauId)}
+                        >
+                          <FaPlus size={14} />
+                        </button>
               </div>
             </div>
 
@@ -389,15 +417,26 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                   </div>
 
                   <div className="mt-2 flex justify-end space-x-1">
-                    <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                      <FaPlus size={14} />
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                      <FaTrash size={14} />
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
+                  <button
+                              onClick={() => {
+                                setSelectedHangMucId(hangMuc.hangMucId);
+                                setShowAddVuongMac(true);
+                              }}
+                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                              title="Thêm vướng mắc"
+                            >
+                              <FaPlus size={12} className="sm:w-3.5 sm:h-3.5" />
+                            </button>
+                            <button
+                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                              title="Xóa hạng mục"
+                              onClick={() => handleDeleteHangMuc(hangMuc.hangMucId)}
+                            >
+                              <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
+                            </button>
+                    {/* <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
                       <FaPencilAlt size={14} />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
 
@@ -445,12 +484,13 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                       </div>
 
                       <div className="mt-2 flex justify-end space-x-1">
-                        <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                          <FaTrash size={14} />
-                        </button>
-                        <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                          <FaPencilAlt size={14} />
-                        </button>
+                      <button
+                                onClick={() => handleDeleteKeHoach(vuongMac.vuongMacId)}
+                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
+                                  title="Xóa"
+                                >
+                                  <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
+                                </button>
                       </div>
                     </div>
                   );

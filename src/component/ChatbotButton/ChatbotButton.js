@@ -1,7 +1,9 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { FaComment, FaTimes, FaDatabase } from 'react-icons/fa';
+import { FaComment, FaTimes, FaDatabase, FaExpand, FaCompress } from 'react-icons/fa';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from "rehype-raw";
 import "./ChatbotButton.css";
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -10,6 +12,7 @@ import aiLogo from '../../assets/img/ai.png'
 
 const ChatbotButton = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [messages, setMessages] = useState([
     { id: 'initial-bot-message', type: 'bot', text: 'Xin chào! Tôi có thể giúp gì cho bạn?' },
   ]);
@@ -25,6 +28,10 @@ const ChatbotButton = () => {
       setIsMcpModalOpen(false);
     }
     setIsOpen(prev => !prev);
+  };
+
+  const toggleExpand = () => {
+    setIsExpanded(prev => !prev);
   };
 
   const scrollToBottom = () => {
@@ -59,17 +66,17 @@ const ChatbotButton = () => {
     let finalResponseReceived = false;
 
     try {
-      const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/api/stream', {
+      const response = await fetch('http://localhost:3002/api/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userInput , conversation_id: "Kiet"}),
+        body: JSON.stringify({ message: userInput , conversation_id: "tuan8"}),
       });
       if (!response.ok || !response.body) {
         throw new Error('Lỗi kết nối tới server hoặc không có body');
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
+      const decoder = new TextDecoder('utf-8'); 
       let buffer = '';
 
       while (true) {
@@ -361,25 +368,52 @@ const ChatbotButton = () => {
 
   {/* Chatbot panel */}
   {isOpen && (
-    <div className="fixed bottom-20 right-5 w-80 h-[70vh] bg-white rounded-lg shadow-xl flex flex-col z-50 overflow-hidden md:w-96 sm:right-2 sm:bottom-16 sm:w-[calc(100%-16px)]">
+    <div className={`fixed bg-white rounded-lg shadow-xl flex flex-col z-50 overflow-hidden transition-all duration-300 ${
+      isExpanded 
+        ? 'inset-0 rounded-none' 
+        : 'bottom-20 right-5 w-80 h-[70vh] md:w-96 sm:right-2 sm:bottom-16 sm:w-[calc(100%-16px)]'
+    }`}>
       {/* Header */}
-      <div className="bg-blue-600 text-white p-4 text-center relative">
-        <h3 className="text-lg font-medium">Trợ lý ảo</h3>
-        <button
-          onClick={toggleChatbot}
-          className="absolute right-2 top-2 bg-transparent border-none text-white text-xl p-1 cursor-pointer"
-          aria-label="Đóng chatbot"
-        >
-          <FaTimes />
-        </button>
+      <div className={`bg-blue-600 text-white p-3 text-center relative flex items-center justify-between ${
+        isExpanded ? 'p-4' : 'p-3'
+      }`}>
+        <div className="flex items-center space-x-3">
+          <h3 className={`font-medium ${isExpanded ? 'text-xl' : 'text-lg'}`}>Trợ lý ảo</h3>
+          {isExpanded && (
+            <span className="bg-blue-500 px-2 py-1 rounded-full text-xs">
+              Chế độ toàn màn hình
+            </span>
+          )}
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-colors"
+            title={isExpanded ? 'Thu nhỏ' : 'Phóng to'}
+            aria-label={isExpanded ? 'Thu nhỏ' : 'Phóng to'}
+          >
+            {isExpanded ? <FaCompress className="text-sm" /> : <FaExpand className="text-sm" />}
+          </button>
+          <button
+            onClick={toggleChatbot}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-full hover:bg-red-400 transition-colors"
+            aria-label="Đóng chatbot"
+          >
+            <FaTimes className="text-sm" />
+          </button>
+        </div>
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+      <div className={`flex-1 overflow-y-auto bg-gray-50 ${
+        isExpanded 
+          ? 'p-6 w-full' 
+          : 'p-3'
+      }`}>
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`mb-3 p-3 rounded-2xl max-w-[80%] break-words ${
+            className={`mb-2 p-3 rounded-lg max-w-[85%] break-words ${
               msg.type === 'bot'
                 ? 'bg-gray-200 mr-auto rounded-bl-none'
                 : 'bg-blue-600 text-white ml-auto rounded-br-none'
@@ -387,6 +421,7 @@ const ChatbotButton = () => {
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
               components={{
                 p: ({ children }) => (
                   <p className="whitespace-pre-wrap mb-0">{children}</p>
@@ -395,7 +430,7 @@ const ChatbotButton = () => {
                   <strong className="font-semibold">{children}</strong>
                 ),
                 li: ({ children }) => (
-                  <li className="ml-6 list-disc">{children}</li>
+                  <li className="ml-4 list-disc">{children}</li>
                 ),
               }}
             >
@@ -407,33 +442,40 @@ const ChatbotButton = () => {
       </div>
 
       {/* Input area */}
-      <div className="p-3 bg-white border-t border-gray-200">
-  <div className="flex gap-2 items-stretch">
-    <input
-      type="text"
-      placeholder="Nhập câu hỏi của bạn..."
-      value={userInput}
-      onChange={(e) => setUserInput(e.target.value)}
-      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-      className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-    <button
-      className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-      onClick={handleShowData}
-      title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
-      aria-label="Hiển thị dữ liệu"
-    >
-      <FaDatabase />
-    </button>
-    <button
-      onClick={handleSend}
-      className="flex-shrink-0 px-4 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors whitespace-nowrap"
-    >
-      Gửi
-    </button>
-  </div>
-</div>
-
+      <div className={`bg-white border-t border-gray-200 ${
+        isExpanded 
+          ? 'p-4 w-full' 
+          : 'p-2'
+      }`}>
+        <div className="flex gap-2 items-stretch">
+          <input
+            type="text"
+            placeholder="Nhập câu hỏi của bạn..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            className={`flex-1 min-w-0 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isExpanded ? 'px-6 py-3 text-base' : 'px-3 py-1.5 text-sm'
+            }`}
+          />
+          <button
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+            onClick={handleShowData}
+            title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
+            aria-label="Hiển thị dữ liệu"
+          >
+            <FaDatabase />
+          </button>
+          <button
+            onClick={handleSend}
+            className={`flex-shrink-0 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors whitespace-nowrap ${
+              isExpanded ? 'px-6 py-3 text-base' : 'px-4 py-1.5 text-sm'
+            }`}
+          >
+            Gửi
+          </button>
+        </div>
+      </div>
     </div>
   )}
 

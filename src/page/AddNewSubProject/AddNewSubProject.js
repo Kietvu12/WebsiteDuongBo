@@ -416,7 +416,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                     {isEdit ? "Cập nhật dự án" : "Thêm mơi dự án"}
                 </h1>
                 <div className="flex items-center gap-2">
-                    <button
+                    {/* <button
                         type="button"
                         className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
                     >
@@ -424,7 +424,7 @@ const AddNewSubProject = ({ isEdit, ProjectID, DuAnID, onClose, onSuccess }) => 
                         <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
                             AI
                         </span>
-                    </button>
+                    </button> */}
                     <button
                         onClick={onClose}
                         className="p-1 text-gray-500 hover:text-gray-700 transition-colors"

@@ -71,7 +71,7 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
         setIsLoading(true);
         try {
             const normalizedText = normalizeText(textInput);
-            const response = await fetch('https://f37d-1-53-44-48.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
+            const response = await fetch('https://f956-58-187-57-1.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
