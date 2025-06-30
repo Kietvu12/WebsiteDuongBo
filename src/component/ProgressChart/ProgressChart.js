@@ -35,7 +35,7 @@ const ProgressChart = ({ data }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+    <div className="bg-white rounded-lg p-4 ">
       {/* Header với icon */}
       <div className="flex items-center mb-3">
         <FaChartPie className="text-gray-500 mr-2" size={18} />

@@ -29,7 +29,7 @@ const ConstructionVolume = ({ data, packageId }) => {
 
   if (!data || !data.khoiLuongThiCong || data.khoiLuongThiCong.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg overflow-hidden">
         <Header />
         <div className="p-3 h-60 overflow-y-auto">
           <p className="text-sm text-gray-800 text-left">Không có dữ liệu</p>
@@ -46,7 +46,7 @@ const ConstructionVolume = ({ data, packageId }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden">
       <Header />
       <div className="p-3 h-60 overflow-y-auto">
         <ul className="list-disc pl-4 space-y-2">

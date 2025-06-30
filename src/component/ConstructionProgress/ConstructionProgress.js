@@ -68,7 +68,7 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center space-x-2">
@@ -89,7 +89,7 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
       </div>
       
       {/* Bảng công việc */}
-      <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+      <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
         {tasks.length > 0 ? (
           tasks.map((task, index) => {
             const statusStyle = getStatusStyle(task.TrangThai, task.NgayKetThuc);

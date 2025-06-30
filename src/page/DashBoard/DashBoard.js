@@ -377,7 +377,7 @@ const Dashboard = () => {
         }
 
         console.log("Dữ liệu đã tìm nạp:", fetchedData);
-        setProjects(fetchedData);
+        // setProjects(fetchedData);
         setFilteredProjects(fetchedData);
         setLoading(false);
       } catch (error) {
@@ -522,7 +522,7 @@ const Dashboard = () => {
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
           <div className="flex flex-col md:flex-row items-center gap-2">
-            <div className="w-full md:w-64">
+            <div className=" w-full md:w-64">
               <input
                 type="text"
                 placeholder="Tìm dự án"

@@ -28,7 +28,7 @@ const ContractorInfo = ({ data }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg mt-2 shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg mt-2 overflow-hidden">
       <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center">
         <FaUsers className="text-gray-500 mr-2" size={14} />
         <h2 className="text-base font-semibold text-gray-800">NHÀ THẦU CHÍNH</h2>

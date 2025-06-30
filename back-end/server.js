@@ -45,6 +45,7 @@ if (!fs.existsSync('logs')) {
 const app = express();
 const port = process.env.PORT || 5000;
 
+
 // 2. Middleware
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
@@ -230,10 +231,34 @@ app.post('/api/nhathau', async (req, res) => {
     res.status(500).json({ error: 'Lỗi server khi thêm nhà thầu' });
   }
 });
-
+app.post('/capNhatTienDoTatCa', async (req, res) => {
+  try {
+    // Lấy tất cả dự án tổng
+    const [duAnTongList] = await pool.query(
+      'SELECT DuAnID FROM duan WHERE ParentID IS NULL'
+    );
+    
+    // Gọi stored procedure cho từng dự án
+    await Promise.all(duAnTongList.map(async (duAn) => {
+      await pool.query('CALL CapNhatTienDoDuAn(?)', [duAn.DuAnID]);
+    }));
+    
+    res.json({
+      success: true,
+      message: `Đã cập nhật tiến độ cho ${duAnTongList.length} dự án tổng`
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi khi cập nhật tiến độ',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 app.get('/duAnTongList', async (req, res) => {
   try {
-    const [duAnTongList] = await db.query(
+    const [duAnTongList] = await pool.query(
       'SELECT * FROM duan WHERE ParentID IS NULL'
     );
 
@@ -248,7 +273,7 @@ app.get('/duAnTongList', async (req, res) => {
       const duAnId = duAnTong.DuAnID;
       
       // Get all sub-projects
-      const [duAnThanhPhan] = await db.query(
+      const [duAnThanhPhan] = await pool.query(
         'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
         [duAnId]
       );
@@ -257,13 +282,13 @@ app.get('/duAnTongList', async (req, res) => {
       const allProjectIds = [duAnId, ...duAnThanhPhan.map(d => d.DuAnID)];
 
       // 1. Count contracts for the main project (including sub-projects)
-      const [goiThauCount] = await db.query(
+      const [goiThauCount] = await pool.query(
         'SELECT COUNT(*) as count FROM goithau WHERE DuAn_ID IN (?)',
         [allProjectIds]
       );
 
       // 2. Get all contractors for the main project (including sub-projects)
-      const [contractors] = await db.query(`
+      const [contractors] = await pool.query(`
         SELECT DISTINCT n.* 
         FROM nhathau n
         JOIN goithau_nhathau gn ON n.NhaThauID = gn.NhaThauID
@@ -277,7 +302,7 @@ app.get('/duAnTongList', async (req, res) => {
       let phanTramHoanThanhTong = 0;
       let phanTramChamTienDoTong = 0;
 
-      const [allGoiThau] = await db.query(
+      const [allGoiThau] = await pool.query(
         `SELECT GoiThau_ID FROM goithau WHERE DuAn_ID IN (?)`,
         [allProjectIds]
       );
@@ -286,7 +311,7 @@ app.get('/duAnTongList', async (req, res) => {
         const goiThauIds = allGoiThau.map(gt => gt.GoiThau_ID);
         
         // Tính tổng khối lượng kế hoạch
-        const [tongKeHoach] = await db.query(
+        const [tongKeHoach] = await pool.query(
           `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
            FROM quanlykehoach kh
            JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
@@ -296,7 +321,7 @@ app.get('/duAnTongList', async (req, res) => {
         tongKhoiLuongKeHoach = tongKeHoach[0].tongKeHoach || 0;
 
         // Tính tổng khối lượng thực hiện
-        const [tongThucHien] = await db.query(
+        const [tongThucHien] = await pool.query(
           `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
            FROM tiendothuchien td
            JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
@@ -315,25 +340,25 @@ app.get('/duAnTongList', async (req, res) => {
       }
 
       const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
-        const [goiThauList] = await db.query(
+        const [goiThauList] = await pool.query(
           'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
           [duAnTP.DuAnID]
         );
 
         const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
-          const [hangMucList] = await db.query(
+          const [hangMucList] = await pool.query(
             'SELECT * FROM hangmuc WHERE GoiThauID = ? ORDER BY HangMucID ASC',
             [goiThau.GoiThau_ID]
           );
 
           const hangMucWithTienDo = await Promise.all(hangMucList.map(async (hangMuc) => {
-            const [keHoachList] = await db.query(
+            const [keHoachList] = await pool.query(
               'SELECT * FROM quanlykehoach WHERE HangMucID = ? ORDER BY KeHoachID ASC',
               [hangMuc.HangMucID]
             );
 
             const keHoachWithTienDo = await Promise.all(keHoachList.map(async (keHoach) => {
-              const [tienDo] = await db.query(
+              const [tienDo] = await pool.query(
                 `SELECT KhoiLuongThucHien, DonViTinh 
                  FROM tiendothuchien 
                  WHERE KeHoachID = ? 
@@ -445,7 +470,7 @@ app.get('/duAnTongList', async (req, res) => {
 });
 app.get('/duAnTong', async (req, res) => {
   try {
-    const [duAnTongList] = await db.query(
+    const [duAnTongList] = await pool.query(
       'SELECT * FROM duan WHERE ParentID IS NULL'
     );
 
@@ -460,7 +485,7 @@ app.get('/duAnTong', async (req, res) => {
       const duAnId = duAnTong.DuAnID;
       
       // Get all sub-projects
-      const [duAnThanhPhan] = await db.query(
+      const [duAnThanhPhan] = await pool.query(
         'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
         [duAnId]
       );
@@ -474,7 +499,7 @@ app.get('/duAnTong', async (req, res) => {
       // Process each sub-project
       const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
         // Get all contract packages for this sub-project
-        const [goiThauList] = await db.query(
+        const [goiThauList] = await pool.query(
           'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
           [duAnTP.DuAnID]
         );
@@ -485,7 +510,7 @@ app.get('/duAnTong', async (req, res) => {
         // Process each contract package
         const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
           // Get all work items for this contract package
-          const [hangMucList] = await db.query(
+          const [hangMucList] = await pool.query(
             'SELECT * FROM hangmuc WHERE GoiThauID = ? ORDER BY HangMucID ASC',
             [goiThau.GoiThau_ID]
           );
@@ -493,7 +518,7 @@ app.get('/duAnTong', async (req, res) => {
           // Process each work item
           const hangMucWithDetails = await Promise.all(hangMucList.map(async (hangMuc) => {
             // Get all plans for this work item
-            const [keHoachList] = await db.query(
+            const [keHoachList] = await pool.query(
               'SELECT * FROM quanlykehoach WHERE HangMucID = ? ORDER BY KeHoachID ASC',
               [hangMuc.HangMucID]
             );
@@ -501,7 +526,7 @@ app.get('/duAnTong', async (req, res) => {
             // Process each plan
             const keHoachWithDetails = await Promise.all(keHoachList.map(async (keHoach) => {
               // Get all progress records for this plan
-              const [tienDoList] = await db.query(
+              const [tienDoList] = await pool.query(
                 'SELECT * FROM tiendothuchien WHERE KeHoachID = ? ORDER BY NgayCapNhat ASC',
                 [keHoach.KeHoachID]
               );
@@ -629,7 +654,7 @@ app.get('/duAnTong', async (req, res) => {
 });
 app.get('/duAnList', async (req, res) => {
   try {
-    const [duAnTongList] = await db.query(
+    const [duAnTongList] = await pool.query(
       'SELECT * FROM duan'
     );
 
@@ -644,7 +669,7 @@ app.get('/duAnList', async (req, res) => {
       const duAnId = duAnTong.DuAnID;
       
       // Get all sub-projects
-      const [duAnThanhPhan] = await db.query(
+      const [duAnThanhPhan] = await pool.query(
         'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
         [duAnId]
       );
@@ -658,7 +683,7 @@ app.get('/duAnList', async (req, res) => {
       // Process each sub-project
       const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
         // Get all contract packages for this sub-project
-        const [goiThauList] = await db.query(
+        const [goiThauList] = await pool.query(
           'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
           [duAnTP.DuAnID]
         );
@@ -669,7 +694,7 @@ app.get('/duAnList', async (req, res) => {
         // Process each contract package
         const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
           // Get all work items for this contract package
-          const [hangMucList] = await db.query(
+          const [hangMucList] = await pool.query(
             'SELECT * FROM hangmuc WHERE GoiThauID = ? ORDER BY HangMucID ASC',
             [goiThau.GoiThau_ID]
           );
@@ -677,7 +702,7 @@ app.get('/duAnList', async (req, res) => {
           // Process each work item
           const hangMucWithDetails = await Promise.all(hangMucList.map(async (hangMuc) => {
             // Get all plans for this work item
-            const [keHoachList] = await db.query(
+            const [keHoachList] = await pool.query(
               'SELECT * FROM quanlykehoach WHERE HangMucID = ? ORDER BY KeHoachID ASC',
               [hangMuc.HangMucID]
             );
@@ -685,7 +710,7 @@ app.get('/duAnList', async (req, res) => {
             // Process each plan
             const keHoachWithDetails = await Promise.all(keHoachList.map(async (keHoach) => {
               // Get all progress records for this plan
-              const [tienDoList] = await db.query(
+              const [tienDoList] = await pool.query(
                 'SELECT * FROM tiendothuchien WHERE KeHoachID = ? ORDER BY NgayCapNhat ASC',
                 [keHoach.KeHoachID]
               );
@@ -814,7 +839,7 @@ app.get('/duAnList', async (req, res) => {
 app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
   try {
     const duAnId = req.params.duAnId;
-    const [duAnTong] = await db.query(
+    const [duAnTong] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NULL',
       [duAnId]
     );
@@ -827,7 +852,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
     }
 
     // 2. Lấy các dự án thành phần
-    const [duAnThanhPhan] = await db.query(
+    const [duAnThanhPhan] = await pool.query(
       'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
       [duAnId]
     );
@@ -837,7 +862,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
     let tongKhoiLuongThucHien = 0;
 
     // Lấy tất cả gói thầu thuộc dự án tổng
-    const [allGoiThau] = await db.query(
+    const [allGoiThau] = await pool.query(
       `SELECT gt.GoiThau_ID 
        FROM goithau gt
        JOIN duan d ON gt.DuAn_ID = d.DuAnID
@@ -849,7 +874,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
       const goiThauIds = allGoiThau.map(gt => gt.GoiThau_ID);
       
       // Tính tổng khối lượng kế hoạch của toàn bộ dự án tổng
-      const [tongKeHoach] = await db.query(
+      const [tongKeHoach] = await pool.query(
         `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
          FROM quanlykehoach kh
          JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
@@ -859,7 +884,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
       tongKhoiLuongKeHoach = tongKeHoach[0].tongKeHoach || 0;
 
       // Tính tổng khối lượng thực hiện của toàn bộ dự án tổng
-      const [tongThucHien] = await db.query(
+      const [tongThucHien] = await pool.query(
         `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
          FROM tiendothuchien td
          JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
@@ -874,7 +899,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
     const duAnThanhPhanWithDetails = await Promise.all(
       duAnThanhPhan.map(async (duAnTP) => {
         // Lấy các gói thầu thuộc dự án thành phần này
-        const [goiThauTP] = await db.query(
+        const [goiThauTP] = await pool.query(
           `SELECT gt.* 
            FROM goithau gt
            WHERE gt.DuAn_ID = ?
@@ -893,7 +918,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
           const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
           
           // Tính tổng khối lượng kế hoạch của dự án thành phần
-          const [keHoachTP] = await db.query(
+          const [keHoachTP] = await pool.query(
             `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
              FROM quanlykehoach kh
              JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
@@ -903,7 +928,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
           khoiLuongKeHoachTP = keHoachTP[0].tongKeHoach || 0;
 
           // Tính tổng khối lượng thực hiện của dự án thành phần
-          const [thucHienTP] = await db.query(
+          const [thucHienTP] = await pool.query(
             `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
              FROM tiendothuchien td
              JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
@@ -943,7 +968,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
         let countHangMuc = 0;
         if (goiThauTP.length > 0) {
           const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
-          const [hangMuc] = await db.query(
+          const [hangMuc] = await pool.query(
             `SELECT COUNT(*) as count FROM hangmuc WHERE GoiThauID IN (?)`,
             [goiThauIds]
           );
@@ -1014,7 +1039,7 @@ app.get('/duAn/goiThau/:duAnId', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Verify project exists
-    const [duAn] = await db.query(
+    const [duAn] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ?',
       [duAnId]
     );
@@ -1027,7 +1052,7 @@ app.get('/duAn/goiThau/:duAnId', async (req, res) => {
     }
 
     // 2. Get all packages of the project
-    const [goiThau] = await db.query(
+    const [goiThau] = await pool.query(
       `SELECT 
         gt.*,
         nt.TenNhaThau,
@@ -1058,7 +1083,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     const goiThauId = req.params.goiThauId;
 
     // 1. Lấy thông tin cơ bản của gói thầu
-    const [goiThau] = await db.query(
+    const [goiThau] = await pool.query(
       `SELECT gt.*, nt.*, d.TenDuAn, d.DuAnID, d.ChuDauTu
        FROM goithau gt
        LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -1072,7 +1097,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     }
 
     // 2. Lấy danh sách nhà thầu liên quan
-    const [nhaThauLienQuan] = await db.query(
+    const [nhaThauLienQuan] = await pool.query(
       `SELECT nt.*, gtn.VaiTro
        FROM goithau_nhathau gtn
        JOIN nhathau nt ON gtn.NhaThauID = nt.NhaThauID
@@ -1081,7 +1106,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 3. Lấy dữ liệu khối lượng thi công
-    const [khoiLuongThiCong] = await db.query(
+    const [khoiLuongThiCong] = await pool.query(
       `SELECT klt.*, nt.TenNhaThau
        FROM khoiluong_thicong klt
        JOIN nhathau nt ON klt.NhaThauID = nt.NhaThauID
@@ -1091,7 +1116,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 4. Tính tổng khối lượng kế hoạch của toàn bộ gói thầu
-    const [tongKhoiLuongResult] = await db.query(
+    const [tongKhoiLuongResult] = await pool.query(
       `SELECT SUM(q.KhoiLuongKeHoach) AS TongKhoiLuong
        FROM quanlykehoach q
        JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
@@ -1102,7 +1127,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     const tongKhoiLuong = tongKhoiLuongResult[0].TongKhoiLuong || 1; // Tránh chia cho 0
 
     // 5. Tính tổng khối lượng kế hoạch theo từng nhà thầu
-    const [khoiLuongTheoNhaThau] = await db.query(
+    const [khoiLuongTheoNhaThau] = await pool.query(
       `SELECT 
         q.NhaThauID,
         nt.TenNhaThau,
@@ -1116,7 +1141,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 6. Tính tổng khối lượng thực hiện theo từng nhà thầu
-    const [khoiLuongThucHienTheoNhaThau] = await db.query(
+    const [khoiLuongThucHienTheoNhaThau] = await pool.query(
       `SELECT 
         q.NhaThauID,
         SUM(COALESCE(t.KhoiLuongThucHien, 0)) AS TongKhoiLuongThucHien
@@ -1155,7 +1180,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     };
 
     // 8. Lấy chi tiết tiến độ thi công
-    const [tienDoThiCong] = await db.query(
+    const [tienDoThiCong] = await pool.query(
       `SELECT 
         q.*, 
         hm.TenHangMuc,
@@ -1177,7 +1202,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 9. Lấy thông tin vướng mắc
-    const [vuongMac] = await db.query(
+    const [vuongMac] = await pool.query(
       `SELECT vm.*, q.TenCongTac, hm.TenHangMuc
        FROM vuongmac vm
        JOIN quanlykehoach q ON vm.KeHoachID = q.KeHoachID
@@ -1242,7 +1267,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     const goiThauId = req.params.goiThauId;
 
     // 1. Get basic contract package info
-    const [goiThau] = await db.query(
+    const [goiThau] = await pool.query(
       `SELECT gt.*, nt.*, d.TenDuAn, d.DuAnID, d.ChuDauTu
        FROM goithau gt
        LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -1256,7 +1281,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     }
 
     // 2. Get related contractors
-    const [nhaThauLienQuan] = await db.query(
+    const [nhaThauLienQuan] = await pool.query(
       `SELECT nt.*, gtn.VaiTro
        FROM goithau_nhathau gtn
        JOIN nhathau nt ON gtn.NhaThauID = nt.NhaThauID
@@ -1265,7 +1290,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 3. Get construction quantity data
-    const [khoiLuongThiCong] = await db.query(
+    const [khoiLuongThiCong] = await pool.query(
       `SELECT klt.*, nt.TenNhaThau
        FROM khoiluong_thicong klt
        JOIN nhathau nt ON klt.NhaThauID = nt.NhaThauID
@@ -1275,7 +1300,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 4. Get total planned quantity for the package
-    const [tongKhoiLuongResult] = await db.query(
+    const [tongKhoiLuongResult] = await pool.query(
       `SELECT SUM(q.KhoiLuongKeHoach) AS TongKhoiLuong
        FROM quanlykehoach q
        JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
@@ -1286,7 +1311,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     const tongKhoiLuong = tongKhoiLuongResult[0].TongKhoiLuong || 0;
 
     // 5. Get planned quantity by contractor
-    const [khoiLuongTheoNhaThau] = await db.query(
+    const [khoiLuongTheoNhaThau] = await pool.query(
       `SELECT 
         q.NhaThauID,
         nt.TenNhaThau,
@@ -1300,7 +1325,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 6. Get actual quantity by contractor
-    const [khoiLuongThucHienTheoNhaThau] = await db.query(
+    const [khoiLuongThucHienTheoNhaThau] = await pool.query(
       `SELECT 
         q.NhaThauID,
         SUM(COALESCE(t.KhoiLuongThucHien, 0)) AS TongKhoiLuongThucHien
@@ -1313,7 +1338,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 7. Get construction progress details
-    const [tienDoThiCong] = await db.query(
+    const [tienDoThiCong] = await pool.query(
       `SELECT 
         q.*, 
         hm.TenHangMuc,
@@ -1335,7 +1360,7 @@ app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
     );
 
     // 8. Get issues/obstacles
-    const [vuongMac] = await db.query(
+    const [vuongMac] = await pool.query(
       `SELECT vm.*, q.TenCongTac, hm.TenHangMuc
        FROM vuongmac vm
        JOIN quanlykehoach q ON vm.KeHoachID = q.KeHoachID
@@ -1401,7 +1426,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
     const duAnThanhPhanId = req.params.duAnThanhPhanId;
 
     // 1. Check if component project exists
-    const [duAnThanhPhan] = await db.query(
+    const [duAnThanhPhan] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NOT NULL',
       [duAnThanhPhanId]
     );
@@ -1416,7 +1441,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
     const duAnTP = duAnThanhPhan[0];
 
     // 2. Get all packages of this component project
-    const [goiThauTP] = await db.query(
+    const [goiThauTP] = await pool.query(
       `SELECT gt.* 
        FROM goithau gt
        WHERE gt.DuAn_ID = ?
@@ -1428,7 +1453,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
     const goiThauWithDetails = await Promise.all(
       goiThauTP.map(async (goiThau) => {
         // Get work items of the package
-        const [hangMucList] = await db.query(
+        const [hangMucList] = await pool.query(
           `SELECT * FROM hangmuc 
            WHERE GoiThauID = ?
            ORDER BY HangMucID ASC`,
@@ -1439,7 +1464,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
         const hangMucWithDetails = await Promise.all(
           hangMucList.map(async (hangMuc) => {
             // Get plans of the work item
-            const [keHoachList] = await db.query(
+            const [keHoachList] = await pool.query(
               `SELECT kh.*, nt.TenNhaThau 
                FROM quanlykehoach kh
                JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
@@ -1451,7 +1476,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
             // Get execution progress for each plan
             const keHoachWithDetails = await Promise.all(
               keHoachList.map(async (keHoach) => {
-                const [tienDoList] = await db.query(
+                const [tienDoList] = await pool.query(
                   `SELECT * FROM tiendothuchien 
                    WHERE KeHoachID = ?
                    ORDER BY NgayCapNhat DESC`,
@@ -1534,7 +1559,7 @@ app.get('/duAnThanhPhan/:duAnThanhPhanId/detail', async (req, res) => {
   }
 });
 async function getNhaThauInfo(nhaThauId) {
-  const [nhaThau] = await db.query(
+  const [nhaThau] = await pool.query(
     'SELECT * FROM nhathau WHERE NhaThauID = ?',
     [nhaThauId]
   );
@@ -1545,7 +1570,7 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Lấy thông tin cơ bản của dự án (bao gồm cả thông tin nhà thầu nếu có)
-    const [duAn] = await db.query(
+    const [duAn] = await pool.query(
       `SELECT d.*, nt.* 
        FROM duan d
        LEFT JOIN nhathau nt ON d.ChuDauTu = nt.NhaThauID
@@ -1564,7 +1589,7 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     const isDuAnTong = currentDuAn.ParentID === null;
 
     // 2. Lấy loại hình dự án
-    const [loaiHinh] = await db.query(
+    const [loaiHinh] = await pool.query(
       `SELECT lh.* FROM loaihinh lh
        JOIN doituongloaihinh dlh ON lh.LoaiHinh_ID = dlh.LoaiHinh_ID
        WHERE dlh.DoiTuong_ID = ? AND dlh.LoaiDoiTuong = 'duan'`,
@@ -1572,7 +1597,7 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     );
 
     // 3. Lấy thuộc tính loại hình và giá trị
-    const [thuocTinh] = await db.query(
+    const [thuocTinh] = await pool.query(
       `SELECT tt.*, gt.GiaTri 
        FROM thuoctinhloaihinh tt
        LEFT JOIN giatrithuoctinh gt ON tt.ThuocTinh_ID = gt.ThuocTinh_ID 
@@ -1600,7 +1625,7 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     let duAnList = [];
     if (isDuAnTong) {
       // Lấy tất cả dự án thành phần nếu là dự án tổng
-      const [duAnThanhPhan] = await db.query(
+      const [duAnThanhPhan] = await pool.query(
         'SELECT * FROM duan WHERE ParentID = ?',
         [duAnId]
       );
@@ -1611,7 +1636,7 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     }
 
     // 6. Lấy tất cả gói thầu liên quan
-    const [allGoiThau] = await db.query(
+    const [allGoiThau] = await pool.query(
       `SELECT gt.*, nt.* 
        FROM goithau gt
        LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -1619,31 +1644,31 @@ app.get('/du-an/:duAnId/tong-hop', async (req, res) => {
     );
 
     // 7. Lấy tất cả hạng mục
-    const [allHangMuc] = await db.query(
+    const [allHangMuc] = await pool.query(
       `SELECT hm.* FROM hangmuc hm
        WHERE hm.GoiThauID IN (${allGoiThau.map(gt => gt.GoiThau_ID).join(',') || 'NULL'})`
     );
 
     // 8. Lấy tất cả kế hoạch
-    const [allKeHoach] = await db.query(
+    const [allKeHoach] = await pool.query(
       `SELECT kh.* FROM quanlykehoach kh
        WHERE kh.HangMucID IN (${allHangMuc.map(hm => hm.HangMucID).join(',') || 'NULL'})`
     );
 
     // 9. Lấy tất cả tiến độ thực hiện
-    const [allTienDo] = await db.query(
+    const [allTienDo] = await pool.query(
       `SELECT td.* FROM tiendothuchien td
        WHERE td.KeHoachID IN (${allKeHoach.map(kh => kh.KeHoachID).join(',') || 'NULL'})`
     );
 
     // 10. Lấy tất cả vướng mắc
-    const [allVuongMac] = await db.query(
+    const [allVuongMac] = await pool.query(
       `SELECT vm.* FROM vuongmac vm
        WHERE vm.KeHoachID IN (${allKeHoach.map(kh => kh.KeHoachID).join(',') || 'NULL'})`
     );
 
     // 11. Lấy tất cả tài liệu liên quan
-    const [allTaiLieu] = await db.query(
+    const [allTaiLieu] = await pool.query(
       `SELECT * FROM tailieu 
        WHERE (LoaiDoiTuong = 'DUAN' AND DoiTuongID IN (${duAnList.map(da => da.DuAnID).join(',')}))
          OR (LoaiDoiTuong = 'GOITHAU' AND DoiTuongID IN (${allGoiThau.map(gt => gt.GoiThau_ID).join(',') || 'NULL'}))
@@ -1781,7 +1806,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Kiểm tra dự án tổng có tồn tại không
-    const [duAnTong] = await db.query(
+    const [duAnTong] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NULL',
       [duAnId]
     );
@@ -1794,7 +1819,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
     }
 
     // 2. Lấy các dự án thành phần
-    const [duAnThanhPhan] = await db.query(
+    const [duAnThanhPhan] = await pool.query(
       'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
       [duAnId]
     );
@@ -1803,7 +1828,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
     const duAnThanhPhanWithDetails = await Promise.all(
       duAnThanhPhan.map(async (duAnTP) => {
         // Lấy các gói thầu thuộc dự án thành phần này
-        const [goiThauList] = await db.query(
+        const [goiThauList] = await pool.query(
           `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
            FROM goithau gt
            LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -1816,7 +1841,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
         const goiThauWithCategories = await Promise.all(
           goiThauList.map(async (goiThau) => {
             // Lấy các loại hạng mục của gói thầu
-            const [loaiHangMucList] = await db.query(
+            const [loaiHangMucList] = await pool.query(
               `SELECT DISTINCT LoaiHangMuc 
                FROM hangmuc 
                WHERE GoiThauID = ? AND LoaiHangMuc IS NOT NULL
@@ -1828,7 +1853,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
             const loaiHangMucWithDetails = await Promise.all(
               loaiHangMucList.map(async (loaiHangMuc) => {
                 // Lấy các hạng mục thuộc loại này
-                const [hangMucList] = await db.query(
+                const [hangMucList] = await pool.query(
                   `SELECT * FROM hangmuc 
                    WHERE GoiThauID = ? AND LoaiHangMuc = ?
                    ORDER BY HangMucID ASC`,
@@ -1839,7 +1864,7 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
                 const hangMucWithKeHoach = await Promise.all(
                   hangMucList.map(async (hangMuc) => {
                     // Lấy kế hoạch và thông tin thực thi
-                    const [keHoachWithTienDo] = await db.query(
+                    const [keHoachWithTienDo] = await pool.query(
                       `SELECT 
                         kh.KeHoachID,
                         kh.TenCongTac,
@@ -2024,7 +2049,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Kiểm tra dự án có tồn tại không và xác định loại dự án
-    const [duAn] = await db.query(
+    const [duAn] = await pool.query(
       'SELECT DuAnID, TenDuAn, ParentID, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE DuAnID = ?',
       [duAnId]
     );
@@ -2041,7 +2066,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
     // 2. Hàm lấy chi tiết gói thầu, hạng mục, kế hoạch và tiến độ (đã cập nhật)
     const getGoiThauDetails = async (duAnId) => {
       // Lấy các gói thầu thuộc dự án
-      const [goiThauList] = await db.query(
+      const [goiThauList] = await pool.query(
         `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
          FROM goithau gt
          LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -2054,7 +2079,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
       const goiThauWithHangMuc = await Promise.all(
         goiThauList.map(async (goiThau) => {
           // Lấy tất cả hạng mục của gói thầu
-          const [hangMucList] = await db.query(
+          const [hangMucList] = await pool.query(
             `SELECT * FROM hangmuc 
              WHERE GoiThauID = ?
              ORDER BY HangMucID ASC`,
@@ -2065,7 +2090,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
           const hangMucWithKeHoach = await Promise.all(
             hangMucList.map(async (hangMuc) => {
               // Lấy danh sách kế hoạch với nhà thầu và tiến độ thực hiện
-              const [keHoachList] = await db.query(
+              const [keHoachList] = await pool.query(
                 `SELECT kh.*, nt.TenNhaThau 
                  FROM quanlykehoach kh
                  JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
@@ -2077,7 +2102,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
               // Lấy chi tiết tiến độ thực hiện cho từng kế hoạch
               const keHoachWithTienDo = await Promise.all(
                 keHoachList.map(async (keHoach) => {
-                  const [tienDoList] = await db.query(
+                  const [tienDoList] = await pool.query(
                     `SELECT * FROM tiendothuchien 
                      WHERE KeHoachID = ?
                      ORDER BY NgayCapNhat DESC`,
@@ -2188,7 +2213,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
 
     // 3. Hàm kiểm tra và lấy tất cả dự án con (đệ quy)
     const getAllChildProjects = async (parentId) => {
-      const [childProjects] = await db.query(
+      const [childProjects] = await pool.query(
         'SELECT DuAnID, TenDuAn, ParentID FROM duan WHERE ParentID = ?',
         [parentId]
       );
@@ -2209,7 +2234,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
     // Kiểm tra xem đây là dự án cha hay con
     if (currentProject.ParentID === null) {
       // Dự án cha - có thể có cả dự án con và gói thầu trực tiếp
-      const [directChildProjects] = await db.query(
+      const [directChildProjects] = await pool.query(
         'SELECT DuAnID, TenDuAn, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE ParentID = ?',
         [duAnId]
       );
@@ -2238,7 +2263,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
       // Lấy tất cả gói thầu từ các dự án con (bao gồm cả cháu, chắt...)
       let allTendersFromChildren = [];
       if (allChildProjectIds.length > 0) {
-        const [allTenders] = await db.query(
+        const [allTenders] = await pool.query(
           `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
            FROM goithau gt
            LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -2276,7 +2301,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
       };
     } else {
       // Dự án con - giữ logic hiện tại
-      const [parentProject] = await db.query(
+      const [parentProject] = await pool.query(
         'SELECT DuAnID, TenDuAn FROM duan WHERE DuAnID = ?',
         [currentProject.ParentID]
       );
@@ -2331,16 +2356,16 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     }
 
     // 2. Bắt đầu transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // 3. Kiểm tra kế hoạch tồn tại
-    const [keHoach] = await db.query(
+    const [keHoach] = await pool.query(
       'SELECT * FROM quanlykehoach WHERE KeHoachID = ?',
       [keHoachId]
     );
 
     if (keHoach.length === 0) {
-      await db.query('ROLLBACK');
+      await pool.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy kế hoạch với ID này'
@@ -2348,7 +2373,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     }
 
     // 4. Thêm tiến độ mới
-    const [tienDoResult] = await db.query(
+    const [tienDoResult] = await pool.query(
       `INSERT INTO tiendothuchien 
        (KeHoachID, NgayCapNhat, KhoiLuongThucHien, DonViTinh, MoTaVuongMac, GhiChu)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -2367,7 +2392,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     // 5. Xử lý vướng mắc nếu có
     let vuongMacId = null;
     if (moTaVuongMac && loaiVuongMac) {
-      const [vuongMacResult] = await db.query(
+      const [vuongMacResult] = await pool.query(
         `INSERT INTO vuongmac 
          (KeHoachID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh, MucDo)
          VALUES (?, ?, ?, ?, ?)`,
@@ -2394,7 +2419,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [result] = await db.query(
+        const [result] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -2419,7 +2444,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     }
 
     // 7. Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -2432,7 +2457,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     // Xóa file đã upload nếu có lỗi
     if (req.files && req.files.length > 0) {
@@ -2456,7 +2481,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
 app.get('/nhaThauList', async (req, res) => {
   try {
     // Lấy tất cả nhà thầu từ database
-    const [results] = await db.query('SELECT * FROM nhathau ORDER BY TenNhaThau ASC');
+    const [results] = await pool.query('SELECT * FROM nhathau ORDER BY TenNhaThau ASC');
     
     res.json({
       success: true,
@@ -2476,7 +2501,7 @@ app.get('/tien-do/:keHoachId', async (req, res) => {
       const keHoachId = req.params.keHoachId;
       
       // 1. Lấy thông tin cơ bản của kế hoạch
-      const [keHoach] = await db.query(`
+      const [keHoach] = await pool.query(`
           SELECT * FROM quanlykehoach 
           WHERE KeHoachID = ?
       `, [keHoachId]);
@@ -2489,14 +2514,14 @@ app.get('/tien-do/:keHoachId', async (req, res) => {
       }
 
       // 2. Lấy tất cả tiến độ thực hiện của kế hoạch này
-      const [tienDoList] = await db.query(`
+      const [tienDoList] = await pool.query(`
           SELECT * FROM tiendothuchien 
           WHERE KeHoachID = ?
           ORDER BY NgayCapNhat DESC
       `, [keHoachId]);
 
       // 3. Tính tổng khối lượng đã thực hiện
-      const [tongKhoiLuong] = await db.query(`
+      const [tongKhoiLuong] = await pool.query(`
           SELECT SUM(KhoiLuongThucHien) as tongThucHien 
           FROM tiendothuchien 
           WHERE KeHoachID = ?
@@ -2530,7 +2555,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Kiểm tra dự án tổng có tồn tại không
-    const [duAnTong] = await db.query(
+    const [duAnTong] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NULL',
       [duAnId]
     );
@@ -2543,7 +2568,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
     }
 
     // 2. Lấy các dự án thành phần
-    const [duAnThanhPhan] = await db.query(
+    const [duAnThanhPhan] = await pool.query(
       'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
       [duAnId]
     );
@@ -2552,7 +2577,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
     const duAnThanhPhanWithDetails = await Promise.all(
       duAnThanhPhan.map(async (duAnTP) => {
         // Lấy các gói thầu thuộc dự án thành phần này
-        const [goiThauList] = await db.query(
+        const [goiThauList] = await pool.query(
           `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
            FROM goithau gt
            LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -2565,7 +2590,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
         const goiThauWithCategories = await Promise.all(
           goiThauList.map(async (goiThau) => {
             // Lấy các loại hạng mục của gói thầu
-            const [loaiHangMucList] = await db.query(
+            const [loaiHangMucList] = await pool.query(
               `SELECT DISTINCT LoaiHangMuc 
                FROM hangmuc 
                WHERE GoiThauID = ? AND LoaiHangMuc IS NOT NULL
@@ -2577,7 +2602,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
             const loaiHangMucWithDetails = await Promise.all(
               loaiHangMucList.map(async (loaiHangMuc) => {
                 // Lấy các hạng mục thuộc loại này
-                const [hangMucList] = await db.query(
+                const [hangMucList] = await pool.query(
                   `SELECT * FROM hangmuc 
                    WHERE GoiThauID = ? AND LoaiHangMuc = ?
                    ORDER BY HangMucID ASC`,
@@ -2588,7 +2613,7 @@ app.get('/duAn/:duAnId/vuongMac', async (req, res) => {
                 const hangMucWithVuongMac = await Promise.all(
                   hangMucList.map(async (hangMuc) => {
                     // Lấy danh sách vướng mắc và thông tin kế hoạch liên quan
-                    const [vuongMacList] = await db.query(
+                    const [vuongMacList] = await pool.query(
                       `SELECT 
                         vm.VuongMacID,
                         vm.KeHoachID,
@@ -2775,7 +2800,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
     const duAnId = req.params.duAnId;
 
     // 1. Kiểm tra dự án có tồn tại không
-    const [duAn] = await db.query(
+    const [duAn] = await pool.query(
       'SELECT DuAnID, TenDuAn, ParentID, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE DuAnID = ?',
       [duAnId]
     );
@@ -2792,7 +2817,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
     // 2. Hàm lấy chi tiết vướng mắc cho một dự án
     const getVuongMacDetails = async (projectId) => {
       // Lấy các gói thầu thuộc dự án
-      const [goiThauList] = await db.query(
+      const [goiThauList] = await pool.query(
         `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
          FROM goithau gt
          LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
@@ -2805,7 +2830,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
       const goiThauWithHangMuc = await Promise.all(
         goiThauList.map(async (goiThau) => {
           // Lấy tất cả hạng mục của gói thầu
-          const [hangMucList] = await db.query(
+          const [hangMucList] = await pool.query(
             `SELECT * FROM hangmuc 
              WHERE GoiThauID = ?
              ORDER BY HangMucID ASC`,
@@ -2815,7 +2840,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
           // Lấy thông tin vướng mắc cho từng hạng mục
           const hangMucWithVuongMac = await Promise.all(
             hangMucList.map(async (hangMuc) => {
-              const [vuongMacList] = await db.query(
+              const [vuongMacList] = await pool.query(
                 `SELECT 
                   vm.VuongMacID,
                   vm.KeHoachID,
@@ -2932,7 +2957,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
 
     // 3. Hàm lấy tất cả dự án con (đệ quy)
     const getAllChildProjects = async (parentId) => {
-      const [childProjects] = await db.query(
+      const [childProjects] = await pool.query(
         'SELECT DuAnID, TenDuAn, ParentID FROM duan WHERE ParentID = ?',
         [parentId]
       );
@@ -2952,7 +2977,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
 
     if (currentProject.ParentID === null) {
       // Dự án cha - có thể có cả dự án con và gói thầu trực tiếp
-      const [directChildProjects] = await db.query(
+      const [directChildProjects] = await pool.query(
         'SELECT DuAnID, TenDuAn, NgayKhoiCong, KeHoachHoanThanh FROM duan WHERE ParentID = ?',
         [duAnId]
       );
@@ -3017,7 +3042,7 @@ app.get('/hangMuc/:duAnId/vuongMac', async (req, res) => {
       };
     } else {
       // Dự án con - giữ logic hiện tại
-      const [parentProject] = await db.query(
+      const [parentProject] = await pool.query(
         'SELECT DuAnID, TenDuAn FROM duan WHERE DuAnID = ?',
         [currentProject.ParentID]
       );
@@ -3055,7 +3080,7 @@ app.get('/duAntp/:id', async (req, res) => {
     const id = parseInt(req.params.id);
 
     // Truy vấn chi tiết dự án thành phần (có ParentID không null)
-    const [rows] = await db.query(
+    const [rows] = await pool.query(
       'SELECT * FROM DuAn WHERE DuAnID = ?', 
       [id]
     );
@@ -3082,7 +3107,7 @@ app.get('/duAntp/:id', async (req, res) => {
 app.get('/duAn/:duAnId', async (req, res) => {
   try {
     const duAnId = req.params.duAnId;
-    const [duAnTong] = await db.query(
+    const [duAnTong] = await pool.query(
       'SELECT * FROM duan WHERE DuAnID = ? AND ParentID IS NULL',
       [duAnId]
     );
@@ -3095,7 +3120,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
     }
 
     // 2. Lấy các dự án thành phần
-    const [duAnThanhPhan] = await db.query(
+    const [duAnThanhPhan] = await pool.query(
       'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
       [duAnId]
     );
@@ -3105,7 +3130,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
     let tongKhoiLuongThucHien = 0;
 
     // Lấy tất cả gói thầu thuộc dự án tổng
-    const [allGoiThau] = await db.query(
+    const [allGoiThau] = await pool.query(
       `SELECT gt.GoiThau_ID 
        FROM goithau gt
        JOIN duan d ON gt.DuAn_ID = d.DuAnID
@@ -3117,7 +3142,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
       const goiThauIds = allGoiThau.map(gt => gt.GoiThau_ID);
 
       // Tính tổng khối lượng kế hoạch của toàn bộ dự án tổng
-      const [tongKeHoach] = await db.query(
+      const [tongKeHoach] = await pool.query(
         `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
          FROM quanlykehoach kh
          JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
@@ -3127,7 +3152,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
       tongKhoiLuongKeHoach = tongKeHoach[0].tongKeHoach || 0;
 
       // Tính tổng khối lượng thực hiện của toàn bộ dự án tổng
-      const [tongThucHien] = await db.query(
+      const [tongThucHien] = await pool.query(
         `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
          FROM tiendothuchien td
          JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
@@ -3142,7 +3167,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
     const duAnThanhPhanWithDetails = await Promise.all(
       duAnThanhPhan.map(async (duAnTP) => {
         // Lấy các gói thầu thuộc dự án thành phần này
-        const [goiThauTP] = await db.query(
+        const [goiThauTP] = await pool.query(
           `SELECT gt.* 
            FROM goithau gt
            WHERE gt.DuAn_ID = ?
@@ -3161,7 +3186,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
           const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
 
           // Tính tổng khối lượng kế hoạch của dự án thành phần
-          const [keHoachTP] = await db.query(
+          const [keHoachTP] = await pool.query(
             `SELECT SUM(kh.KhoiLuongKeHoach) as tongKeHoach
              FROM quanlykehoach kh
              JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
@@ -3171,7 +3196,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
           khoiLuongKeHoachTP = keHoachTP[0].tongKeHoach || 0;
 
           // Tính tổng khối lượng thực hiện của dự án thành phần
-          const [thucHienTP] = await db.query(
+          const [thucHienTP] = await pool.query(
             `SELECT SUM(td.KhoiLuongThucHien) as tongThucHien
              FROM tiendothuchien td
              JOIN quanlykehoach kh ON td.KeHoachID = kh.KeHoachID
@@ -3211,7 +3236,7 @@ app.get('/duAn/:duAnId', async (req, res) => {
         let countHangMuc = 0;
         if (goiThauTP.length > 0) {
           const goiThauIds = goiThauTP.map(gt => gt.GoiThau_ID);
-          const [hangMuc] = await db.query(
+          const [hangMuc] = await pool.query(
             `SELECT COUNT(*) as count FROM hangmuc WHERE GoiThauID IN (?)`,
             [goiThauIds]
           );
@@ -3280,7 +3305,7 @@ app.get('/duAnChiTiet/:id', async (req, res) => {
     const { id } = req.params;
 
     // Lấy thông tin cơ bản của dự án
-    const [duan] = await db.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
+    const [duan] = await pool.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
     if (!duan || duan.length === 0) {
       return res.status(404).json({
         success: false,
@@ -3289,13 +3314,13 @@ app.get('/duAnChiTiet/:id', async (req, res) => {
     }
 
     // Lấy loại hình dự án
-    const [loaiHinh] = await db.query(
+    const [loaiHinh] = await pool.query(
       'SELECT LoaiHinh_ID FROM doituongloaihinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
       [id]
     );
 
     // Lấy các thuộc tính của dự án
-    const [thuocTinh] = await db.query(
+    const [thuocTinh] = await pool.query(
       'SELECT ThuocTinh_ID, GiaTri FROM giatrithuoctinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
       [id]
     );
@@ -3307,7 +3332,7 @@ app.get('/duAnChiTiet/:id', async (req, res) => {
     });
 
     // Lấy danh sách tài liệu
-    const [taiLieu] = await db.query(
+    const [taiLieu] = await pool.query(
       'SELECT TaiLieuID, TenTaiLieu, LoaiTaiLieu, DuongDan, MoTa FROM tailieu WHERE DoiTuongID = ? AND LoaiDoiTuong = "DUAN"',
       [id]
     );
@@ -3368,7 +3393,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     }
 
     // Kiểm tra dự án có tồn tại không
-    const [existingProject] = await db.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
+    const [existingProject] = await pool.query('SELECT * FROM duan WHERE DuAnID = ?', [id]);
     if (!existingProject || existingProject.length === 0) {
       return res.status(404).json({
         success: false,
@@ -3377,10 +3402,10 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     }
 
     // Start transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // Update main project info
-    await db.query(
+    await pool.query(
       `UPDATE duan SET
         TenDuAn = ?,
         TinhThanh = ?,
@@ -3409,13 +3434,13 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     );
 
     // Update project type
-    await db.query(
+    await pool.query(
       'UPDATE doituongloaihinh SET LoaiHinh_ID = ? WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
       [LoaiHinh_ID, id]
     );
 
     // Xóa các thuộc tính cũ
-    await db.query(
+    await pool.query(
       'DELETE FROM giatrithuoctinh WHERE DoiTuong_ID = ? AND LoaiDoiTuong = "duan"',
       [id]
     );
@@ -3423,7 +3448,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     // Thêm lại các thuộc tính mới
     if (thuocTinhValuesParsed && typeof thuocTinhValuesParsed === 'object') {
       for (const [ThuocTinh_ID, GiaTri] of Object.entries(thuocTinhValuesParsed)) {
-        await db.query(
+        await pool.query(
           `INSERT INTO giatrithuoctinh 
           (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
           VALUES (?, ?, "duan", ?)`,
@@ -3438,7 +3463,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
       
       for (const fileId of deletedFilesArray) {
         // Lấy thông tin file để xóa vật lý
-        const [fileInfo] = await db.query(
+        const [fileInfo] = await pool.query(
           'SELECT DuongDan FROM tailieu WHERE TaiLieuID = ?',
           [fileId]
         );
@@ -3453,7 +3478,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
         }
         
         // Xóa record trong DB
-        await db.query(
+        await pool.query(
           'DELETE FROM tailieu WHERE TaiLieuID = ?',
           [fileId]
         );
@@ -3472,7 +3497,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [fileResult] = await db.query(
+        const [fileResult] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -3497,7 +3522,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     }
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -3511,7 +3536,7 @@ app.put('/duan/:id', createUploadMiddleware('DUAN'), async (req, res) => {
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     // Clean up uploaded files if error occurs
     if (req.files && req.files.length > 0) {
@@ -3566,10 +3591,10 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     }
 
     // Start transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // Insert main project info
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO duan (
         TenDuAn, TinhThanh, ChuDauTu, NgayKhoiCong,
         TrangThai, NguonVon, TongChieuDai, KeHoachHoanThanh,
@@ -3592,7 +3617,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     const DuAnID = result.insertId;
 
     // Link project to its type
-    await db.query(
+    await pool.query(
       'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "duan", ?)',
       [DuAnID, LoaiHinh_ID]
     );
@@ -3600,7 +3625,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     // Insert attribute values if provided
     if (thuocTinhValuesParsed && typeof thuocTinhValuesParsed === 'object') {
       for (const [ThuocTinh_ID, GiaTri] of Object.entries(thuocTinhValuesParsed)) {
-        await db.query(
+        await pool.query(
           `INSERT INTO giatrithuoctinh 
           (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
           VALUES (?, ?, "duan", ?)`,
@@ -3621,7 +3646,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [fileResult] = await db.query(
+        const [fileResult] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -3646,7 +3671,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     }
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -3660,7 +3685,7 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     // Clean up uploaded files if error occurs
     if (req.files && req.files.length > 0) {
@@ -3702,10 +3727,10 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
     } = req.body;
 
     // Start transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // 1. Insert main tender package info
-    const [goiThauResult] = await db.query(
+    const [goiThauResult] = await pool.query(
       `INSERT INTO goithau (
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
@@ -3722,7 +3747,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
 
     // 2. Insert into goithau_nhathau table if NhaThauID is provided
     if (NhaThauID) {
-      await db.query(
+      await pool.query(
         'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
         [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
       );
@@ -3730,7 +3755,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
 
     // 3. Link tender package to its type
     if (LoaiHinh_ID) {
-      await db.query(
+      await pool.query(
         'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
         [GoiThau_ID, LoaiHinh_ID]
       );
@@ -3738,7 +3763,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       // 4. Insert attribute values if provided
       if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
         for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
-          await db.query(
+          await pool.query(
             `INSERT INTO giatrithuoctinh 
             (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
             VALUES (?, ?, "goithau", ?)`,
@@ -3760,7 +3785,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [fileResult] = await db.query(
+        const [fileResult] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -3785,7 +3810,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
     }
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -3799,7 +3824,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     // Clean up uploaded files if error occurs
     if (req.files && req.files.length > 0) {
@@ -3839,7 +3864,7 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
     }
 
     // Check if type exists
-    const [loaiHinh] = await db.query(
+    const [loaiHinh] = await pool.query(
       'SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?',
       [LoaiHinh_ID]
     );
@@ -3852,7 +3877,7 @@ app.post('/loaihinh/them-thuoctinh', async (req, res) => {
     }
 
     // Insert new attribute
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO thuoctinhloaihinh 
       (LoaiHinh_ID, TenThuocTinh, KieuDuLieu, DonVi, BatBuoc)
       VALUES (?, ?, ?, ?, ?)`,
@@ -3900,16 +3925,16 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
     }
 
     // Bắt đầu transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // 1. Kiểm tra gói thầu tồn tại
-    const [goiThau] = await db.query(
+    const [goiThau] = await pool.query(
       'SELECT GoiThau_ID FROM goithau WHERE GoiThau_ID = ?',
       [GoiThau_ID]
     );
 
     if (goiThau.length === 0) {
-      await db.query('ROLLBACK');
+      await pool.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy gói thầu với ID này'
@@ -3917,13 +3942,13 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
     }
 
     // 2. Kiểm tra nhà thầu tồn tại
-    const [nhaThau] = await db.query(
+    const [nhaThau] = await pool.query(
       'SELECT NhaThauID FROM nhathau WHERE NhaThauID = ?',
       [NhaThauID]
     );
 
     if (nhaThau.length === 0) {
-      await db.query('ROLLBACK');
+      await pool.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         message: 'Không tìm thấy nhà thầu với ID này'
@@ -3932,14 +3957,14 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
 
     // 3. Thêm hoặc cập nhật vai trò nhà thầu trong gói thầu
     try {
-      await db.query(
+      await pool.query(
         `INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro)
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE VaiTro = VALUES(VaiTro)`,
         [GoiThau_ID, NhaThauID, VaiTro]
       );
     } catch (error) {
-      await db.query('ROLLBACK');
+      await pool.query('ROLLBACK');
       console.error('Lỗi khi thêm nhà thầu vào gói thầu:', error);
       return res.status(500).json({
         success: false,
@@ -3949,7 +3974,7 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
     }
 
     // 4. Thêm khối lượng thi công (chỉ với các trường có trong bảng)
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO khoiluong_thicong 
       (GoiThau_ID, NhaThauID, TieuDe, NoiDung)
       VALUES (?, ?, ?, ?)`,
@@ -3957,7 +3982,7 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
     );
 
     // Commit transaction nếu mọi thứ thành công
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -3973,7 +3998,7 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     console.error('Error adding construction volume:', error);
     res.status(500).json({
       success: false,
@@ -3984,7 +4009,7 @@ app.post('/khoiluong-thicong/them-moi', async (req, res) => {
 });
 app.get('/loaihinh', async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT * FROM loaihinh');
+    const [rows] = await pool.query('SELECT * FROM loaihinh');
 
     res.json({
       success: true,
@@ -4004,7 +4029,7 @@ app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
     const loaiHinhId = req.params.id;
 
     // Kiểm tra loại hình có tồn tại
-    const [loaiHinh] = await db.query('SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
+    const [loaiHinh] = await pool.query('SELECT * FROM loaihinh WHERE LoaiHinh_ID = ?', [loaiHinhId]);
     if (loaiHinh.length === 0) {
       return res.status(404).json({
         success: false,
@@ -4013,7 +4038,7 @@ app.get('/loaihinh/:id/thuoctinh', async (req, res) => {
     }
 
     // Lấy thuộc tính của loại hình
-    const [thuocTinh] = await db.query(
+    const [thuocTinh] = await pool.query(
       'SELECT * FROM thuoctinhloaihinh WHERE LoaiHinh_ID = ?',
       [loaiHinhId]
     );
@@ -4077,7 +4102,7 @@ app.post('/api/tailieu/:loaiDoiTuong/:doiTuongID', async (req, res) => {
       const fileSizeMB = req.file.size / (1024 * 1024);
 
       // Lưu thông tin vào database
-      const [result] = await db.query(
+      const [result] = await pool.query(
         `INSERT INTO tailieu (
           LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
           DuongDan, DungLuong, NguoiUpload, MoTa, Public
@@ -4122,7 +4147,7 @@ app.get('/api/tailieu/:loaiDoiTuong/:doiTuongID', async (req, res) => {
     // Kiểm tra quyền truy cập (tùy thuộc vào logic ứng dụng của bạn)
     // ...
 
-    const [documents] = await db.query(
+    const [documents] = await pool.query(
       `SELECT * FROM tailieu 
        WHERE LoaiDoiTuong = ? AND DoiTuongID = ?
        ORDER BY NgayUpload DESC`,
@@ -4147,7 +4172,7 @@ app.delete('/api/tailieu/:taiLieuID', async (req, res) => {
     const { user } = req;
 
     // Lấy thông tin tài liệu trước khi xóa
-    const [document] = await db.query(
+    const [document] = await pool.query(
       `SELECT * FROM tailieu WHERE TaiLieuID = ?`,
       [taiLieuID]
     );
@@ -4174,7 +4199,7 @@ app.delete('/api/tailieu/:taiLieuID', async (req, res) => {
     }
 
     // Xóa record trong database
-    await db.query(
+    await pool.query(
       `DELETE FROM tailieu WHERE TaiLieuID = ?`,
       [taiLieuID]
     );
@@ -4216,10 +4241,10 @@ app.post('/hangmuc/tao-moi', createUploadMiddleware('HANGMUC'), async (req, res)
     }
 
     // Start transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // Insert main info
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO hangmuc (
         GoiThauID, TenHangMuc, LoaiHangMuc, TieuDeChiTiet,
         MayMocThietBi, NhanLucThiCong, ThoiGianHoanThanh, GhiChu
@@ -4250,7 +4275,7 @@ app.post('/hangmuc/tao-moi', createUploadMiddleware('HANGMUC'), async (req, res)
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [fileResult] = await db.query(
+        const [fileResult] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -4275,7 +4300,7 @@ app.post('/hangmuc/tao-moi', createUploadMiddleware('HANGMUC'), async (req, res)
     }
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -4287,7 +4312,7 @@ app.post('/hangmuc/tao-moi', createUploadMiddleware('HANGMUC'), async (req, res)
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
@@ -4332,10 +4357,10 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
     }
 
     // Start transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // Insert main info
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO quanlykehoach (
         HangMucID, NhaThauID, TenCongTac, KhoiLuongKeHoach,
         DonViTinh, NgayBatDau, NgayKetThuc, GhiChu
@@ -4366,7 +4391,7 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
         const newPath = path.join(newFolder, file.filename);
         fs.renameSync(file.path, newPath);
 
-        const [fileResult] = await db.query(
+        const [fileResult] = await pool.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
@@ -4391,7 +4416,7 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
     }
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     res.json({
       success: true,
@@ -4403,7 +4428,7 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
     });
 
   } catch (error) {
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
@@ -4428,7 +4453,7 @@ app.delete('/kehoach/:id', async (req, res) => {
   
   try {
     // Kiểm tra kế hoạch tồn tại
-    const [keHoachResults] = await db.query(
+    const [keHoachResults] = await pool.query(
       'SELECT * FROM quanlykehoach WHERE KeHoachID = ?', 
       [keHoachId]
     );
@@ -4441,40 +4466,40 @@ app.delete('/kehoach/:id', async (req, res) => {
     }
 
     // Bắt đầu transaction
-    await db.query('START TRANSACTION');
+    await pool.query('START TRANSACTION');
 
     // 1. Xóa tất cả tiến độ liên quan
-    await db.query(
+    await pool.query(
       'DELETE FROM tiendothuchien WHERE KeHoachID = ?',
       [keHoachId]
     );
 
     // 2. Xóa tất cả khó khăn vướng mắc liên quan
-    await db.query(
+    await pool.query(
       'DELETE FROM vuongmac WHERE KeHoachID = ?',
       [keHoachId]
     );
 
     // 3. Lấy danh sách tài liệu đính kèm để xóa file vật lý
-    const [taiLieuResults] = await db.query(
+    const [taiLieuResults] = await pool.query(
       'SELECT * FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
       [keHoachId]
     );
 
     // 4. Xóa các tài liệu từ database
-    await db.query(
+    await pool.query(
       'DELETE FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
       [keHoachId]
     );
 
     // 5. Xóa kế hoạch chính
-    await db.query(
+    await pool.query(
       'DELETE FROM quanlykehoach WHERE KeHoachID = ?',
       [keHoachId]
     );
 
     // Commit transaction
-    await db.query('COMMIT');
+    await pool.query('COMMIT');
 
     // Xóa các file vật lý sau khi commit thành công
     if (taiLieuResults.length > 0) {
@@ -4497,7 +4522,7 @@ app.delete('/kehoach/:id', async (req, res) => {
 
   } catch (error) {
     // Rollback nếu có lỗi
-    await db.query('ROLLBACK');
+    await pool.query('ROLLBACK');
     
     console.error('Lỗi khi xóa kế hoạch:', error);
     res.status(500).json({
@@ -4641,7 +4666,7 @@ app.post('/vuongmac/tao-moi', async (req, res) => {
     }
 
     // Kiểm tra kế hoạch tồn tại
-    const [keHoach] = await db.query(
+    const [keHoach] = await pool.query(
       'SELECT 1 FROM quanlykehoach WHERE KeHoachID = ? LIMIT 1',
       [KeHoachID]
     );
@@ -4654,7 +4679,7 @@ app.post('/vuongmac/tao-moi', async (req, res) => {
     }
 
     // Thêm vướng mắc mới
-    const [result] = await db.query(
+    const [result] = await pool.query(
       `INSERT INTO vuongmac (
         KeHoachID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh,
         NgayKetThuc, MucDo, BienPhapXuLy
@@ -4692,7 +4717,7 @@ app.delete('/vuongmac/:id', async (req, res) => {
 
   try {
     // Kiểm tra vướng mắc tồn tại
-    const [vuongMac] = await db.query(
+    const [vuongMac] = await pool.query(
       'SELECT * FROM vuongmac WHERE VuongMacID = ?',
       [vuongMacId]
     );
@@ -4705,7 +4730,7 @@ app.delete('/vuongmac/:id', async (req, res) => {
     }
 
     // Xóa vướng mắc
-    await db.query(
+    await pool.query(
       'DELETE FROM vuongmac WHERE VuongMacID = ?',
       [vuongMacId]
     );
@@ -4729,7 +4754,7 @@ app.get('/hangmuc/:hangMucId/kehoach', async (req, res) => {
     const hangMucId = req.params.hangMucId;
 
     // 1. Kiểm tra hạng mục tồn tại
-    const [hangMucCheck] = await db.query(
+    const [hangMucCheck] = await pool.query(
       'SELECT HangMucID FROM hangmuc WHERE HangMucID = ?', 
       [hangMucId]
     );
@@ -4742,7 +4767,7 @@ app.get('/hangmuc/:hangMucId/kehoach', async (req, res) => {
     }
 
     // 2. Lấy danh sách kế hoạch
-    const [keHoachList] = await db.query(`
+    const [keHoachList] = await pool.query(`
       SELECT 
         k.KeHoachID,
         k.TenCongTac,
@@ -4764,7 +4789,7 @@ app.get('/hangmuc/:hangMucId/kehoach', async (req, res) => {
 
     // 3. Lấy danh sách tài liệu đính kèm cho mỗi kế hoạch
     for (const keHoach of keHoachList) {
-      const [taiLieu] = await db.query(
+      const [taiLieu] = await pool.query(
         'SELECT * FROM tailieu WHERE LoaiDoiTuong = "KEHOACH" AND DoiTuongID = ?',
         [keHoach.KeHoachID]
       );

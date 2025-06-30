@@ -109,7 +109,7 @@ const Detail = () => {
 </div>
 
       {/* Phần nội dung chính */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 mt-4 flex flex-col lg:flex-row overflow-hidden">
         {/* Cột List - giữ nguyên, luôn hiển thị */}
         <div className="w-full lg:w-[400px] flex-shrink-0 bg-white shadow">
           <List
@@ -126,17 +126,17 @@ const Detail = () => {
           {!isExpanded && (
             <div className="flex-1 flex flex-col min-w-0 p-2.5 gap-2.5">
               {packageData?.thongTinChung && (
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white p-4">
                   <BasicInfo data={packageData.thongTinChung} />
                 </div>
               )}
               {packageData?.tienDo.phanTram && (
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white p-4">
                   <ProgressChart data={packageData.tienDo.phanTram} />
                 </div>
               )}
               {packageData?.tienDo.chiTiet && (
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white p-4">
                   <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={subProjectId} packageId={selectedPackageId} />
                 </div>
               )}
@@ -147,17 +147,17 @@ const Detail = () => {
           <div className={`flex-1 flex flex-col min-w-0 p-2.5 gap-2.5 ${isExpanded ? 'absolute inset-0 z-10' : ''}`}>
             {!isExpanded && packageData?.thongTinChung && (
               <>
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white p-4">
                   <ContractorInfo data={packageData.thongTinChung} />
                 </div>
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white p-4">
                   <ConstructionVolume data={{ khoiLuongThiCong: packageData.thongTinChung.khoiLuongThiCong }}  packageId={selectedPackageId}/>
                 </div>
               </>
             )}
             {packageData?.thongTinChung && (
-              <div className={`bg-white rounded-lg shadow flex-1 ${isExpanded ? 'h-full' : ''}`}>
-                <div className="relative h-full">
+              <div className={`bg-white flex-1 ${isExpanded ? 'h-full' : ''}`}>
+                <div className="relative h-80">
                   <button
                     className="absolute bottom-5 right-5 z-[1000] bg-[#006591] hover:bg-[#004b73] text-white py-2 px-3 rounded flex items-center gap-1.5 transition-colors"
                     onClick={toggleExpand}
