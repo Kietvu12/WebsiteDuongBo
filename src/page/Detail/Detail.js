@@ -1,6 +1,6 @@
 import './Detail.css';
-import React, { useEffect, useState } from 'react';
-import { FaExpand, FaCompress, FaFileWord } from 'react-icons/fa';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaExpand, FaCompress, FaFileWord, FaRegBell } from 'react-icons/fa';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
 import menuIcon from '../../assets/img/menu-icon.png';
 import helpIcon from '../../assets/img/help-icon.png';
@@ -16,6 +16,22 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { useProject } from '../../contexts/ProjectContext';
 import AddNewPackage from '../AddNewPackage/AddNewPackage';
+
+const useClickOutside = (ref, callback) => {
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [ref, callback]);
+};
+
 const Detail = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,6 +42,17 @@ const Detail = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAddPackage, setShowAddPackage] = useState(false);
+
+  const { logout } = useProject();
+  const [showMenu, setShowMenu] = useState(false);
+
+  const menuRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useClickOutside(menuRef, () => {
+    setShowMenu(false);
+  });
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const fetchPackageDetails = async () => {
     if (!selectedPackageId) return;
@@ -64,47 +91,59 @@ const Detail = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       {/* Header giữ nguyên như cũ */}
-      <div className="bg-white shadow-sm">
-  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 sm:px-5 py-3 gap-3 sm:gap-0">
-    {/* Nhóm nút bên trái - giờ bao gồm cả nút Back và Thêm mới */}
-    <div className="flex items-center gap-2">
+<div className="bg-white shadow-sm">
+  {/* Top Row - Navigation Icons */}
+    <div className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 md:pt-0 mt-12 md:mt-0">
+        <div className="flex items-center space-x-4 pt-0 md:pt-1">
+          <span className="text-gray-500">Thông báo</span>
+          <FaRegBell />
+          <span></span>
+          <div className="inline-block" ref={menuRef}>
+              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                onClick={() => setShowMenu(!showMenu)}
+              >
+                R
+              </button>
+              {showMenu && (
+            <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+              <button
+                className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+              >
+                Đăng xuất
+                </button>
+            </div>
+          )}
+          </div>
+        </div>
+      </div>
+
+  {/* Bottom Row - Project Info and Create Button */}
+  <div className="px-4 py-3 border-t border-gray-100 flex justify-between items-start">
+    <div className="flex items-center gap-3">
       <button
         onClick={() => navigate(-1)}
-        className="p-2 rounded hover:bg-gray-200"
+        className="p-1.5 rounded hover:bg-gray-100"
         aria-label="Quay lại"
       >
         <FiArrowLeft className="w-4 h-4" />
       </button>
-
-      <button
-        onClick={() => setShowAddPackage(true)}
-        className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
-      >
-        <FiPlus className="w-3 h-3" />
-        <span>Tạo gói thầu dự án mới</span>
-      </button>
+      <div>
+        <h1 className="text-xl font-bold text-gray-800">{projectName}</h1>
+        <p className="text-xm font-bold text-gray-500">{subProjectName}</p>
+      </div>
     </div>
-
-    {/* Nhóm nút bên phải */}
-    <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-normal">
-      <div className="sm:hidden">
-        <button className="p-1 rounded-md hover:bg-gray-100 transition-colors">
-          <img src={menuIcon} alt="Menu" className="w-5 h-5" />
-        </button>
-      </div>      
-      <button className="p-1 rounded-md hover:bg-gray-100 transition-colors">
-        <img src={helpIcon} alt="Help" className="w-5 h-5" />
-      </button>
-      
-      <button className="p-1 rounded-md hover:bg-gray-100 transition-colors">
-        <img src={userIcon} alt="User" className="w-5 h-5" />
-      </button>
-    </div>
-  </div>
-
-  <div className="px-4 sm:px-5 py-3 sm:py-4 border-t border-gray-100">
-    <h1 className="text-xl sm:text-2xl font-bold text-gray-800">{projectName}</h1>
-    <p className="text-xs sm:text-sm text-gray-500 mt-1">{subProjectName}</p>
+    
+    <button
+      onClick={() => setShowAddPackage(true)}
+      className="flex items-center gap-1 px-3 py-1.5 bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm"
+    >
+      <FiPlus className="w-6 h-6" />
+      <span>Tạo gói thầu dự án mới</span>
+    </button>
   </div>
 </div>
 

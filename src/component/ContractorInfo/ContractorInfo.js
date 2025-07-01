@@ -5,7 +5,8 @@ const ContractorInfo = ({ data }) => {
   if (!data) return null;
 
   const { NgayKhoiCong, NgayHoanThanh, TrangThai, danhGiaRuiRo, nhaThau = [] } = data;
-
+  console.log("Dữ liệu nahf thầu:",data);
+  
   const formatDate = (dateString) => {
     if (!dateString) return '---';
     const date = new Date(dateString);
