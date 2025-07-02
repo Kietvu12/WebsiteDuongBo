@@ -65,7 +65,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
             {packages.map((item) => (
               <div 
                 key={item.GoiThau_ID}
-                className={`flex items-center gap-4 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-gray-200 ${
+                className={`flex items-center gap-4 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-gray-200z ${
                   selectedProject?.GoiThau_ID === item.GoiThau_ID ? 'bg-gray-100' : ''
                 }`}
                 onClick={() => handlePackageClick(item.GoiThau_ID)}

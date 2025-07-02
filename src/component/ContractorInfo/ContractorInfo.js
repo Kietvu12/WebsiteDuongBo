@@ -34,7 +34,7 @@ const ContractorInfo = ({ data }) => {
         <FaUsers className="text-gray-500 mr-2" size={14} />
         <h2 className="text-base font-semibold text-gray-800">NHÀ THẦU CHÍNH</h2>
       </div>
-      <div className="p-3 max-h-40 overflow-y-auto">
+      <div className="p-4 max-h-40 overflow-y-auto">
         <div className="mb-4">
           <p className="text-xm font-bold text-gray-800 text-center truncate">{contractorNames || 'Không có thông tin nhà thầu'}</p>
         </div>

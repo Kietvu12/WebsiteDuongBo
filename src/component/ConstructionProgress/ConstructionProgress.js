@@ -75,12 +75,12 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
           <FaBars className="text-gray-500" />
           <h2 className="text-base font-semibold text-gray-800">TIẾN ĐỘ THI CÔNG</h2>
         </div>
-        <button 
+      <button
           onClick={() => setShowCategory(true)}
-          className="flex items-center text-blue-600 hover:text-blue-800 text-xs font-medium"
+          className="flex items-center gap-1 px-3 py-1.5 bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm"
         >
-          Xem chi tiết <FaChevronRight className="ml-1" size={10} />
-        </button>
+          <span>Chi tiết tiến độ thi công</span>
+      </button>
       </div>
       
       {/* Ngày hiện tại */}
@@ -89,7 +89,7 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
       </div>
       
       {/* Bảng công việc */}
-      <div className="divide-y divide-gray-100 max-h-60 overflow-y-auto">
+      <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
         {tasks.length > 0 ? (
           tasks.map((task, index) => {
             const statusStyle = getStatusStyle(task.TrangThai, task.NgayKetThuc);

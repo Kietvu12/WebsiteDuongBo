@@ -16,7 +16,7 @@ import { useProject } from "../../contexts/ProjectContext";
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
-import { FaRegCalendarAlt, FaRegBell, FaFilter } from "react-icons/fa";
+import { FaRegCalendarAlt, FaRegBell, FaFilter, FaChevronLeft } from "react-icons/fa";
 import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
 import AddNewPackage from '../AddNewPackage/AddNewPackage';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
@@ -509,12 +509,7 @@ const SideProject = () => {
   return (
     <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
       <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
-        <div>
-          <button
-            className="p-2 rounded hover:bg-gray-200"
-            aria-label="Navigation menu"
-          ></button>
-        </div>
+        <button className="hover:bg-gray-100 pt-0 md:pt-1"><FaChevronLeft /></button>
         <div className="flex items-center space-x-4 pt-0 md:pt-1">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />

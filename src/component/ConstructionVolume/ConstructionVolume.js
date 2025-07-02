@@ -29,9 +29,9 @@ const ConstructionVolume = ({ data, packageId }) => {
 
   if (!data || !data.khoiLuongThiCong || data.khoiLuongThiCong.length === 0) {
     return (
-      <div className="bg-white rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg overflow-hidden h-full flex flex-col">
         <Header />
-        <div className="p-3 h-60 overflow-y-auto">
+        <div className="flex-1 p-3 overflow-y-auto min-h-[100px]">
           <p className="text-sm text-gray-800 text-left">Không có dữ liệu</p>
         </div>
         {showPopup && (
@@ -46,9 +46,9 @@ const ConstructionVolume = ({ data, packageId }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg overflow-hidden h-full flex flex-col">
       <Header />
-      <div className="p-3 h-60 overflow-y-auto">
+      <div className="flex-1 p-3 overflow-y-auto min-h-[100px]">
         <ul className="list-disc pl-4 space-y-2">
           {data.khoiLuongThiCong.map((item, index) => (
             <li

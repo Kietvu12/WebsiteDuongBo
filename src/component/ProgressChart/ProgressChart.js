@@ -47,7 +47,7 @@ const ProgressChart = ({ data }) => {
 
       <div className="flex flex-col md:flex-row items-center justify-between">
         {/* Biểu đồ thu nhỏ */}
-        <div className="w-32 h-32 md:w-40 md:h-40">
+        <div className="w-16 h-16 md:w-20 md:h-20">
           <Doughnut data={dataChart} options={options} />
         </div>
 

@@ -10,7 +10,7 @@ const BasicInfo = ({ data }) => {
           THÔNG TIN CHUNG
         </div>
       </div>
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-3">
         <div className="flex justify-between">
           <span className="text-gray-600 font-medium">Tổng chiều dài tuyến:</span>
           <span className="text-gray-800 font-bold">55.34km</span>

@@ -84,16 +84,13 @@ const MapView = ({ selectedProject, isExpanded }) => {
   }, [selectedProject]);
 
   return (
-    <div className="map-container">
-      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center">
-        <FaMap className="text-gray-500 mr-2" size={14} />
-        <h2 className="text-base font-semibold text-gray-800">BẢN ĐỒ DỰ ÁN</h2>
-      </div>
+    <div className="w-full h-full rounded shadow-md overflow-hidden relative">
+      <div className={`${isExpanded ? 'h-[calc(100vh-44px)]' : 'h-[calc(100%)]'} w-full z-0`}>
       <MapContainer
         center={startPoint || [21.8534, 106.7615]}
         zoom={13}
         scrollWheelZoom={true}
-        className="leaflet-map"
+        className="w-full h-full z-0"
       >
         <TileLayer
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -110,8 +107,8 @@ const MapView = ({ selectedProject, isExpanded }) => {
         {startPoint && (
           <Marker position={startPoint}>
             <Popup>
-              <div className="marker-popup">
-                <strong>Điểm bắt đầu</strong>
+              <div className="min-w-[180px] text-sm leading-relaxed">
+                <strong className="text-[#1890ff] block mb-1 text-base">Điểm bắt đầu</strong>
                 <div>Dự án: {selectedProject.TenGoiThau}</div>
                 <div>Km: {selectedProject.Km_BatDau}</div>
                 <div>Tọa độ: {startPoint[0].toFixed(6)}, {startPoint[1].toFixed(6)}</div>
@@ -122,8 +119,8 @@ const MapView = ({ selectedProject, isExpanded }) => {
         {endPoint && (
           <Marker position={endPoint}>
             <Popup>
-              <div className="marker-popup">
-                <strong>Điểm kết thúc</strong>
+              <div className="min-w-[180px] text-sm leading-relaxed">
+                <strong className="text-[#1890ff] block mb-1 text-base">Điểm kết thúc</strong>
                 <div>Dự án: {selectedProject.TenGoiThau}</div>
                 <div>Km: {selectedProject.Km_KetThuc}</div>
                 <div>Tọa độ: {endPoint[0].toFixed(6)}, {endPoint[1].toFixed(6)}</div>
@@ -133,15 +130,16 @@ const MapView = ({ selectedProject, isExpanded }) => {
         )}
         <MapController bounds={bounds} isExpanded={isExpanded} />
       </MapContainer>
+      </div>
       {isExpanded && selectedProject && (
-        <div className="floating-info-container">
-          <div className="floating-card slide-in" style={{ animationDelay: '0s' }}>
+        <div className="absolute top-5 right-5 flex flex-col gap-4 z-[1001] pointer-events-none">
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]">
             <ConstructionVolume data={{ khoiLuongThiCong: selectedProject.khoiLuongThiCong }} />
           </div>
-          <div className="floating-card slide-in" style={{ animationDelay: '0.1s' }}>
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]" style={{ animationDelay: '0.1s' }}>
             <ContractorInfo data={selectedProject} />
           </div>
-          <div className="floating-card slide-in" style={{ animationDelay: '0.2s' }}>
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]" style={{ animationDelay: '0.2s' }}>
             <ProgressChart data={selectedProject.phanTram} />
           </div>
         </div>

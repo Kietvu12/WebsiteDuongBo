@@ -34,7 +34,8 @@ const LayoutWithSidebar = ({ children }) => {
         position: 'sticky',
         top: 0,
         overflowY: 'auto'
-      }}>
+      }}
+      className='z-10'>
         <Sidebar />
       </div>
       
@@ -43,9 +44,11 @@ const LayoutWithSidebar = ({ children }) => {
         flex: 1,
         overflowY: 'auto'
       }}>
-        <div style={{ minHeight: '100%' }}>
+        <div style={{ minHeight: '100%'}} className=''>
           {children}
-          <ChatbotButton />
+          <div className="fixed bottom-6 right-6 z-40">
+            <ChatbotButton />
+          </div>
         </div>
       </div>
     </div>

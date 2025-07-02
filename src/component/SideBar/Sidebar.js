@@ -156,7 +156,7 @@ const Sidebar = () => {
     >
       {/* Phần trên sidebar */}
       <div
-        className="relative bg-center bg-cover p-5 rounded-b-xl"
+        className="relative bg-center bg-cover p-5"
         style={{ backgroundImage: `url(${backgroundSidebar})` }}
       >
         <div className="flex flex-col items-center relative z-10">
@@ -169,8 +169,10 @@ const Sidebar = () => {
             <input
               type="text"
               placeholder="Tìm kiếm..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-full bg-white bg-opacity-90 text-sm outline-none transition
-                focus:border-blue-600 focus:ring-2 focus:ring-blue-300"
+              className="w-full px-4 py-2 border border-gray-300 rounded-full 
+                backdrop-blur-sm bg-white/70 text-sm outline-none transition
+                focus:border-blue-600 focus:ring-2 focus:ring-blue-300
+                shadow-m"
             />
           </div>
         </div>
@@ -185,7 +187,7 @@ const Sidebar = () => {
         {/* Project menu */}
         <div className="py-1">
           <div
-            className="flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-sm hover:bg-gray-200 transition"
+            className="flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-lg hover:bg-gray-200 transition"
             onClick={() => toggleMenu('project')}
           >
             <img src={projectIcon} width={20} alt="Project Icon" className="mr-2" />
@@ -200,7 +202,7 @@ const Sidebar = () => {
             />
           </div>
           <div
-            className={`overflow-hidden text-sm text-gray-600 transition-max-height duration-300 ease-out
+            className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
             ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
           >
             <div
@@ -218,9 +220,9 @@ const Sidebar = () => {
             <div onClick= {handleAddNew} className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
               Thêm dự án mới
             </div>
-            <div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
+            {/*<div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
               Phân loại dự án
-            </div>
+            </div>*/}
           </div>
         </div>
 
@@ -241,8 +243,8 @@ const Sidebar = () => {
             icon: requirementsIcon,
             label: 'Nhà thầu thi công',
             submenu: [
-              { label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
-              { label: 'Tiến độ hoàn thành', onClick: () => handleNavigation('/completion-progress') },
+              //{ label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
+              //{ label: 'Tiến độ hoàn thành', onClick: () => handleNavigation('/completion-progress') },
               { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
             ],
           },
@@ -252,8 +254,8 @@ const Sidebar = () => {
             label: 'Báo cáo',
             submenu: [
               { label: 'Báo cáo chi tiết theo dự án', onClick: () => handleNavigation('/project-report') },
-              { label: 'Báo cáo theo các nhà thầu', onClick: () => handleNavigation('/contractor-report') },
-              { label: 'Xuất báo cáo Excel', onClick: () => handleNavigation('/export-excel') },
+              //{ label: 'Báo cáo theo các nhà thầu', onClick: () => handleNavigation('/contractor-report') },
+              //{ label: 'Xuất báo cáo Excel', onClick: () => handleNavigation('/export-excel') },
             ],
           },
           {
@@ -268,7 +270,7 @@ const Sidebar = () => {
         ].map(({ key, icon, label, submenu }) => (
           <div key={key} className="py-1">
             <div
-              className={`flex items-center px-5 py-2 cursor-pointer text-gray-600 font-semibold text-sm
+              className={`flex items-center px-5 py-2 cursor-pointer text-gray-600 font-semibold text-lg
                 hover:bg-gray-200 transition
                 ${isMenuItemDisabled(key) ? 'cursor-not-allowed opacity-50' : 'text-gray-700'}`}
               onClick={() => {
@@ -287,7 +289,7 @@ const Sidebar = () => {
               />
             </div>
             <div
-              className={`overflow-hidden text-sm text-gray-600 transition-max-height duration-300 ease-out
+              className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
               ${openMenus[key] ? 'max-h-[400px]' : 'max-h-0'}`}
             >
               {submenu.map(({ label: subLabel, onClick }, idx) => (

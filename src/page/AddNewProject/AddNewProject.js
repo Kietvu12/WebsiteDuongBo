@@ -71,7 +71,7 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
         setIsLoading(true);
         try {
             const normalizedText = normalizeText(textInput);
-            const response = await fetch('https://f956-58-187-57-1.ngrok-free.app/api_ai_dadb_v2/analyze-text/', {
+            const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/analyze_du_an', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
     }, [preview.url]);
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 text-base">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Nhập thông tin dự án từ văn bản</h2>
@@ -286,7 +286,7 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
 
                 <div className="space-y-4">
                     <div className="border border-gray-200 rounded-lg p-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-base font-medium text-gray-700 mb-2">
                             Nhập văn bản mô tả dự án:
                         </label>
                         <textarea
@@ -339,20 +339,20 @@ const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
                             <div className="flex justify-between items-center mb-2">
                                 <h3 className="font-medium">Kết quả phân tích</h3>
                                 <button
-                                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                                    className="px-3 py-1 bg-green-600 text-white rounded text-base hover:bg-green-700"
                                     onClick={handleApplyToForm}
                                 >
                                     Áp dụng vào form
                                 </button>
                             </div>
-                            <pre className="text-sm whitespace-pre-wrap max-h-60 overflow-auto bg-white p-3 rounded border border-gray-200">
+                            <pre className="text-base whitespace-pre-wrap max-h-60 overflow-auto bg-white p-3 rounded border border-gray-200">
                                 {JSON.stringify(projectInfo, null, 2)}
                             </pre>
                         </div>
                     )}
 
                     {error && !jsonOutput && (
-                        <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
+                        <div className="p-3 bg-red-50 text-red-600 rounded text-base">
                             {error}
                         </div>
                     )}
@@ -635,7 +635,7 @@ const AddNewProject = () => {
         const value = formData.ThuocTinhValues?.[thuocTinh.ThuocTinh_ID] 
         || (thuocTinh.GiaTriMacDinh ? thuocTinh.GiaTriMacDinh : '');
 
-        const baseClass = "w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500";
+        const baseClass = "w-full px-2 py-1 text-base border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500";
         const textareaClass = `${baseClass} resize-y min-h-[32px] max-h-[200px] overflow-auto`;
 
         switch (thuocTinh.KieuDuLieu) {
@@ -648,7 +648,7 @@ const AddNewProject = () => {
                             value={value}
                             onChange={(e) => handleThuocTinhChange(thuocTinh.ThuocTinh_ID, e.target.value)}
                         />
-                        <FaCalendarAlt className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                        <FaCalendarAlt className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-base" />
                     </div>
                 );
 
@@ -697,20 +697,20 @@ const AddNewProject = () => {
     };
 
     return (
-        <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl">
+        <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl text-base">
             {/* Header gọn */}
             <div className="flex justify-between items-center mb-2">
                 <h1 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <FaRoad className="mr-1 text-blue-500 text-sm" />
+                    <FaRoad className="mr-1 text-blue-500" />
                     Thêm dự án mới
                 </h1>
                 <button
                     type="button"
-                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs hover:shadow transition-all"
+                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base hover:shadow transition-all"
                     onClick={() => setShowDocThongMinh(true)}
                 >
                     <span>Đọc thông minh</span>
-                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-xxs animate-pulse">
+                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-base animate-pulse">
                         AI
                     </span>
                 </button>
@@ -731,12 +731,12 @@ const AddNewProject = () => {
             <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
                 <div className="bg-white rounded p-2 border border-gray-200">
                     <div className="flex items-center space-x-2">
-                        <label className="text-xs font-medium text-gray-700 flex items-center">
-                            <FaRoad className="mr-1 text-gray-500 text-xs" />
+                        <label className="text-base font-medium text-gray-700 flex items-center">
+                            <FaRoad className="mr-1 text-gray-500 text-base" />
                             Loại dự án:
                         </label>
                         <select
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                             onChange={handleLoaiHinhChange}
                             value={formData.LoaiHinh_ID}
                         >
@@ -748,8 +748,8 @@ const AddNewProject = () => {
                             ))}
                         </select>
                         {selectedLoaiHinh && (
-                            <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded-full text-xxs whitespace-nowrap flex items-center">
-                                <FaCheckCircle className="mr-0.5 text-xs" />
+                            <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded-full text-base whitespace-nowrap flex items-center">
+                                <FaCheckCircle className="mr-0.5 text-base" />
                                 {selectedLoaiHinh.TenLoaiHinh}
                             </span>
                         )}
@@ -757,63 +757,63 @@ const AddNewProject = () => {
                 </div>
                 <div className="bg-white rounded p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="col-span-2">
-                        <h2 className="text-xs font-semibold text-gray-700 pb-1 border-b border-gray-200 flex items-center">
+                        <h2 className="text-base font-semibold text-gray-700 pb-1 border-b border-gray-200 flex items-center">
                             <FaInfoCircle className="mr-1.5 text-lg text-gray-500" />
                             Thông tin điển hình
                         </h2>
                     </div>
                     <div className="space-y-2">
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
+                            <label className="text-base text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
                                 Tên dự án <span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="TenDuAn"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.TenDuAn}
                                 onChange={handleInputChange}
                                 required
                             />
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
+                            <label className="text-base text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
                                 Tổng chiều dài <span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <input
                                 type="text"
                                 name="TongChieuDai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.TongChieuDai}
                                 onChange={handleInputChange}
                                 required
                             />
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
-                                <FaCalendarAlt className="mr-1.5 text-gray-500 text-xs" />
+                            <label className="text-base text-gray-700 flex items-center mb-px">
+                                <FaCalendarAlt className="mr-1.5 text-gray-500 text-base" />
                                 Ngày khởi công
                             </label>
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                     value={formData.NgayKhoiCong}
                                     onChange={(e) => handleDateChange('NgayKhoiCong', e.target.value)}
                                 />
-                                <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                                <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-base" />
                             </div>
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
+                            <label className="text-base text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
                                 Chủ đầu tư
                             </label>
                             <select
                                 name="ChuDauTu"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.ChuDauTu}
                                 onChange={handleInputChange}
                             >
@@ -828,12 +828,12 @@ const AddNewProject = () => {
                     </div>
                     <div className="space-y-2">
                         <div className="flex flex-col relative" ref={dropdownRef}>
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
-                                <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-xs" />
+                            <label className="text-base text-gray-700 flex items-center mb-px">
+                                <FaMapMarkerAlt className="mr-1.5 text-gray-500 text-base" />
                                 Tỉnh thành
                             </label>
                             <div
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs bg-white cursor-pointer"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base bg-white cursor-pointer"
                                 onClick={() => setShowDropdown(!showDropdown)}
                             >
                                 {selectedProvinces.length > 0
@@ -842,7 +842,7 @@ const AddNewProject = () => {
                             </div>
                             {showDropdown && (
                                 <div
-                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-xs transition-all duration-200 ease-out animate-slide-down z-50"
+                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-base transition-all duration-200 ease-out animate-slide-down z-50"
                                 >
                                     {mergedProvinces.map((tinh, index) => (
                                         <div
@@ -863,13 +863,13 @@ const AddNewProject = () => {
                             )}
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
-                                <FaMoneyBillWave className="mr-1.5 text-gray-500 text-xs" />
+                            <label className="text-base text-gray-700 flex items-center mb-px">
+                                <FaMoneyBillWave className="mr-1.5 text-gray-500 text-base" />
                                 Nguồn vốn
                             </label>
                             <select
                                 name="NguonVon"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
@@ -880,28 +880,28 @@ const AddNewProject = () => {
                             </select>
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
-                                <FaCalendarAlt className="mr-1.5 text-gray-500 text-xs" />
+                            <label className="text-base text-gray-700 flex items-center mb-px">
+                                <FaCalendarAlt className="mr-1.5 text-gray-500 text-base" />
                                 Kế hoạch hoàn thành
                             </label>
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                     value={formData.KeHoachHoanThanh}
                                     onChange={(e) => handleDateChange('KeHoachHoanThanh', e.target.value)}
                                 />
-                                <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs" />
+                                <FaCalendarAlt className="absolute left-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 text-base" />
                             </div>
                         </div>
                         <div className="flex flex-col">
-                            <label className="text-xs text-gray-700 flex items-center mb-px">
+                            <label className="text-base text-gray-700 flex items-center mb-px">
                                 <span className="w-2 mr-1">•</span>
                                 Trạng thái
                             </label>
                             <select
                                 name="TrangThai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                                 value={formData.TrangThai}
                                 onChange={handleInputChange}
                             >
@@ -913,14 +913,14 @@ const AddNewProject = () => {
                         </div>
                     </div>
                     <div className="col-span-2">
-                        <label className="text-xs text-gray-700 flex items-center mb-px">
+                        <label className="text-base text-gray-700 flex items-center mb-px">
                             <span className="w-2 mr-1">•</span>
                             Mô tả chung
                         </label>
                         <textarea
                             name="MoTaChung"
                             rows={2}
-                            className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
                             value={formData.MoTaChung}
                             onChange={handleInputChange}
                         />
@@ -929,8 +929,8 @@ const AddNewProject = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div className="bg-white rounded p-2 border border-gray-200 lg:col-span-9 bg-white rounded-lg border border-gray-200 shadow-sm">
                         <div className="flex justify-between items-center mb-1">
-                            <h2 className="text-xs font-semibold text-gray-700 flex items-center">
-                                <FaCheckCircle className="mr-1 text-green-500 text-xs" />
+                            <h2 className="text-base font-semibold text-gray-700 flex items-center">
+                                <FaCheckCircle className="mr-1 text-green-500 text-base" />
                                 Thuộc tính dự án
                             </h2>
                             <button
@@ -938,9 +938,9 @@ const AddNewProject = () => {
                                     e.preventDefault();
                                      
                                     setShowAddAttribute(true)}}
-                                className="flex items-center px-2 py-0.5 bg-green-500 text-white rounded text-xxs hover:bg-green-600 transition-colors"
+                                className="flex items-center px-2 py-0.5 bg-green-500 text-white rounded text-base hover:bg-green-600 transition-colors"
                             >
-                                <FaPlus className="mr-0.5 text-xs" />
+                                <FaPlus className="mr-0.5 text-base" />
                                 Thêm thuộc tính
                             </button>
                         </div>
@@ -961,7 +961,7 @@ const AddNewProject = () => {
                                                     </label>
                                                     <button
                                                         type="button"
-                                                        className="text-gray-400 hover:text-red-500 transition-colors text-xxs"
+                                                        className="text-gray-400 hover:text-red-500 transition-colors text-base"
                                                         onClick={() => removeThuocTinh(thuocTinh)}
                                                     >
                                                         <FaTimes className="h-2.5 w-2.5" />
@@ -969,14 +969,14 @@ const AddNewProject = () => {
                                                 </div>
                                                 {renderInputByType(thuocTinh)}
                                                 {thuocTinh.DonVi && (
-                                                    <div className="text-xxs text-gray-500 truncate">Đơn vị: {thuocTinh.DonVi}</div>
+                                                    <div className="text-base text-gray-500 truncate">Đơn vị: {thuocTinh.DonVi}</div>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="col-span-full text-center py-3 text-gray-400 text-xxs">
+                                <div className="col-span-full text-center py-3 text-gray-400 text-base">
                                     {selectedLoaiHinh ? 'Chưa có thuộc tính nào' : 'Vui lòng chọn loại hình dự án'}
                                 </div>
                             )}
@@ -985,7 +985,7 @@ const AddNewProject = () => {
                     </div>
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:col-span-3">
                         <div className="p-3 border-b border-gray-200">
-                            <h2 className="text-sm font-semibold text-gray-700 flex items-center">
+                            <h2 className="text-base font-semibold text-gray-700 flex items-center">
                                 <FaInfoCircle className="mr-2 text-blue-500" />
                                 Thuộc tính có sẵn
                             </h2>
@@ -1000,13 +1000,13 @@ const AddNewProject = () => {
                                             className="p-2 bg-gray-50 rounded-md hover:bg-blue-50 cursor-pointer transition-colors flex justify-between items-center"
                                             onClick={() => restoreThuocTinh(thuocTinh)}
                                         >
-                                            <span className="text-sm text-gray-700 truncate">{thuocTinh.TenThuocTinh}</span>
+                                            <span className="text-base text-gray-700 truncate">{thuocTinh.TenThuocTinh}</span>
                                             <FaPlus className="h-3 w-3 text-green-500" />
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-6 text-gray-400 text-sm">
+                                <div className="text-center py-6 text-gray-400 text-base">
                                     Không có thuộc tính nào
                                 </div>
                             )}
@@ -1016,18 +1016,18 @@ const AddNewProject = () => {
                 <div className="flex justify-end space-x-2 mt-2">
                     <button
                         type="button"
-                        className="px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center text-xs"
+                        className="px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center text-base"
                         onClick={() => navigate('/home')}
                     >
-                        <FaTimes className="mr-1 text-xs" />
+                        <FaTimes className="mr-1 text-base" />
                         Hủy bỏ
                     </button>
                     <button
                         type="submit"
-                        className={`px-2 py-1 rounded text-white flex items-center space-x-1 text-xs ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors`}
+                        className={`px-2 py-1 rounded text-white flex items-center space-x-1 text-base ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} transition-colors`}
                         disabled={loading}
                     >
-                        {loading ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
+                        {loading ? <FaSpinner className="animate-spin text-base" /> : <FaCheckCircle className="text-base" />}
                         <span>Tạo dự án</span>
                     </button>
                 </div>
@@ -1044,7 +1044,7 @@ const AddNewProject = () => {
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                     <div className="bg-white px-6 py-4 rounded shadow flex items-center space-x-3">
                         <FaSpinner className="animate-spin text-blue-500" />
-                        <span className="text-sm text-gray-700">Đang tạo dự án, vui lòng chờ...</span>
+                        <span className="text-base text-gray-700">Đang tạo dự án, vui lòng chờ...</span>
                     </div>
                 </div>
             )}
@@ -1060,7 +1060,7 @@ const AddNewProject = () => {
                         <div className="flex justify-center space-x-2">
                             <button
                                 onClick={() => setShowSuccessModal(false)}
-                                className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400"
+                                className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-base hover:bg-gray-400"
                             >
                                 Đóng
                             </button>
