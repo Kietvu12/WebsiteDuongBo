@@ -244,7 +244,7 @@ const Sidebar = () => {
             label: 'Nhà thầu thi công',
             submenu: [
               //{ label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
-              //{ label: 'Tiến độ hoàn thành', onClick: () => handleNavigation('/completion-progress') },
+              { label: 'Tiến độ các nhà thầu', onClick: () => handleSimpleNavigation('/constructor-progress') },
               { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
             ],
           },

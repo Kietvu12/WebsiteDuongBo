@@ -19,6 +19,8 @@ import AddNewSubProject from './page/AddNewSubProject/AddNewSubProject';
 import AddNewPackage from './page/AddNewPackage/AddNewPackage';
 import AddNewContructors from './page/AddNewContructors/AddNewContructors';
 import { useEffect } from 'react';
+import ConstructionProgress from './component/ConstructionProgress/ConstructionProgress';
+import ConstructorProgress from './page/ConstructorProgress/ConstructorProgress';
 
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
@@ -167,6 +169,13 @@ function App() {
           <ProtectedRoute>
             <LayoutWithSidebar>
               <AddNewContructors/>
+            </LayoutWithSidebar>
+          </ProtectedRoute>
+        } />
+        <Route path='/constructor-progress' element={
+          <ProtectedRoute>
+            <LayoutWithSidebar>
+              <ConstructorProgress/>
             </LayoutWithSidebar>
           </ProtectedRoute>
         } />

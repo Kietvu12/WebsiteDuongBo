@@ -448,7 +448,7 @@ const ProductionChart = ({duAnThanhPhanId}) => {
     <div className="p-4 bg-white rounded shadow grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="h-80">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-sm font-semibold">Biểu đồ dữ liệu tiến độ của các kế hoạch</h2>
+          <h2 className="text-sm font-semibold">Biểu đồ dữ liệu tiến độ thi công hạng mục</h2>
           <select
             className="text-sm border rounded p-1"
             value={selectedHangMuc || ''}
@@ -464,7 +464,7 @@ const ProductionChart = ({duAnThanhPhanId}) => {
         <Line data={lineData} options={chartOptions} />
       </div>
       <div className="h-80">
-        <h2 className="text-sm font-semibold mb-2">Biểu đồ kế hoạch và thực hiện: </h2>
+        <h2 className="text-sm font-semibold mb-2">Biểu đồ so sánh khối lượng kế hoạch và thực hiện: </h2>
         <Bar data={barData} options={barOptions} />
       </div>
     </div>

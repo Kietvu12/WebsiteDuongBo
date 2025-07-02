@@ -46,28 +46,42 @@ const ConstructionVolume = ({ data, packageId }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden h-full flex flex-col">
-      <Header />
-      <div className="flex-1 p-3 overflow-y-auto min-h-[100px]">
-        <ul className="list-disc pl-4 space-y-2">
-          {data.khoiLuongThiCong.map((item, index) => (
-            <li
-              key={item.KhoiLuong_ID || index}
-              className="text-sm text-gray-800 text-left"
-            >
-              <strong>{item.TieuDe}:</strong> {item.NoiDung}
-            </li>
-          ))}
-        </ul>
-      </div>
-      {showPopup && (
-        <AddConstructionVolumePopup
-          packageId={packageId}
-          onClose={() => setShowPopup(false)}
-          onSuccess={handleSuccess}
-        />
-      )}
+<div className="bg-white rounded-lg overflow-hidden h-full flex flex-col shadow-sm">
+  <Header />
+  <div className="flex-1 p-3 md:p-4 overflow-y-auto min-h-[100px]">
+    <ul className="list-disc pl-4 md:pl-5 space-y-2 md:space-y-3">
+      {data.khoiLuongThiCong.map((item, index) => (
+        <li
+          key={item.KhoiLuong_ID || index}
+          className="text-sm md:text-base text-gray-800 text-left leading-relaxed"
+        >
+          <strong className="font-semibold">{item.TieuDe}:</strong> {item.NoiDung}
+        </li>
+      ))}
+    </ul>
+    
+    {/* Nút thêm khối lượng - responsive */}
+    <div className="mt-4 md:mt-6 flex justify-end">
+      <button
+        onClick={() => setShowPopup(true)}
+        className="px-3 py-2 md:px-4 md:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm md:text-base transition-colors duration-200 flex items-center gap-1.5"
+      >
+        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        <span>Thêm khối lượng</span>
+      </button>
     </div>
+  </div>
+  
+  {showPopup && (
+    <AddConstructionVolumePopup
+      packageId={packageId}
+      onClose={() => setShowPopup(false)}
+      onSuccess={handleSuccess}
+    />
+  )}
+</div>
   );
 };
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import downIcon from '../../assets/img/down.png';
 import axios from 'axios';
 import { FaPlus, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import { FiPlus, FiChevronLeft, FiCalendar, FiSearch, FiFilter } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
 import AddNewPlan from '../AddNewPlan/AddNewPlan';
@@ -417,6 +418,59 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   return (
     <div className="w-full overflow-x-auto p-2">
       <div className="hidden md:block">
+          {/* Phần tìm kiếm và lọc ngày */}
+  <div className="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-md shadow-sm">
+    {/* Ô tìm kiếm */}
+    <div className="flex-1">
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <FiSearch className="text-gray-400" />
+        </div>
+        <input
+          type="text"
+          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          placeholder="Tìm kiếm công việc, hạng mục..."
+        />
+      </div>
+    </div>
+
+    {/* Bộ lọc ngày tháng */}
+    <div className="flex flex-col sm:flex-row gap-4">
+      {/* Ngày bắt đầu */}
+      <div className="flex-1">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FiCalendar className="text-gray-400" />
+          </div>
+          <input
+            type="date"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+          <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Từ ngày</label>
+        </div>
+      </div>
+
+      {/* Ngày kết thúc */}
+      <div className="flex-1">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FiCalendar className="text-gray-400" />
+          </div>
+          <input
+            type="date"
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          />
+          <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Đến ngày</label>
+        </div>
+      </div>
+
+      {/* Nút áp dụng */}
+      <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2">
+        <FiFilter className="w-4 h-4" />
+        <span>Lọc</span>
+      </button>
+    </div>
+  </div>
         <div className="w-full overflow-x-auto">
           <table className="divide-y divide-gray-200 border text-sm">
             <thead className="bg-gray-50">
