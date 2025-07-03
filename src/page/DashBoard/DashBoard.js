@@ -62,6 +62,9 @@ const Dashboard = () => {
 
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
+  const [expandedMenuId, setExpandedMenuId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
@@ -194,8 +197,23 @@ const Dashboard = () => {
       setSelectedStatus(statusLabel);
       setActiveStatus(statusLabel);
     }
+
+  };
+  const toggleMenu = (projectId) => {
+    setExpandedMenuId(expandedMenuId === projectId ? null : projectId);
   };
 
+  // Add this effect to close the menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setExpandedMenuId(null);
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, []);
   const filterProjects = () => {
     let result = [...projects];
 
@@ -511,39 +529,39 @@ const Dashboard = () => {
           <FaRegBell />
           <span></span>
           <div className="inline-block" ref={menuRef}>
-              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
-                onClick={() => setShowMenu(!showMenu)}
-              >
-                R
-              </button>
-              {showMenu && (
-            <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
-              <button
-                className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-              >
-                Đăng xuất
+            <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              R
+            </button>
+            {showMenu && (
+              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                <button
+                  className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                >
+                  Đăng xuất
                 </button>
-            </div>
-          )}
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
       <div className="md:hidden flex justify-between items-center px-4 mb-2">
-        <button 
+        <button
           onClick={() => setShowMobileFilters(!showMobileFilters)}
           className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
         >
           <FaFilter className="text-gray-600" />
           <span>Bộ lọc</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={handleExportReport}
           className="bg-green-700 text-white px-4 py-1 rounded font-bold"
         >
@@ -598,8 +616,6 @@ const Dashboard = () => {
               />
             </div>
           </div>
-
-
           <div>
             <select
               value={selectedProvince}
@@ -684,22 +700,23 @@ const Dashboard = () => {
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className={`bg-white rounded-lg p-4 flex flex-col flex-1 ${showFilters ? 'min-h-screen' : 'min-h-0'}`}>
-          <div className="hidden md:flex flex-col md:flex-row items-center gap-2">
-            <div className=" w-full md:w-64">
+          <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
+            {/* Ô tìm kiếm */}
+            <div className="w-full md:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
               <input
                 type="text"
                 placeholder="Tìm dự án"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-3 pr-10 py-1 border rounded w-full "
+                className="pl-3 pr-8 py-1.5 md:py-1 lg:py-1.5 border rounded w-full text-sm md:text-xs lg:text-sm"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto ">
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
                       onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                      className="px-2 py-1.5 md:py-1 lg:py-1.5 hover:bg-blue-50 cursor-pointer text-sm md:text-xs lg:text-sm"
                     >
                       {suggestion}
                     </li>
@@ -707,38 +724,43 @@ const Dashboard = () => {
                 </ul>
               )}
             </div>
-            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5  text-gray-700 bg-white w-full md:w-auto">
-              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+
+            {/* Khoảng thời gian */}
+            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 md:px-1.5 md:py-0.5 lg:px-2 lg:py-1 text-gray-700 bg-white w-full md:w-56 lg:w-60 xl:w-64 max-w-[1451px]:w-full">
+              <FaRegCalendarAlt className="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 text-gray-500 mr-2" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
               />
               <span className="mx-1">-</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
               />
             </div>
+
+            {/* Các dropdown filter */}
             <select
-  value={selectedProvince}
-  onChange={handleProvinceChange}
-  className="px-3 py-1 border rounded w-full md:w-48"
->
-  <option value="">Tất cả tỉnh</option>
-  {mergedProvinces.map((province, index) => (
-    <option key={index} value={province}>
-      {province}
-    </option>
-  ))}
-</select>
+              value={selectedProvince}
+              onChange={handleProvinceChange}
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
+            >
+              <option value="">Tất cả tỉnh</option>
+              {mergedProvinces.map((province, index) => (
+                <option key={index} value={province}>
+                  {province}
+                </option>
+              ))}
+            </select>
+
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Đang chuẩn bị">Đang chuẩn bị</option>
@@ -746,10 +768,11 @@ const Dashboard = () => {
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
             </select>
+
             <select
               value={contractor}
               onChange={(e) => setContractor(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
             >
               <option value="all">Tất cả nhà thầu</option>
               {contractorList.map((nhathau) => (
@@ -758,29 +781,31 @@ const Dashboard = () => {
                 </option>
               ))}
             </select>
+
             <select
               value={completionLevel}
               onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
             >
               <option value="all">Mọi tiến độ</option>
-              <option value="20">&gt;20%</option>
-              <option value="50">&gt;50%</option>
-              <option value="80">&gt;80%</option>
+              <option value="20">>20%</option>
+              <option value="50">>50%</option>
+              <option value="80">>80%</option>
               <option value="100">100%</option>
             </select>
-            <button
-              onClick={resetFilters}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded  font-medium md:col-start-4"
-            >
-              Xóa lọc
-            </button>
-          </div>
-          <div className="hidden md:flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold ">
-              XUẤT BÁO CÁO
-            </button>
 
+            {/* Nút xuất báo cáo */}
+            <div className="w-full md:w-auto max-w-[1451px]:w-full flex justify-start">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-1.5 mr-2 md:px-3 md:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm md:text-xs lg:text-sm max-w-[1451px]:w-full"
+              >
+                XÓA LỌC
+              </button>
+              <button className="bg-green-700 text-white px-4 py-1.5 md:px-3 md:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm md:text-xs lg:text-sm w-full md:w-auto max-w-[1451px]:w-full">
+                XUẤT BÁO CÁO
+              </button>
+            </div>
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
@@ -912,16 +937,16 @@ const Dashboard = () => {
               style={{ height: "calc(100vh - 300px)" }}
             >
               <div className="overflow-y-auto">
-                <table className="min-w-full border border-gray-300 ">
+                <table className="w-full border border-gray-300">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">
-                      <th className="border px-2 py-1 w-6 ">CHỌN</th>
-                      <th className="border px-2 py-1 ">THAO TÁC</th>
-                      <th className="border px-2 py-1 ">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-1 ">TÊN DỰ ÁN</th>
-                      <th className="border px-2 py-1 ">DÀI TUYẾN</th>
-                      <th className="border px-2 py-1 ">TRẠNG THÁI</th>
-                      <th className="border px-2 py-1 ">TIẾN ĐỘ</th>
+                      <th className="border px-2 py-2 w-8">CHỌN</th>
+                      <th className="border px-2 py-2 w-20">THAO TÁC</th>
+                      <th className="border px-2 py-2 w-24">MÃ DỰ ÁN</th>
+                      <th className="border px-2 py-2 min-w-[180px]">TÊN DỰ ÁN</th>
+                      <th className="border px-2 py-2 w-24">DÀI TUYẾN</th>
+                      <th className="border px-2 py-2 w-28">TRẠNG THÁI</th>
+                      <th className="border px-2 py-2 w-48">TIẾN ĐỘ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -934,137 +959,144 @@ const Dashboard = () => {
                           if (!aIsPinned && bIsPinned) return 1;
                           return 0;
                         })
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                         .map((project, index) => (
-                          <tr key={project.DuAnID} className="text-center">
+                          <tr key={project.DuAnID} className="hover:bg-gray-50">
                             <td className="border px-1 py-2 text-center">
                               <input
                                 type="checkbox"
-                                className="accent-red-500"
+                                className="accent-red-500 w-4 h-4"
                               />
                             </td>
                             <td className="border px-1 py-2">
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Tệp đính kèm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <img
-                                  src={attachment}
-                                  alt="Tệp đính kèm"
-                                  className="w-5 h-5"
-                                />
-                              </button>
-
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Xoá"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProject(project.DuAnID);
-                                }}
-                              >
-                                <img
-                                  src={trash}
-                                  alt="Xoá"
-                                  className="w-5 h-5"
-                                />
-                              </button>
-
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Ghim"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePinProject(project.DuAnID);
-                                }}
-                              >
-                                <img src={pin} alt="Ghim" className="w-5 h-5" />
-                              </button>
-
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Sửa thông tin"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(project.DuAnID, project.ParentID);
-                                }}
-                              >
-                                <img src={edit} alt="Ghim" className="w-5 h-5" />
-                              </button>
-
-
+                              <div className="flex justify-center items-center gap-1">
+                                <button
+                                  className={`p-1 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID) ? "bg-yellow-100" : ""
+                                    }`}
+                                  title="Ghim"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePinProject(project.DuAnID);
+                                  }}
+                                >
+                                  <img src={pin} alt="Ghim" className="w-4 h-4" />
+                                </button>
+                                <div className="relative">
+                                  <button
+                                    className="p-1 hover:bg-gray-200 rounded-full transition-all"
+                                    title="Menu"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleMenu(project.DuAnID);
+                                    }}
+                                  >
+                                    {expandedMenuId === project.DuAnID ? (
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  {expandedMenuId === project.DuAnID && (
+                                    <div className="absolute ml-6 mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <img src={attachment} alt="Tệp đính kèm" className="w-4 h-4 mr-2" />
+                                        <span>Tệp đính kèm</span>
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteProject(project.DuAnID);
+                                        }}
+                                      >
+                                        <img src={trash} alt="Xoá" className="w-4 h-4 mr-2" />
+                                        <span>Xoá</span>
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEdit(project.DuAnID, project.ParentID);
+                                        }}
+                                      >
+                                        <img src={edit} alt="Sửa" className="w-4 h-4 mr-2" />
+                                        <span>Sửa thông tin</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </td>
-                            <td className="border px-1 py-2 text-blue-600 font-medium">
+                            <td className="border px-2 py-2 text-blue-600 font-medium text-sm">
                               <div>{project.DuAnID}</div>
                               <div
-                                className="text-blue-400  cursor-pointer hover:underline"
+                                className="text-blue-400 text-xs cursor-pointer hover:underline"
                                 onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)}
                               >
                                 Xem chi tiết
                               </div>
                             </td>
-                            <td className="border px-1 py-2">
+                            <td className="border px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
                               {project.TenDuAn}
                             </td>
-                            <td className="border px-1 py-2">
+                            <td className="border px-2 py-2 text-sm text-center">
                               {project.TongChieuDai} Km
                             </td>
-
-                            <td className="border px-1 py-2">
+                            <td className="border px-2 py-2 text-center">
                               <span
-                                className={`px-2 py-[2px] text-white  rounded-full ${getStatusColor(
+                                className={`px-2 py-1 text-xs text-white rounded-full ${getStatusColor(
                                   project.TrangThai
                                 )}`}
                               >
                                 {project.TrangThai}
                               </span>
                             </td>
-
-                            <td className="border px-1 py-2">
-                              <div className="grid grid-rows-3 gap-2">
+                            <td className="border px-2 py-2 text-sm">
+                              <div className="grid grid-rows-3 gap-1">
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={planIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Kế hoạch"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-blue-600 font-bold">
+                                  <span className="text-blue-600">
                                     Kế hoạch:{" "}
-                                    <strong className="font-medium">
-                                      {project.phanTramKeHoach || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramKeHoach || "0"}%</strong>
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={actualIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Hoàn thành"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-green-600 font-bold">
+                                  <span className="text-green-600">
                                     Hoàn thành:{" "}
-                                    <strong className="font-medium">
-                                      {project.phanTramHoanThanh || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramHoanThanh || "0"}%</strong>
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={delayIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Chậm tiến độ"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-yellow-600 font-bold">
+                                  <span className="text-yellow-600">
                                     Chậm tiến độ:{" "}
-                                    <strong className="font-medium">
-                                      {project.phanTramChamTienDo || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramChamTienDo || "0"}%</strong>
                                   </span>
                                 </div>
                               </div>
@@ -1083,6 +1115,42 @@ const Dashboard = () => {
                     )}
                   </tbody>
                 </table>
+
+                {/* Phần phân trang */}
+                {filteredProjects.length > 0 && (
+                  <div className="flex justify-between items-center mt-4 px-4 py-2 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} trong tổng số {filteredProjects.length} dự án
+                    </div>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Trước
+                      </button>
+
+                      {Array.from({ length: Math.ceil(filteredProjects.length / itemsPerPage) }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded border ${currentPage === page ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProjects.length / itemsPerPage)))}
+                        disabled={currentPage === Math.ceil(filteredProjects.length / itemsPerPage)}
+                        className={`px-3 py-1 rounded border ${currentPage === Math.ceil(filteredProjects.length / itemsPerPage) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1143,15 +1211,15 @@ const Dashboard = () => {
                             />
                           </button>
                           <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Sửa thông tin"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(project.DuAnID, project.ParentID);
-                                }}
-                              >
-                                <img src={edit} alt="Ghim" className="w-5 h-5" />
-                              </button>
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Sửa thông tin"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(project.DuAnID, project.ParentID);
+                            }}
+                          >
+                            <img src={edit} alt="Ghim" className="w-5 h-5" />
+                          </button>
 
                           <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
                             <img src={pin} alt="Ghim" className="w-5 h-5" />
@@ -1248,10 +1316,10 @@ const Dashboard = () => {
           ></div>
         </div>
       )}
-{showEdit && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div
-      className="
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div
+            className="
         w-full 
         max-w-6xl 
         bg-white 
@@ -1266,19 +1334,19 @@ const Dashboard = () => {
         max-h-[90vh] 
         overflow-y-auto
       "
-    >
-      <AddNewSubProject
-        isEdit={1}
-        ProjectID={selectedID}
-        DuAnID={selectedParentID}
-        onClose={() => setShowEdit(false)}
-        onSuccess={() => {
-          setShowEdit(false);
-        }}
-      />
-    </div>
-  </div>
-)}
+          >
+            <AddNewSubProject
+              isEdit={1}
+              ProjectID={selectedID}
+              DuAnID={selectedParentID}
+              onClose={() => setShowEdit(false)}
+              onSuccess={() => {
+                setShowEdit(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

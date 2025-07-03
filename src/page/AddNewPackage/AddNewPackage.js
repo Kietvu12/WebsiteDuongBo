@@ -7,7 +7,7 @@ import { FaCheckCircle, FaPlus, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 
 
-const AddNewPackage = (projectId, onClose, onSuccess) => {
+const AddNewPackage = ({projectId, onClose, onSuccess}) => {
 
   // State cho form
   const [formData, setFormData] = useState({
@@ -472,10 +472,10 @@ const AddNewPackage = (projectId, onClose, onSuccess) => {
                   value={formData.TrangThai}
                   onChange={handleInputChange}
                 >
-                  <option value="dang_chuan_bi">Đang chuẩn bị</option>
-                  <option value="dang_thi_cong">Đang thi công</option>
-                  <option value="hoan_thanh">Hoàn thành</option>
-                  <option value="tam_dung">Tạm dừng</option>
+                  <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+                  <option value="Đang thi công">Đang thi công</option>
+                  <option value="Hoàn thành">Hoàn thành</option>
+                  <option value="Tạm dừng">Tạm dừng</option>
                 </select>
               </div>
             </div>

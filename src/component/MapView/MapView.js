@@ -87,11 +87,11 @@ const MapView = ({ selectedProject, isExpanded }) => {
     <div className="w-full h-full rounded shadow-md overflow-hidden relative">
       <div className={`${isExpanded ? 'h-[calc(100vh-44px)]' : 'h-[calc(100%)]'} w-full z-0`}>
       <MapContainer
-        center={startPoint || [21.8534, 106.7615]}
-        zoom={13}
-        scrollWheelZoom={true}
-        className="w-full h-full z-0"
-      >
+          center={startPoint || [21.8534, 106.7615]}
+          zoom={13}
+          scrollWheelZoom={true}
+          className="w-full h-full min-h-52"
+        >
         <TileLayer
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -133,13 +133,13 @@ const MapView = ({ selectedProject, isExpanded }) => {
       </div>
       {isExpanded && selectedProject && (
         <div className="absolute top-5 right-5 flex flex-col gap-4 z-[1001] pointer-events-none">
-          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]">
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[550px] h-[30%]">
             <ConstructionVolume data={{ khoiLuongThiCong: selectedProject.khoiLuongThiCong }} />
           </div>
-          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]" style={{ animationDelay: '0.1s' }}>
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[550px] h-[30%]" style={{ animationDelay: '0.1s' }}>
             <ContractorInfo data={selectedProject} />
           </div>
-          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[400px] h-[30%]" style={{ animationDelay: '0.2s' }}>
+          <div className="animate-[slideInFromRight_0.4s_ease_forwards] pointer-events-auto w-[550PX] h-[30%]" style={{ animationDelay: '0.2s' }}>
             <ProgressChart data={selectedProject.phanTram} />
           </div>
         </div>

@@ -15,12 +15,12 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
     if (onPackageSelect) {
       onPackageSelect(packageId);
     }
-    // Đóng dropdown khi chọn item trên mobile
     if (window.innerWidth < 768) {
       setIsDropdownOpen(false);
       if (onMobileListToggle) onMobileListToggle(false);
     }
   };
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const fetchPackages = async () => {
     try {
@@ -44,8 +44,9 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
       setLoading(false);
     }
   };
+
   useEffect(() => {
-      fetchPackages();
+    fetchPackages();
   }, [subProjectId]);
 
   if (loading) return <div className="p-4 text-center">Loading...</div>;
@@ -62,19 +63,25 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
           </div>
 
           <div className="p-2.5 overflow-y-auto flex-grow">
-            {packages.map((item) => (
+            {packages.map((item, index) => (
               <div 
                 key={item.GoiThau_ID}
-                className={`flex items-center gap-4 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-gray-200z ${
-                  selectedProject?.GoiThau_ID === item.GoiThau_ID ? 'bg-gray-100' : ''
+                className={`relative flex flex-col items-left gap-2 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-blue-50 ${
+                  selectedProject?.GoiThau_ID === item.GoiThau_ID 
+                    ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
+                    : ''
                 }`}
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
               >
-                <div className="flex items-center text-[#006591] font-bold text-sm md:text-base min-w-[80px]">
+                <div className='flex flex-row min-w-[80px]'>
+                <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
                   <FaHashtag className="mr-2 text-xs md:text-sm" />
-                  {item.GoiThau_ID}
                 </div>
-                <div className="font-bold text-gray-800 text-xs md:text-sm flex-1">
+                <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
+                  GT - {index + 1}
+                </div>
+                </div>
+                <div className="font-bold text-gray-600 text-xs md:text-sm flex-1">
                   {item.TenGoiThau}
                 </div>
               </div>
@@ -102,17 +109,19 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
         <div className={`absolute z-10 w-full bg-white shadow-lg max-h-60 overflow-y-auto transition-all duration-300 ${
           isDropdownOpen ? 'block' : 'hidden'
         }`}>
-          {packages.map((item) => (
+          {packages.map((item, index) => (
             <div 
               key={item.GoiThau_ID}
-              className={`flex flex-col p-3 border-b border-gray-200 cursor-pointer hover:bg-gray-200 ${
-                selectedProject?.GoiThau_ID === item.GoiThau_ID ? 'bg-gray-100' : ''
+              className={`relative flex flex-col p-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 ${
+                selectedProject?.GoiThau_ID === item.GoiThau_ID 
+                  ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
+                  : ''
               }`}
               onClick={() => handlePackageClick(item.GoiThau_ID)}
             >
               <div className="flex items-center text-[#006591] font-bold text-sm">
                 <FaHashtag className="mr-2" />
-                {item.GoiThau_ID}
+                Gói thầu - {index + 1}
               </div>
               <div className="font-bold text-gray-800 text-xs mt-1">
                 {item.TenGoiThau}

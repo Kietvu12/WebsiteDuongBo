@@ -55,14 +55,16 @@ const SideProject = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [completionLevel, setCompletionLevel] = useState("all");
-  const [filteredSubProjects, setFilteredProjects] = useState([]);
+  const [filteredSubProjects, setfilteredSubProjects] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [showAddSideProject, setShowAddSideProject] = useState(false);
   const [showEdit, setShowEdit] = useState(false)
   const [showAddPackage, setShowAddPackage] = useState(false);
-  
+   const [expandedMenuId, setExpandedMenuId] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
   const { logout } = useProject();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -256,7 +258,7 @@ const SideProject = () => {
       );
     }
 
-    setFilteredProjects(result);
+    setfilteredSubProjects(result);
   };
   const handleEdit = (projectID, parentID) => {
     setSelectedID(projectID);
@@ -280,6 +282,9 @@ const SideProject = () => {
       .slice(0, 5);
 
     setSearchSuggestions(suggestions);
+  };
+  const toggleMenu = (projectId) => {
+    setExpandedMenuId(expandedMenuId === projectId ? null : projectId);
   };
   const handleSearchChange = (e) => {
     const value = e.target.value;
@@ -333,7 +338,7 @@ const SideProject = () => {
         );
         setProject(response.data.data.duAnTong);
         setSubProjects(response.data.data.duAnThanhPhan);
-        setFilteredProjects(response.data.data.duAnThanhPhan);
+        setfilteredSubProjects(response.data.data.duAnThanhPhan);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching project data:", error);
@@ -664,22 +669,23 @@ const SideProject = () => {
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-          <div className="hidden md:flex flex-col md:flex-row items-center gap-2">
-            <div className="w-full md:w-64">
+        <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
+            {/* Ô tìm kiếm */}
+            <div className="w-full md:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
               <input
                 type="text"
                 placeholder="Tìm dự án"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-3 pr-10 py-1 border rounded w-full "
+                className="pl-3 pr-8 py-1.5 md:py-1 lg:py-1.5 border rounded w-full text-sm md:text-xs lg:text-sm"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto ">
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
                       onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                      className="px-2 py-1.5 md:py-1 lg:py-1.5 hover:bg-blue-50 cursor-pointer text-sm md:text-xs lg:text-sm"
                     >
                       {suggestion}
                     </li>
@@ -687,26 +693,28 @@ const SideProject = () => {
                 </ul>
               )}
             </div>
-            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5  text-gray-700 bg-white w-full md:w-auto">
-              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+
+            {/* Khoảng thời gian */}
+            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 md:px-1.5 md:py-0.5 lg:px-2 lg:py-1 text-gray-700 bg-white w-full md:w-56 lg:w-60 xl:w-64 max-w-[1451px]:w-full">
+              <FaRegCalendarAlt className="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 text-gray-500 mr-2" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
               />
               <span className="mx-1">-</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent  w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
               />
             </div>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Đang chuẩn bị">Đang chuẩn bị</option>
@@ -717,33 +725,34 @@ const SideProject = () => {
             <select
               value={completionLevel}
               onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
             >
               <option value="all">Mọi tiến độ</option>
-              <option value="20">&gt;20%</option>
-              <option value="50">&gt;50%</option>
-              <option value="80">&gt;80%</option>
+              <option value="20">>20%</option>
+              <option value="50">>50%</option>
+              <option value="80">>80%</option>
               <option value="100">100%</option>
             </select>
-            <button
-              onClick={resetFilters}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded  font-medium md:col-start-4"
-            >
-              Xóa lọc
-            </button>
-          </div>
-          <div className="hidden md:flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold " onClick={handleExportReport}>
-              XUẤT BÁO CÁO
-            </button>
-            <button
+
+            {/* Nút xuất báo cáo */}
+            <div className="w-full md:w-auto max-w-[1451px]:w-full flex justify-start">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-1.5 mr-2 md:px-3 md:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm md:text-xs lg:text-sm max-w-[1451px]:w-full"
+              >
+                XÓA LỌC
+              </button>
+              <button className="bg-green-700 mr-2 text-white px-4 py-1.5 md:px-3 md:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm md:text-xs lg:text-sm w-full md:w-auto max-w-[1451px]:w-full">
+                XUẤT BÁO CÁO
+              </button>
+              <button
               onClick={() => setShowAddSideProject(true)}
               className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold "
             >
               TẠO DỰ ÁN MỚI
             </button>
+            </div>
           </div>
-          <div className="text-gray-500">Cập nhật lần cuối: 15:10</div>
 
           {/* Status bar section - hidden on mobile */}
           <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
@@ -879,16 +888,16 @@ const SideProject = () => {
             >
               <div className="overflow-y-auto">
                 <h1 className="text-l mt-6 md:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>
-                <table className="min-w-full border border-gray-300 ">
+                <table className="w-full border border-gray-300">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">
-                      <th className="border px-2 py-1 w-6 ">CHỌN</th>
-                      <th className="border px-2 py-1 ">THAO TÁC</th>
-                      <th className="border px-2 py-1 ">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-1 ">TÊN DỰ ÁN</th>
-                      <th className="border px-2 py-1 ">DÀI TUYẾN</th>
-                      <th className="border px-2 py-1 ">TRẠNG THÁI</th>
-                      <th className="border px-2 py-1 ">TIẾN ĐỘ</th>
+                      <th className="border px-2 py-2 w-8">CHỌN</th>
+                      <th className="border px-2 py-2 w-20">THAO TÁC</th>
+                      <th className="border px-2 py-2 w-24">MÃ DỰ ÁN</th>
+                      <th className="border px-2 py-2 min-w-[180px]">TÊN DỰ ÁN</th>
+                      <th className="border px-2 py-2 w-24">DÀI TUYẾN</th>
+                      <th className="border px-2 py-2 w-28">TRẠNG THÁI</th>
+                      <th className="border px-2 py-2 w-48">TIẾN ĐỘ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -901,135 +910,144 @@ const SideProject = () => {
                           if (!aIsPinned && bIsPinned) return 1;
                           return 0;
                         })
-                        .map((subProject, index) => (
-                          <tr key={subProject.DuAnID} className="text-center">
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .map((project, index) => (
+                          <tr key={project.DuAnID} className="hover:bg-gray-50">
                             <td className="border px-1 py-2 text-center">
                               <input
                                 type="checkbox"
-                                className="accent-red-500"
+                                className="accent-red-500 w-4 h-4"
                               />
                             </td>
                             <td className="border px-1 py-2">
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Tệp đính kèm"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <img
-                                  src={attachment}
-                                  alt="Tệp đính kèm"
-                                  className="w-5 h-5"
-                                />
-                              </button>
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Xoá"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProject(subProject.DuAnID);
-                                }}
-                              >
-                                <img
-                                  src={trash}
-                                  alt="Xoá"
-                                  className="w-5 h-5"
-                                />
-                              </button>
-                              <button
-                                className={`p-1.5 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(subProject.DuAnID)
-                                  ? "bg-yellow-100"
-                                  : ""
-                                  }`}
-                                title="Ghim"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePinProject(subProject.DuAnID);
-                                }}
-                              >
-                                <img src={pin} alt="Ghim" className="w-5 h-5" />
-                              </button>
-                              <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Sửa thông tin"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(subProject.DuAnID, subProject.ParentID);
-                                }}
-                              >
-                                <img src={edit} alt="Ghim" className="w-5 h-5" />
-                              </button>
+                              <div className="flex justify-center items-center gap-1">
+                                <button
+                                  className={`p-1 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID) ? "bg-yellow-100" : ""
+                                    }`}
+                                  title="Ghim"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePinProject(project.DuAnID);
+                                  }}
+                                >
+                                  <img src={pin} alt="Ghim" className="w-4 h-4" />
+                                </button>
+                                <div className="relative">
+                                  <button
+                                    className="p-1 hover:bg-gray-200 rounded-full transition-all"
+                                    title="Menu"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleMenu(project.DuAnID);
+                                    }}
+                                  >
+                                    {expandedMenuId === project.DuAnID ? (
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  {expandedMenuId === project.DuAnID && (
+                                    <div className="absolute ml-6 mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <img src={attachment} alt="Tệp đính kèm" className="w-4 h-4 mr-2" />
+                                        <span>Tệp đính kèm</span>
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteProject(project.DuAnID);
+                                        }}
+                                      >
+                                        <img src={trash} alt="Xoá" className="w-4 h-4 mr-2" />
+                                        <span>Xoá</span>
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEdit(project.DuAnID, project.ParentID);
+                                        }}
+                                      >
+                                        <img src={edit} alt="Sửa" className="w-4 h-4 mr-2" />
+                                        <span>Sửa thông tin</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </td>
-                            <td className="border px-1 py-2 text-blue-600 font-medium">
-                              <div>{subProject.DuAnID}</div>
+                            <td className="border px-2 py-2 text-blue-600 font-medium text-sm">
+                              <div>{project.DuAnID}</div>
                               <div
-                                className="text-blue-400  cursor-pointer hover:underline"
-                                onClick={() => handleDetail(subProject.DuAnID)}
+                                className="text-blue-400 text-xs cursor-pointer hover:underline"
+                                onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)}
                               >
                                 Xem chi tiết
                               </div>
                             </td>
-                            <td className="border px-1 py-2">
-                              {subProject.TenDuAn}
+                            <td className="border px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
+                              {project.TenDuAn}
                             </td>
-                            <td className="border px-1 py-2">
-                              {subProject.TongChieuDai} Km
+                            <td className="border px-2 py-2 text-sm text-center">
+                              {project.TongChieuDai} Km
                             </td>
-
-                            <td className="border px-1 py-2">
+                            <td className="border px-2 py-2 text-center">
                               <span
-                                className={`px-2 py-[2px] text-white  rounded-full ${getStatusColor(
-                                  subProject.TrangThai
+                                className={`px-2 py-1 text-xs text-white rounded-full ${getStatusColor(
+                                  project.TrangThai
                                 )}`}
                               >
-                                {subProject.TrangThai}
+                                {project.TrangThai}
                               </span>
                             </td>
-
-                            <td className="border px-1 py-2">
-                              <div className="grid grid-rows-3 gap-2">
+                            <td className="border px-2 py-2 text-sm">
+                              <div className="grid grid-rows-3 gap-1">
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={planIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Kế hoạch"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-blue-600 font-bold">
+                                  <span className="text-blue-600">
                                     Kế hoạch:{" "}
-                                    <strong className="font-medium">
-                                      {subProject.phanTramKeHoach || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramKeHoach || "0"}%</strong>
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={actualIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Hoàn thành"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-green-600 font-bold">
+                                  <span className="text-green-600">
                                     Hoàn thành:{" "}
-                                    <strong className="font-medium">
-                                      {subProject.phanTramHoanThanh || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramHoanThanh || "0"}%</strong>
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <img
                                     src={delayIcon}
-                                    width="16"
-                                    height="16"
+                                    width="14"
+                                    height="14"
                                     alt="Chậm tiến độ"
                                     className="flex-shrink-0"
                                   />
-                                  <span className=" text-yellow-600 font-bold">
+                                  <span className="text-yellow-600">
                                     Chậm tiến độ:{" "}
-                                    <strong className="font-medium">
-                                      {subProject.phanTramChamTienDo || "0"}%
-                                    </strong>
+                                    <strong>{project.phanTramChamTienDo || "0"}%</strong>
                                   </span>
                                 </div>
                               </div>
@@ -1038,40 +1056,50 @@ const SideProject = () => {
                         ))
                     ) : (
                       <tr>
-                        <td colSpan="8" className="p-4 text-center  text-gray-500">
-                          <div className="text-center text-gray-500 py-4">
-                            Không tìm thấy dự án nào phù hợp
-                            <div className="mt-2  text-gray-500">
-                              <p>Dự án này hiện chưa có dự án thành phần nào.</p>
-                              <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
-                            </div>
-                            <div className="mt-6">
-                              <button
-                                type="button"
-                                className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                onClick={() => setShowAddPackage(true)}
-                              >
-                                <svg
-                                  className="-ml-1 mr-2 h-5 w-5"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                Thêm mới gói thầu
-                              </button>
-                            </div>
-                          </div>
+                        <td
+                          colSpan="7"
+                          className="text-center text-gray-500 py-4"
+                        >
+                          Không tìm thấy dự án nào phù hợp
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
+                {filteredSubProjects.length > 0 && (
+                  <div className="flex justify-between items-center mt-4 px-4 py-2 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredSubProjects.length)} trong tổng số {filteredSubProjects.length} dự án
+                    </div>
+                    <div className="flex space-x-1">
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Trước
+                      </button>
+
+                      {Array.from({ length: Math.ceil(filteredSubProjects.length / itemsPerPage) }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded border ${currentPage === page ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredSubProjects.length / itemsPerPage)))}
+                        disabled={currentPage === Math.ceil(filteredSubProjects.length / itemsPerPage)}
+                        className={`px-3 py-1 rounded border ${currentPage === Math.ceil(filteredSubProjects.length / itemsPerPage) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                      >
+                        Sau
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

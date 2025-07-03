@@ -68,28 +68,29 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-white overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border-b border-gray-100 gap-2 sm:gap-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-3 xs:p-1.5 border-b border-gray-100 gap-2 sm:gap-0">
         <div className="flex items-center space-x-2">
-          <FaBars className="text-gray-500 text-lg" />
-          <h2 className="text-base sm:text-lg font-semibold text-gray-800">TIẾN ĐỘ THI CÔNG</h2>
+          <FaBars className="text-gray-500 text-base sm:text-lg xs:text-sm" />
+          <h2 className="text-sm sm:text-base xs:text-xs font-semibold text-gray-800">TIẾN ĐỘ THI CÔNG</h2>
         </div>
         <button
           onClick={() => setShowCategory(true)}
-          className="flex items-center justify-center gap-1 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm sm:text-base transition-colors"
+          className="flex items-center justify-center gap-1 px-2 py-1 sm:px-3 sm:py-1.5 xs:px-1.5 xs:py-0.5 bg-green-600 hover:bg-green-700 text-white font-medium text-xs sm:text-sm xs:text-xs transition-colors rounded"
         >
-          <span>Chi tiết tiến độ thi công</span>
+          <span>Chi tiết tiến độ</span>
+          <FaChevronRight className="hidden sm:block" size={12} />
         </button>
       </div>
 
       {/* Ngày hiện tại */}
-      <div className="px-4 py-2 text-xs sm:text-sm text-gray-500 bg-gray-50">
+      <div className="px-3 py-1.5 text-xs sm:text-sm xs:text-xs text-gray-500 bg-gray-50">
         {todayFormatted}
       </div>
 
       {/* Bảng công việc */}
-      <div className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+      <div className="divide-y divide-gray-100 max-h-[250px] sm:max-h-[220px] xs:max-h-[180px] overflow-y-auto">
         {tasks.length > 0 ? (
           tasks.map((task, index) => {
             const statusStyle = getStatusStyle(task.TrangThai, task.NgayKetThuc);
@@ -97,16 +98,15 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
 
             return (
               <div
-                className="p-3 hover:bg-gray-50 transition-colors cursor-pointer"
+                className="p-2 sm:p-2 xs:p-1.5 hover:bg-gray-50 transition-colors cursor-pointer"
                 key={`task-${index}`}
-                onClick={() => navigate(`/task-detail/${task.id}`)}
               >
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm sm:text-base font-medium text-gray-800 truncate mb-1">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
+                  <div className="flex-1 min-w-0 max-w-[calc(100%-100px)] sm:max-w-[calc(100%-120px)] xs:max-w-[calc(100%-90px)]">
+                    <h3 className="text-xs sm:text-sm xs:text-xs font-medium text-gray-800 break-words mb-1 line-clamp-2">
                       {task.TenCongTac}
                     </h3>
-                    <div className="flex flex-wrap items-center text-xs sm:text-sm text-gray-500 gap-x-2">
+                    <div className="flex flex-wrap items-center text-2xs sm:text-xs xs:text-2xs text-gray-500 gap-x-2">
                       <span>Hạn: {formatDate(task.NgayKetThuc)}</span>
                       {daysRemaining !== Infinity && (
                         <span className={daysRemaining < 0 ? "text-red-500" : ""}>
@@ -115,16 +115,16 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
                       )}
                     </div>
                   </div>
-                  <span className={`flex items-center text-xs sm:text-sm px-3 py-1 rounded-full mt-1 sm:mt-0 ${statusStyle.className}`}>
+                  <span className={`flex items-center text-2xs sm:text-xs xs:text-2xs px-2 py-0.5 sm:px-3 sm:py-1 xs:px-1.5 xs:py-0.5 rounded-full mt-1 sm:mt-0 ${statusStyle.className}`}>
                     {statusStyle.icon}
                     {statusStyle.text || task.TrangThai}
-                  </span>
+                  </span>     
                 </div>
               </div>
             );
           })
         ) : (
-          <div className="p-4 text-center text-sm sm:text-base text-gray-500">
+          <div className="p-3 sm:p-2 xs:p-1.5 text-center text-xs sm:text-sm xs:text-xs text-gray-500">
             Không có công việc nào được ghi nhận
           </div>
         )}
@@ -132,23 +132,23 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
 
       {/* Modal chi tiết */}
       {showCategory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4 xs:p-1 bg-black bg-opacity-50">
           <div
-            className="relative bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col"
+            className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl sm:max-w-5xl md:max-w-6xl lg:max-w-7xl max-h-[85vh] sm:max-h-[90vh] xs:max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b p-3 sm:p-4 flex justify-between items-center z-10">
-              <h3 className="text-lg sm:text-xl font-semibold">Chi tiết hạng mục</h3>
+            <div className="sticky top-0 bg-white border-b p-2 sm:p-3 xs:p-1.5 flex justify-between items-center z-10">
+              <h3 className="text-base sm:text-lg xs:text-sm font-semibold">Chi tiết hạng mục</h3>
               <button
                 onClick={() => setShowCategory(false)}
                 className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
               >
-                <FaTimes className="w-5 h-5" />
+                <FaTimes className="w-4 h-4 sm:w-5 sm:h-5 xs:w-4 xs:h-4" />
               </button>
             </div>
 
             {/* Modal content */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4">
+            <div className="flex-1 overflow-y-auto p-1 sm:p-2 xs:p-1">
               <SubProjectTable
                 duAnThanhPhanId={projectId}
                 packageId={packageId}

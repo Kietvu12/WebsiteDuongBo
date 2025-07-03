@@ -300,23 +300,73 @@ app.post('/capNhatTienDoTatCa', async (req, res) => {
   try {
     // Lấy tất cả dự án tổng
     const [duAnTongList] = await pool.query(
-      'SELECT DuAnID FROM duan WHERE ParentID IS NULL'
+      'SELECT DuAnID FROM duan'
     );
     
-    // Gọi stored procedure cho từng dự án
+    const currentTime = new Date(); // Thời điểm hiện tại
+    
+    // Gọi stored procedure cho từng dự án và cập nhật thời gian
     await Promise.all(duAnTongList.map(async (duAn) => {
+      // Cập nhật tiến độ dự án
       await pool.query('CALL CapNhatTienDoDuAn(?)', [duAn.DuAnID]);
+      
+      // Cập nhật thời gian cập nhật gần nhất
+      await pool.query(
+        'UPDATE duan SET ThoiGianCapNhatGanNhat = ? WHERE DuAnID = ?',
+        [currentTime, duAn.DuAnID]
+      );
     }));
     
     res.json({
       success: true,
-      message: `Đã cập nhật tiến độ cho ${duAnTongList.length} dự án tổng`
+      message: `Đã cập nhật tiến độ và thời gian cập nhật cho ${duAnTongList.length} dự án tổng`,
+      thoiGianCapNhat: currentTime.toISOString()
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({
       success: false,
       message: 'Lỗi khi cập nhật tiến độ',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.post('/goiThau/capNhatPhanTram/:goiThauId', async (req, res) => {
+  try {
+    const goiThauId = req.params.goiThauId;
+
+    // Kiểm tra gói thầu tồn tại
+    const [check] = await pool.query('SELECT 1 FROM goithau WHERE GoiThau_ID = ?', [goiThauId]);
+    if (check.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy gói thầu' });
+    }
+
+    // Gọi stored procedure
+    await pool.query('CALL CapNhatPhanTramGoiThau(?)', [goiThauId]);
+
+    // Lấy kết quả
+    const [result] = await pool.query(
+      `SELECT 
+        PhanTramHoanThanh, 
+        PhanTramDangLam, 
+        PhanTramChamTienDo, 
+        PhanTramKeHoach,
+        NgayCapNhatPhanTram
+       FROM goithau WHERE GoiThau_ID = ?`,
+      [goiThauId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Cập nhật phần trăm thành công',
+      data: result[0]
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi cập nhật phần trăm:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi cập nhật phần trăm',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -1147,12 +1197,13 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
   try {
     const goiThauId = req.params.goiThauId;
 
-    // 1. Lấy thông tin cơ bản của gói thầu
+    // 1. Lấy thông tin cơ bản của gói thầu và chủ đầu tư
     const [goiThau] = await pool.query(
-      `SELECT gt.*, nt.*, d.TenDuAn, d.DuAnID, d.ChuDauTu
+      `SELECT gt.*, nt.*, d.TenDuAn, d.DuAnID, cd.TenNhaThau AS TenChuDauTu
        FROM goithau gt
        LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
        LEFT JOIN duan d ON gt.DuAn_ID = d.DuAnID
+       LEFT JOIN nhathau cd ON d.ChuDauTu = cd.NhaThauID
        WHERE gt.GoiThau_ID = ?`,
       [goiThauId]
     );
@@ -1180,71 +1231,73 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
       [goiThauId]
     );
 
-    // 4. Tính tổng khối lượng kế hoạch của toàn bộ gói thầu
-    const [tongKhoiLuongResult] = await pool.query(
-      `SELECT SUM(q.KhoiLuongKeHoach) AS TongKhoiLuong
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       WHERE hm.GoiThauID = ?`,
+    // 4. Tính toán khối lượng theo cách mới
+    // 4.1. Lấy tất cả hạng mục thuộc gói thầu
+    const [hangMucList] = await pool.query(
+      `SELECT HangMucID, TenHangMuc FROM hangmuc WHERE GoiThauID = ?`,
       [goiThauId]
     );
-    
+
+    // 4.2. Tính tổng khối lượng kế hoạch của toàn bộ gói thầu
+    const [tongKhoiLuongResult] = await pool.query(
+      `SELECT SUM(KhoiLuongKeHoach) AS TongKhoiLuong
+       FROM quanlykehoach
+       WHERE HangMucID IN (SELECT HangMucID FROM hangmuc WHERE GoiThauID = ?)`,
+      [goiThauId]
+    );
     const tongKhoiLuong = tongKhoiLuongResult[0].TongKhoiLuong || 1; // Tránh chia cho 0
 
-    // 5. Tính tổng khối lượng kế hoạch theo từng nhà thầu
-    const [khoiLuongTheoNhaThau] = await pool.query(
+    // 4.3. Tính khối lượng hoàn thành, đang làm và chậm tiến độ
+    const [keHoachList] = await pool.query(
       `SELECT 
-        q.NhaThauID,
-        nt.TenNhaThau,
-        SUM(q.KhoiLuongKeHoach) AS TongKhoiLuongNhaThau
+        q.KeHoachID,
+        q.HangMucID,
+        q.KhoiLuongKeHoach,
+        q.NgayKetThuc,
+        COALESCE(SUM(t.KhoiLuongThucHien), 0) AS KhoiLuongThucHien
        FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       JOIN nhathau nt ON q.NhaThauID = nt.NhaThauID
-       WHERE hm.GoiThauID = ?
-       GROUP BY q.NhaThauID, nt.TenNhaThau`,
-      [goiThauId]
-    );
-
-    // 6. Tính tổng khối lượng thực hiện theo từng nhà thầu
-    const [khoiLuongThucHienTheoNhaThau] = await pool.query(
-      `SELECT 
-        q.NhaThauID,
-        SUM(COALESCE(t.KhoiLuongThucHien, 0)) AS TongKhoiLuongThucHien
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
        LEFT JOIN tiendothuchien t ON q.KeHoachID = t.KeHoachID
-       WHERE hm.GoiThauID = ?
-       GROUP BY q.NhaThauID`,
+       WHERE q.HangMucID IN (SELECT HangMucID FROM hangmuc WHERE GoiThauID = ?)
+       GROUP BY q.KeHoachID, q.HangMucID, q.KhoiLuongKeHoach, q.NgayKetThuc`,
       [goiThauId]
     );
 
-    // 7. Tính toán phần trăm
+    // Phân loại các kế hoạch
+    const now = new Date();
+    let khoiLuongHoanThanh = 0;
+    let khoiLuongDangLam = 0;
+    let khoiLuongChamTienDo = 0;
+
+    keHoachList.forEach(keHoach => {
+      const ngayKetThuc = new Date(keHoach.NgayKetThuc);
+      if (keHoach.KhoiLuongThucHien >= keHoach.KhoiLuongKeHoach) {
+        khoiLuongHoanThanh += keHoach.KhoiLuongKeHoach;
+      } else if (now > ngayKetThuc) {
+        khoiLuongChamTienDo += keHoach.KhoiLuongThucHien;
+      } else {
+        khoiLuongDangLam += keHoach.KhoiLuongThucHien;
+      }
+    });
+
+    // Tính phần trăm
     const calculatePercentage = (value, total) => {
       const percent = (value / total) * 100;
       return Math.min(Math.max(Math.round(percent), 0), 100); // Đảm bảo 0-100%
     };
 
-    // Tính % kế hoạch (tổng KL kế hoạch của nhà thầu / tổng KL kế hoạch gói thầu)
-    const phanTramKeHoach = calculatePercentage(
-      khoiLuongTheoNhaThau.reduce((sum, item) => sum + item.TongKhoiLuongNhaThau, 0),
-      tongKhoiLuong
-    );
-
-    // Tính % hoàn thành (tổng KL thực hiện / tổng KL kế hoạch)
-    const tongKhoiLuongThucHien = khoiLuongThucHienTheoNhaThau.reduce((sum, item) => sum + item.TongKhoiLuongThucHien, 0);
-    const phanTramHoanThanh = calculatePercentage(tongKhoiLuongThucHien, tongKhoiLuong);
-
-    // % đang làm = 100% - % hoàn thành
-    const phanTramDangLam = 100 - phanTramHoanThanh;
+    const phanTramHoanThanh = calculatePercentage(khoiLuongHoanThanh, tongKhoiLuong);
+    const phanTramDangLam = calculatePercentage(khoiLuongDangLam, tongKhoiLuong);
+    const phanTramChamTienDo = calculatePercentage(khoiLuongChamTienDo, tongKhoiLuong);
+    const phanTramKeHoach = 100 - phanTramHoanThanh - phanTramDangLam - phanTramChamTienDo;
 
     const phanTram = {
       keHoach: phanTramKeHoach,
       dangLam: phanTramDangLam,
       hoanThanh: phanTramHoanThanh,
-      tamDung: 0 // Mặc định 0% như yêu cầu
+      chamTienDo: phanTramChamTienDo
     };
 
-    // 8. Lấy chi tiết tiến độ thi công
+    // 5. Lấy chi tiết tiến độ thi công
     const [tienDoThiCong] = await pool.query(
       `SELECT 
         q.*, 
@@ -1253,8 +1306,8 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
         COALESCE(SUM(t.KhoiLuongThucHien), 0) AS KhoiLuongThucHien,
         CASE 
           WHEN COALESCE(SUM(t.KhoiLuongThucHien), 0) >= q.KhoiLuongKeHoach THEN 'Đã hoàn thành'
-          WHEN CURDATE() > q.NgayKetThuc THEN CONCAT('Quá hạn ', DATEDIFF(CURDATE(), q.NgayKetThuc), ' ngày')
-          ELSE CONCAT('Còn ', DATEDIFF(q.NgayKetThuc, CURDATE()), ' ngày')
+          WHEN CURDATE() > q.NgayKetThuc THEN CONCAT('Chậm tiến độ ', DATEDIFF(CURDATE(), q.NgayKetThuc), ' ngày')
+          ELSE CONCAT('Đang thực hiện (còn ', DATEDIFF(q.NgayKetThuc, CURDATE()), ' ngày)')
         END AS TrangThai
        FROM quanlykehoach q
        JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
@@ -1266,7 +1319,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
       [goiThauId]
     );
 
-    // 9. Lấy thông tin vướng mắc
+    // 6. Lấy thông tin vướng mắc
     const [vuongMac] = await pool.query(
       `SELECT vm.*, q.TenCongTac, hm.TenHangMuc
        FROM vuongmac vm
@@ -1277,9 +1330,10 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
       [goiThauId]
     );
 
-    // 10. Đánh giá rủi ro
-    const overdueItems = tienDoThiCong.filter(item => item.TrangThai.includes('Quá hạn'));
-    const criticalItems = tienDoThiCong.filter(item => item.TrangThai.includes('Còn') && item.NgayKetThuc <= new Date(new Date().setDate(new Date().getDate() + 1)));
+    // 7. Đánh giá rủi ro
+    const overdueItems = tienDoThiCong.filter(item => item.TrangThai.includes('Chậm tiến độ'));
+    const criticalItems = tienDoThiCong.filter(item => item.TrangThai.includes('Đang thực hiện') && 
+      new Date(item.NgayKetThuc) <= new Date(new Date().setDate(new Date().getDate() + 7)));
     
     let danhGiaRuiRo = 'Ổn định';
     let riskScore = overdueItems.length * 2 + criticalItems.length;
@@ -1302,177 +1356,20 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
           chiTiet: tienDoThiCong,
           danhGiaRuiRo,
           riskScore,
-          khoiLuongTheoNhaThau, // Thêm thông tin khối lượng theo nhà thầu
-          khoiLuongThucHienTheoNhaThau // Thêm thông tin khối lượng thực hiện theo nhà thầu
+          khoiLuongHoanThanh,
+          khoiLuongDangLam,
+          khoiLuongChamTienDo,
+          tongKhoiLuong
         },
         vuongMac,
         tongQuan: {
-          tongHangMuc: goiThau[0].SoHangMuc || 0,
+          tongHangMuc: hangMucList.length,
           tongCongTac: tienDoThiCong.length,
           congTacHoanThanh: tienDoThiCong.filter(item => item.TrangThai === 'Đã hoàn thành').length,
           congTacQuaHan: overdueItems.length,
           tongKhoiLuongThiCong: khoiLuongThiCong.length,
           tongKhoiLuongKeHoach: tongKhoiLuong,
-          tongKhoiLuongThucHien: tongKhoiLuongThucHien
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Database error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-app.get('/goiThauXayDung/chiTiet/:goiThauId', async (req, res) => {
-  try {
-    const goiThauId = req.params.goiThauId;
-
-    // 1. Get basic contract package info
-    const [goiThau] = await pool.query(
-      `SELECT gt.*, nt.*, d.TenDuAn, d.DuAnID, d.ChuDauTu
-       FROM goithau gt
-       LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
-       LEFT JOIN duan d ON gt.DuAn_ID = d.DuAnID
-       WHERE gt.GoiThau_ID = ?`,
-      [goiThauId]
-    );
-
-    if (goiThau.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy gói thầu với ID này' });
-    }
-
-    // 2. Get related contractors
-    const [nhaThauLienQuan] = await pool.query(
-      `SELECT nt.*, gtn.VaiTro
-       FROM goithau_nhathau gtn
-       JOIN nhathau nt ON gtn.NhaThauID = nt.NhaThauID
-       WHERE gtn.GoiThau_ID = ? AND gtn.VaiTro = 'Nhà thầu chính'`,
-      [goiThauId]
-    );
-
-    // 3. Get construction quantity data
-    const [khoiLuongThiCong] = await pool.query(
-      `SELECT klt.*, nt.TenNhaThau
-       FROM khoiluong_thicong klt
-       JOIN nhathau nt ON klt.NhaThauID = nt.NhaThauID
-       WHERE klt.GoiThau_ID = ?
-       ORDER BY klt.KhoiLuong_ID DESC`,
-      [goiThauId]
-    );
-
-    // 4. Get total planned quantity for the package
-    const [tongKhoiLuongResult] = await pool.query(
-      `SELECT SUM(q.KhoiLuongKeHoach) AS TongKhoiLuong
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       WHERE hm.GoiThauID = ?`,
-      [goiThauId]
-    );
-    
-    const tongKhoiLuong = tongKhoiLuongResult[0].TongKhoiLuong || 0;
-
-    // 5. Get planned quantity by contractor
-    const [khoiLuongTheoNhaThau] = await pool.query(
-      `SELECT 
-        q.NhaThauID,
-        nt.TenNhaThau,
-        SUM(q.KhoiLuongKeHoach) AS TongKhoiLuongNhaThau
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       JOIN nhathau nt ON q.NhaThauID = nt.NhaThauID
-       WHERE hm.GoiThauID = ?
-       GROUP BY q.NhaThauID, nt.TenNhaThau`,
-      [goiThauId]
-    );
-
-    // 6. Get actual quantity by contractor
-    const [khoiLuongThucHienTheoNhaThau] = await pool.query(
-      `SELECT 
-        q.NhaThauID,
-        SUM(COALESCE(t.KhoiLuongThucHien, 0)) AS TongKhoiLuongThucHien
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       LEFT JOIN tiendothuchien t ON q.KeHoachID = t.KeHoachID
-       WHERE hm.GoiThauID = ?
-       GROUP BY q.NhaThauID`,
-      [goiThauId]
-    );
-
-    // 7. Get construction progress details
-    const [tienDoThiCong] = await pool.query(
-      `SELECT 
-        q.*, 
-        hm.TenHangMuc,
-        nt.TenNhaThau,
-        COALESCE(SUM(t.KhoiLuongThucHien), 0) AS KhoiLuongThucHien,
-        CASE 
-          WHEN COALESCE(SUM(t.KhoiLuongThucHien), 0) >= q.KhoiLuongKeHoach THEN 'Đã hoàn thành'
-          WHEN CURDATE() > q.NgayKetThuc THEN CONCAT('Quá hạn ', DATEDIFF(CURDATE(), q.NgayKetThuc), ' ngày')
-          ELSE CONCAT('Còn ', DATEDIFF(q.NgayKetThuc, CURDATE()), ' ngày')
-        END AS TrangThai
-       FROM quanlykehoach q
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       JOIN nhathau nt ON q.NhaThauID = nt.NhaThauID
-       LEFT JOIN tiendothuchien t ON q.KeHoachID = t.KeHoachID
-       WHERE hm.GoiThauID = ?
-       GROUP BY q.KeHoachID
-       ORDER BY q.NgayKetThuc ASC`,
-      [goiThauId]
-    );
-
-    // 8. Get issues/obstacles
-    const [vuongMac] = await pool.query(
-      `SELECT vm.*, q.TenCongTac, hm.TenHangMuc
-       FROM vuongmac vm
-       JOIN quanlykehoach q ON vm.KeHoachID = q.KeHoachID
-       JOIN hangmuc hm ON q.HangMucID = hm.HangMucID
-       WHERE hm.GoiThauID = ? AND vm.NgayKetThuc IS NULL
-       ORDER BY vm.MucDo DESC, vm.NgayPhatSinh DESC`,
-      [goiThauId]
-    );
-
-    // 9. Risk assessment
-    const overdueItems = tienDoThiCong.filter(item => item.TrangThai.includes('Quá hạn'));
-    const criticalItems = tienDoThiCong.filter(item => item.TrangThai.includes('Còn') && item.NgayKetThuc <= new Date(new Date().setDate(new Date().getDate() + 1)));
-    
-    let danhGiaRuiRo = 'Ổn định';
-    let riskScore = overdueItems.length * 2 + criticalItems.length;
-    if (riskScore > 5) danhGiaRuiRo = 'Rủi ro cao';
-    else if (riskScore > 2) danhGiaRuiRo = 'Có rủi ro';
-
-    // Calculate total actual quantity
-    const tongKhoiLuongThucHien = khoiLuongThucHienTheoNhaThau.reduce((sum, item) => sum + item.TongKhoiLuongThucHien, 0);
-
-    res.json({
-      success: true,
-      data: {
-        thongTinChung: {
-          ...goiThau[0],
-          nhaThau: nhaThauLienQuan,
-          danhGiaRuiRo,
-          riskScore,
-          khoiLuongThiCong
-        },
-        tienDo: {
-          chiTiet: tienDoThiCong,
-          danhGiaRuiRo,
-          riskScore,
-          khoiLuongTheoNhaThau,
-          khoiLuongThucHienTheoNhaThau
-        },
-        vuongMac,
-        tongQuan: {
-          tongHangMuc: goiThau[0].SoHangMuc || 0,
-          tongCongTac: tienDoThiCong.length,
-          congTacHoanThanh: tienDoThiCong.filter(item => item.TrangThai === 'Đã hoàn thành').length,
-          congTacQuaHan: overdueItems.length,
-          tongKhoiLuongThiCong: khoiLuongThiCong.length,
-          tongKhoiLuongKeHoach: tongKhoiLuong,
-          tongKhoiLuongThucHien: tongKhoiLuongThucHien
+          tongKhoiLuongThucHien: khoiLuongHoanThanh + khoiLuongDangLam + khoiLuongChamTienDo
         }
       }
     });

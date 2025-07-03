@@ -1,4 +1,3 @@
-
 import './Detail.css';
 import React, { useEffect, useState, useRef } from 'react';
 import { FaExpand, FaCompress, FaFileWord, FaRegBell, FaChevronLeft } from 'react-icons/fa';
@@ -95,7 +94,7 @@ const Detail = () => {
       {/* Header giữ nguyên như cũ */}
       <div className="bg-white shadow-sm pt-3 md:pt-0">
         {/* Top Row - Navigation Icons */}
-        <div className="bg-white px-4 md:px-6 py-1 flex justify-between md:justify-end items-center pt-12 md:pt-0">
+        <div className="bg-white px-4 md:px-6 py-1 flex justify-between md:justify-end items-center pt-12 md:pt-1">
           {/* Nút back chỉ hiện trên mobile */}
           <button className="md:hidden p-2 text-gray-600">
             <FiChevronLeft className="w-5 h-5" />
@@ -145,14 +144,14 @@ const Detail = () => {
               <FiChevronLeft className="w-6 h-6 text-gray-600" />
             </button>
             <div>
-              <h1 className="text-lg md:text-xl font-bold text-gray-800">{projectName}</h1>
-              <p className="text-sm text-gray-500">{subProjectName}</p>
+              <h1 className="text-sm md:text-xl font-bold text-gray-800">{projectName}</h1>
+              <p className="text-xs text-gray-500">{subProjectName}</p>
             </div>
           </div>
 
           <button
             onClick={() => setShowAddPackage(true)}
-            className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium"
+            className="w-fit md:w-auto flex items-center justify-left gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium"
           >
             <FiPlus className="w-5 h-5" />
             <span>Tạo gói thầu mới</span>
@@ -166,76 +165,74 @@ const Detail = () => {
             onPackageSelect={handlePackageSelect}
           />
         </div>
-        <div className="flex-1 flex flex-col lg:flex-row min-w-0 max-w-full lg:max-w-[1200px] mx-auto overflow-auto md:overflow-hidden">
-          {!isExpanded && (
-            <div className="flex-1 flex flex-col min-w-0 p-2 pt-0 gap-2.5">
-              {packageData?.thongTinChung && (
-                <div className="bg-white p-2 flex-1 md:pt-4">
-                  <BasicInfo data={packageData.thongTinChung} />
-                </div>
-              )}
-              {packageData?.tienDo.phanTram && (
-                <div className="bg-white p-2 flex-1">
-                  <ProgressChart data={packageData.tienDo.phanTram} />
-                </div>
-              )}
-              {packageData?.tienDo.chiTiet && (
-                <div className="bg-white p-2 flex-1">
-                  <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={subProjectId} packageId={selectedPackageId} />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Cột thông tin 2 - Luôn hiển thị nhưng thu gọn khi phóng to */}
-          <div className={`${isExpanded ? 'w-full' : 'flex-1'} flex flex-col min-w-0 h-full`}>
-            {!isExpanded && packageData?.thongTinChung && (
-              <>
-                <div className="bg-white p-4 mb-2.5 h-[30%] md:h-[40%] min-h-[200px] md:min-h-[243px]">
-                  <ContractorInfo data={packageData.thongTinChung} />
-                </div>
-                <div className="bg-white p-4 mb-2.5 h-[30%] md:h-[50%] min-h-[200px] md:min-h-[260px]">
-                  <ConstructionVolume data={{ khoiLuongThiCong: packageData.thongTinChung.khoiLuongThiCong }} packageId={selectedPackageId} />
-                </div>
-              </>
-            )}
-            <div className={`bg-white ${isExpanded ? 'absolute inset-0 z-10' : 'h-[70%]'} relative overflow-hidden`}>
-              {/* Phần tiêu đề - thêm z-index để luôn hiển thị trên cùng */}
-              <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between z-[25]">
-                <div className="flex items-center">
-                  <FaMap className="text-gray-500 mr-2" size={14} />
-                  <h2 className="text-base font-semibold text-gray-800">BẢN ĐỒ DỰ ÁN</h2>
-                </div>
-                <button
-                  className="z-[25] bg-[#006591] hover:bg-[#004b73] text-white py-1 px-2 rounded flex items-center gap-1.5 transition-colors text-sm"
-                  onClick={toggleExpand}
-                >
-                  {isExpanded ? <FaCompress /> : <FaExpand />}
-                  <span>{isExpanded ? "Thu nhỏ" : "Phóng to"}</span>
-                </button>
-              </div>
-
-              {/* Phần bản đồ - đảm bảo nằm dưới tiêu đề */}
-              {packageData?.thongTinChung && (
-                <div className={`relative ${isExpanded ? 'h-[calc(100%-44px)]' : 'h-[calc(100%)]'}`}>
-                  <MapView
-                    selectedProject={packageData.thongTinChung}
-                    isExpanded={isExpanded}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col 3xl:flex-row min-w-0 max-w-full 3xl:max-w-[1200px] 3xl:overflow-auto mx-auto overflow-auto">
+  {!isExpanded && (
+    <div className="flex flex-col min-w-0 p-2 pt-0 gap-2.5 w-full 3xl:w-[50%]">
+      {packageData?.thongTinChung && (
+        <div className="bg-white flex pt-0">
+          <BasicInfo data={packageData.thongTinChung} />
         </div>
+      )}
+      {packageData?.tienDo.phanTram && (
+        <div className="bg-white items-center">
+          <ProgressChart data={packageData.tienDo.phanTram} />
+        </div>
+      )}
+      {packageData?.tienDo.chiTiet && (
+        <div className="bg-white p-1 flex-1">
+          <ConstructionProgress tasks={packageData.tienDo.chiTiet} projectId={subProjectId} packageId={selectedPackageId} />
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* Cột thông tin 2 - Luôn hiển thị nhưng thu gọn khi phóng to */}
+  <div className={`${isExpanded ? 'w-full z-30' : 'z-20 flex-1 3xl:w-[50%]'} flex flex-col min-w-0 md:overflow-hidden 3xl:overflow-auto`}>
+    {!isExpanded && packageData?.thongTinChung && (
+      <>
+        <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[250px]">
+          <ContractorInfo data={packageData.thongTinChung} />
+        </div>
+        <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[248px]">
+          <ConstructionVolume data={{ khoiLuongThiCong: packageData.thongTinChung.khoiLuongThiCong }} packageId={selectedPackageId} />
+        </div>
+      </>
+    )}
+    <div className={`bg-white ${isExpanded ? 'absolute inset-0 z-10' : 'h-[70%] min-h-[300px]'} relative flex flex-col`}>
+      {/* Phần tiêu đề - thêm z-index để luôn hiển thị trên cùng */}
+      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between z-[25]">
+        <div className=" sticky top-0 flex items-center">
+          <FaMap className="text-gray-500 mr-2" size={14} />
+          <h2 className="text-lg font-semibold text-gray-800">BẢN ĐỒ DỰ ÁN</h2>
+        </div>
+        <button
+          className="z-[25] bg-[#006591] hover:bg-[#004b73] text-white py-1 px-2 rounded flex items-center gap-1.5 transition-colors text-sm"
+          onClick={toggleExpand}
+        >
+          {isExpanded ? <FaCompress /> : <FaExpand />}
+          <span>{isExpanded ? "Thu nhỏ" : "Phóng to"}</span>
+        </button>
+      </div>
+      
+      {/* Phần bản đồ - đảm bảo nằm dưới tiêu đề */}
+      {packageData?.thongTinChung && (
+        <div className={`relative ${isExpanded ? 'h-[calc(100%-44px)]' : 'h-[calc(100%)]'}`}>
+          <MapView
+            selectedProject={packageData.thongTinChung}
+            isExpanded={isExpanded}
+          />
+        </div>
+      )}
+    </div>
+  </div>
+</div>
       </div>
       {showAddPackage && (
         <div className="fixed inset-0 z-50">
-          {/* Lớp phủ nền mờ - xử lý đóng popup khi click */}
           <div
             className="fixed inset-0 bg-black bg-opacity-50"
             onClick={() => setShowAddPackage(false)}
-          />
-
+          >
           {/* Container popup */}
           <div className="relative z-50 flex items-center justify-center min-h-screen p-4">
             <div
@@ -264,11 +261,9 @@ const Detail = () => {
             </div>
           </div>
         </div>
+        </div>
       )}
-
-
     </div>
-
   );
 };
 
