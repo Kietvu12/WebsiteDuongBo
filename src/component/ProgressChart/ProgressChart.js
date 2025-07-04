@@ -45,14 +45,14 @@ const ProgressChart = ({ data }) => {
       </div>
       
       {/* Container chính - thay đổi flex-col khi màn hình nhỏ */}
-      <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-6 w-full">
+      <div className="flex flex-col ml-10 md:flex-row items-center justify-center gap-4 md:gap-6 w-full">
         {/* Biểu đồ - luôn căn giữa */}
         <div className="w-40 h-40 md:w-36 md:h-36 sm:w-32 sm:h-32 xs:w-28 xs:h-28 flex items-center justify-center">
           <Doughnut data={dataChart} options={options} />
         </div>
 
         {/* Chú thích - chuyển thành grid 2 cột khi màn hình nhỏ */}
-        <div className="grid grid-cols-2 md:flex md:flex-col gap-2 w-full max-w-xs sm:max-w-full">
+        <div className="grid grid-cols-2 ml-6 5xl:ml-12 md:flex md:flex-col gap-2 w-full max-w-xs sm:max-w-full">
           <LegendItem color="#2E86C1" label="Kế hoạch" value={`${data.keHoach}%`} />
           <LegendItem color="#F5B041" label="Đang làm" value={`${data.dangLam}%`} />
           <LegendItem color="#E74C3C" label="Chậm tiến độ" value={`${data.chamTienDo}%`} />

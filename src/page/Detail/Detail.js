@@ -187,7 +187,7 @@ const Detail = () => {
   )}
 
   {/* Cột thông tin 2 - Luôn hiển thị nhưng thu gọn khi phóng to */}
-  <div className={`${isExpanded ? 'w-full z-30' : 'z-20 flex-1 3xl:w-[50%]'} flex flex-col min-w-0 md:overflow-hidden 3xl:overflow-auto`}>
+  <div className={`${isExpanded ? 'w-full z-30' : 'z-20 flex-1 3xl:w-[50%]'} flex flex-col min-w-0 5xl:overflow-hidden 3xl:overflow-auto`}>
     {!isExpanded && packageData?.thongTinChung && (
       <>
         <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[250px]">

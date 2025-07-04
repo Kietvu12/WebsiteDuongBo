@@ -90,7 +90,7 @@ const ConstructionProgress = ({ tasks = [], projectId, packageId }) => {
       </div>
 
       {/* Bảng công việc */}
-      <div className="divide-y divide-gray-100 max-h-[250px] sm:max-h-[220px] xs:max-h-[180px] overflow-y-auto">
+      <div className="divide-y divide-gray-100 max-h-[250px] 4xl:max-h-[290px] 5xl:max-h-[310px] sm:max-h-[220px] xs:max-h-[180px] overflow-y-auto">
         {tasks.length > 0 ? (
           tasks.map((task, index) => {
             const statusStyle = getStatusStyle(task.TrangThai, task.NgayKetThuc);
