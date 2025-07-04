@@ -66,8 +66,29 @@ function AppWrapper() {
 }
 
 function App() {
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const { fetchUserProfile, loading, authChecked } = useProject();
+  useEffect(() => {
+    // Hàm gọi 2 API
+    const capNhatTatCa = async () => {
+      try {
+        await fetch(`${API_BASE_URL}/capNhatTienDoTatCa`, { method: 'POST' });
+        await fetch(`${API_BASE_URL}/goiThau/capNhatPhanTramTatCa`, { method: 'POST' });
+        console.log('Đã cập nhật thành công lúc: ', new Date().toLocaleTimeString());
+      } catch (error) {
+        console.error('Lỗi khi cập nhật:', error);
+      }
+    };
   
+    // Gọi ngay khi component mount
+    capNhatTatCa();
+  
+    // Gọi lại mỗi 1 tiếng (3600000 ms)
+    const interval = setInterval(capNhatTatCa, 3600000);
+  
+    // Clear interval khi component unmount
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
     fetchUserProfile();
   }, []);

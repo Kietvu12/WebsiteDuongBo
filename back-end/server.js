@@ -331,42 +331,36 @@ app.post('/capNhatTienDoTatCa', async (req, res) => {
     });
   }
 });
-app.post('/goiThau/capNhatPhanTram/:goiThauId', async (req, res) => {
+app.post('/goiThau/capNhatPhanTramTatCa', async (req, res) => {
   try {
-    const goiThauId = req.params.goiThauId;
-
-    // Kiểm tra gói thầu tồn tại
-    const [check] = await pool.query('SELECT 1 FROM goithau WHERE GoiThau_ID = ?', [goiThauId]);
-    if (check.length === 0) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy gói thầu' });
-    }
-
-    // Gọi stored procedure
-    await pool.query('CALL CapNhatPhanTramGoiThau(?)', [goiThauId]);
-
-    // Lấy kết quả
-    const [result] = await pool.query(
-      `SELECT 
-        PhanTramHoanThanh, 
-        PhanTramDangLam, 
-        PhanTramChamTienDo, 
-        PhanTramKeHoach,
-        NgayCapNhatPhanTram
-       FROM goithau WHERE GoiThau_ID = ?`,
-      [goiThauId]
+    // Lấy tất cả gói thầu
+    const [goiThauList] = await pool.query(
+      'SELECT GoiThau_ID FROM goithau'
     );
-
+    
+    const currentTime = new Date(); // Thời điểm hiện tại
+    
+    // Gọi stored procedure để tính toán và cập nhật phần trăm cho tất cả gói thầu
+    await pool.query('CALL CalculateAllGoiThauPercentages()');
+    
+    // Cập nhật thời gian cập nhật gần nhất cho tất cả gói thầu
+    await Promise.all(goiThauList.map(async (goiThau) => {
+      await pool.query(
+        'UPDATE goithau SET ThoiGianCapNhatGanNhat = ? WHERE GoiThau_ID = ?',
+        [currentTime, goiThau.GoiThau_ID]
+      );
+    }));
+    
     res.json({
       success: true,
-      message: 'Cập nhật phần trăm thành công',
-      data: result[0]
+      message: `Đã cập nhật phần trăm tiến độ và thời gian cập nhật cho ${goiThauList.length} gói thầu`,
+      thoiGianCapNhat: currentTime.toISOString()
     });
-
   } catch (error) {
-    console.error('Lỗi khi cập nhật phần trăm:', error);
+    console.error('Error updating all package percentages:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi hệ thống khi cập nhật phần trăm',
+      message: 'Lỗi khi cập nhật phần trăm tiến độ các gói thầu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
