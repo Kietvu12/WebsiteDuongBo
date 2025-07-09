@@ -12,7 +12,7 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
   // State cho form
   const [formData, setFormData] = useState({
     TenGoiThau: '',
-    DuAn_ID: projectId.projectId,
+    DuAn_ID: projectId,
     GiaTriHĐ: '',
     Km_BatDau: '',
     Km_KetThuc: '',
@@ -27,7 +27,7 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
     LoaiHinh_ID: '',
     ThuocTinhValues: {}
   });
-  console.log("Dự án id:", projectId.projectId);
+  console.log("Dự án id:", projectId);
   
   const [files, setFiles] = useState([]);
 

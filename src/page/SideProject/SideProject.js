@@ -21,6 +21,7 @@ import AddNewSubProject from '../AddNewSubProject/AddNewSubProject';
 import AddNewPackage from '../AddNewPackage/AddNewPackage';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
 import edit from "../../assets/img/edit.png"
+import AddNewSubProjects from "../AddNewSubProject(1)/AddNewSubProject";
 
 const useClickOutside = (ref, callback) => {
   useEffect(() => {
@@ -1060,7 +1061,34 @@ const SideProject = () => {
                           colSpan="7"
                           className="text-center text-gray-500 py-4"
                         >
-                          Không tìm thấy dự án nào phù hợp
+                                          <div className="text-center text-gray-500 py-4">
+                  Không tìm thấy dự án nào phù hợp
+                  <div className="mt-2  text-gray-500">
+                    <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                    <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                  </div>
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      onClick={() => setShowAddPackage(true)}
+                    >
+                      <svg
+                        className="-ml-1 mr-2 h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Thêm mới gói thầu
+                    </button>
+                  </div>
+                </div>
                         </td>
                       </tr>
                     )}
@@ -1306,7 +1334,7 @@ const SideProject = () => {
       {showAddSideProject && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
     <div className={modalContainerClass}>
-      <AddNewSubProject
+      <AddNewSubProjects
         DuAnID={project.DuAnID}
         onClose={() => setShowAddSideProject(false)}
         onSuccess={(newProject) => {

@@ -15,7 +15,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
     if (onPackageSelect) {
       onPackageSelect(packageId);
     }
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 1050) {  // Changed from 768 to 1050 (ssm breakpoint)
       setIsDropdownOpen(false);
       if (onMobileListToggle) onMobileListToggle(false);
     }
@@ -54,8 +54,8 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
 
   return (
     <div className="flex flex-col w-full h-full bg-white">
-      {/* Desktop View */}
-      <div className="hidden md:flex flex-1 p-2.5 h-full">
+      {/* Desktop View - shows on screens larger than ssm (1050px) */}
+      <div className="ssm:flex flex-1 p-2.5 h-full hidden">
         <div className="flex flex-col h-full min-h-[300px] max-h-[840px] rounded shadow overflow-hidden w-full">
           <div className="flex items-center bg-[#006591] text-white p-3 text-base md:text-xl font-bold flex-shrink-0">
             <FaListOl className="mr-3 text-sm md:text-lg" />
@@ -74,12 +74,12 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
               >
                 <div className='flex flex-row min-w-[80px]'>
-                <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
-                  <FaHashtag className="mr-2 text-xs md:text-sm" />
-                </div>
-                <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
-                  GT - {index + 1}
-                </div>
+                  <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
+                    <FaHashtag className="mr-2 text-xs md:text-sm" />
+                  </div>
+                  <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
+                    GT - {index + 1}
+                  </div>
                 </div>
                 <div className="font-bold text-gray-600 text-xs md:text-sm flex-1">
                   {item.TenGoiThau}
@@ -90,8 +90,8 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
         </div>
       </div>
 
-      {/* Mobile Dropdown View */}
-      <div className="md:hidden">
+      {/* Mobile/Dropdown View - shows on screens smaller than ssm (1050px) */}
+      <div className="ssm:hidden">
         <button 
           className="flex items-center justify-between w-full bg-[#006591] text-white p-3 text-base font-bold"
           onClick={() => {

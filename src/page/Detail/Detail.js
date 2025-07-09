@@ -88,6 +88,8 @@ const Detail = () => {
   const handlePackageSelect = (packageId) => {
     setSelectedPackageId(packageId);
   };
+  console.log("Dự án ID:", subProjectId);
+  
   const handleReport = () => navigate(`/project-report/${projectId}`)
   return (
     <div className="flex flex-col h-screen bg-gray-300 z-0">

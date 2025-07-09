@@ -12,6 +12,8 @@ import { useProject } from '../../contexts/ProjectContext';
 import SubProjectTable from '../../component/SubProjectTable/SubProjectTable';
 import ProductionChart from '../../component/Chart/Chart'
 import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
+import GanttTimeline from '../../component/TimelineChart/TimelineChart';
+
 
 const useClickOutside = (ref, callback) => {
   useEffect(() => {
@@ -254,44 +256,19 @@ const WorkItem = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
 
-              {/* Date Filter */}
-              <div className="flex items-center gap-2">
-                <span className=" sm: text-gray-700 whitespace-nowrap">Thời gian:</span>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
-                />
-                <span className=" sm: text-gray-700">đến</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
-                />
-              </div>
-
-              {/* Status Filter */}
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                {/* <span className=" sm: text-gray-700 whitespace-nowrap">Trạng thái:</span>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1  sm: min-w-[140px] flex-1 sm:flex-none"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="Chậm tiến độ">Chậm tiến độ</option>
-                  <option value="Đang tiến hành">Đang tiến hành</option>
-                  <option value="Đã hoàn thành">Đã hoàn thành</option>
-                </select> */}
-              </div>
-
-            </div>
           </div>
         </div>
+      </div>
+      <div>
+      {selectedProjectId !== null ? (
+            <GanttTimeline duAnThanhPhanId={selectedProjectId} />
+          ) : (
+            // Hiển thị thông báo nếu cả hai đều null
+            <div className="no-project-selected">
+              <p>Vui lòng tìm kiếm một dự án để xem</p>
+            </div>
+          )}
       </div>
       <div>
       {selectedProjectId !== null ? (

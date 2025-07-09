@@ -37,16 +37,16 @@ const ContractorInfo = ({ data }) => {
       </div>
       <div className="p-4 max-h-50 overflow-y-auto">
         <div className="mb-2">
-          <p className="text-xm font-bold text-gray-800 truncate"><span className='text-sm font-medium text-gray-800'>Tên công ty:</span> {contractorNames || 'Không có thông tin nhà thầu'}</p>
+          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Tên công ty:</span> {contractorNames || 'Không có thông tin nhà thầu'}</p>
         </div>
         <div className="mb-2">
-          <p className="text-xm font-bold text-gray-800 break-words whitespace-normal">
-            <span className='text-sm font-medium text-gray-800'>Địa chỉ: </span>
+          <p className="text-xm font-medium text-gray-800 break-words whitespace-normal">
+            <span className='text-xm font-bold text-gray-800'>Địa chỉ: </span>
             {data.DiaChiTruSo || 'Không có thông tin nhà thầu'}
           </p>
         </div>
         <div className="mb-2">
-          <p className="text-xm font-bold text-gray-800 truncate"><span className='text-sm font-medium text-gray-800'>Mã số thuế: </span>{data.MaSoThue || 'Không có thông tin nhà thầu'}</p>
+          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Mã số thuế: </span>{data.MaSoThue || 'Không có thông tin nhà thầu'}</p>
         </div>
         <div className="grid grid-cols-3 gap-4 justify-items-center">
           <div className="w-full text-center">
