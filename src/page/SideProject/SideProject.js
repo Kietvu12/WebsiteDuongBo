@@ -68,6 +68,7 @@ const SideProject = () => {
     const [itemsPerPage] = useState(10);
   const { logout } = useProject();
   const [showMenu, setShowMenu] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const menuRef = useRef(null);
   const triggerRef = useRef(null);
@@ -127,14 +128,14 @@ const SideProject = () => {
   const [selectedParentID, setSelectedParentID] = useState(null)
   const modalContainerClass = `
   w-full 
-  max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-6xl
+  max-w-sm sm:max-w-md md:max-w-2xl ssm:max-w-4xl xl:max-w-6xl
   bg-white 
-  rounded-lg 
+  rounded-ssm 
   shadow-xl 
   overflow-hidden 
   max-h-[90vh] 
   overflow-y-auto 
-  p-4 sm:p-6 lg:p-8
+  p-4 sm:p-6 ssm:p-8
 `;
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const statuses = [
@@ -513,10 +514,10 @@ const SideProject = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
-      <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
-        <button className="hover:bg-gray-100 pt-0 md:pt-1"><FaChevronLeft /></button>
-        <div className="flex items-center space-x-4 pt-0 md:pt-1">
+    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 ssm:pt-0 md:pt-0 text-base">
+      <header className="bg-white px-6 py-1 shadow-sm flex justify-between items-center space-x-4 pt-3 ssm:pt-0 mb-3 ssm:mb-0 md:pt-2">
+        <button className="hover:bg-gray-100 pt-0 ssm:pt-1"><FaChevronLeft /></button>
+        <div className="flex items-center space-x-4 pt-0 ssm:pt-1">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
           <span></span>
@@ -545,7 +546,7 @@ const SideProject = () => {
 
 
       {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
-      <div className="md:hidden flex justify-between items-center px-4 mb-2">
+      <div className="ssm:hidden flex justify-between items-center px-4 mb-2">
         <button 
           onClick={() => setShowMobileFilters(!showMobileFilters)}
           className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
@@ -571,7 +572,7 @@ const SideProject = () => {
 
       {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
       {showMobileFilters && (
-        <div className="md:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
+        <div className="ssm:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-ssm bg-gray-50 mx-4">
           {/* Các phần tử filter giống như bản desktop nhưng responsive cho mobile */}
           <div>
             <div>
@@ -583,7 +584,7 @@ const SideProject = () => {
                 className="pl-3 pr-10 py-1 border rounded w-full"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
+                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-ssm max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
@@ -669,24 +670,24 @@ const SideProject = () => {
       </div>
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
-        <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-        <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
+        <div className={`bg-white rounded-ssm p-4 flex flex-col flex-1 ${showFilters ? 'min-h-screen' : 'min-h-0'}`}>
+          <div className="hidden ssm:flex flex-row flex-wrap items-center gap-2 ssm:gap-1.5 ssm:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
             {/* Ô tìm kiếm */}
-            <div className="w-full md:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
+            <div className="w-full ssm:w-56 ssm:w-64 xl:w-72 max-w-[1451px]:w-full relative">
               <input
                 type="text"
                 placeholder="Tìm dự án"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-3 pr-8 py-1.5 md:py-1 lg:py-1.5 border rounded w-full text-sm md:text-xs lg:text-sm"
+                className="pl-3 pr-8 py-1.5 ssm:py-1 ssm:py-1.5 border rounded w-full text-sm ssm:text-xs ssm:text-sm"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-ssm max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
                       onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 md:py-1 lg:py-1.5 hover:bg-blue-50 cursor-pointer text-sm md:text-xs lg:text-sm"
+                      className="px-2 py-1.5 ssm:py-1 ssm:py-1.5 hover:bg-blue-50 cursor-pointer text-sm ssm:text-xs ssm:text-sm"
                     >
                       {suggestion}
                     </li>
@@ -696,26 +697,27 @@ const SideProject = () => {
             </div>
 
             {/* Khoảng thời gian */}
-            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 md:px-1.5 md:py-0.5 lg:px-2 lg:py-1 text-gray-700 bg-white w-full md:w-56 lg:w-60 xl:w-64 max-w-[1451px]:w-full">
-              <FaRegCalendarAlt className="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 text-gray-500 mr-2" />
+            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 ssm:px-1.5 ssm:py-0.5 ssm:px-2 ssm:py-1 text-gray-700 bg-white w-full ssm:w-56 ssm:w-60 xl:w-64 max-w-[1451px]:w-full">
+              <FaRegCalendarAlt className="w-4 h-4 ssm:w-3 ssm:h-3 ssm:w-4 ssm:h-4 text-gray-500 mr-2" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] ssm:w-[90px] ssm:w-[110px] text-sm ssm:text-xs ssm:text-sm"
               />
               <span className="mx-1">-</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] ssm:w-[90px] ssm:w-[110px] text-sm ssm:text-xs ssm:text-sm"
               />
             </div>
+
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
+              className="px-2 py-1.5 ssm:px-1.5 ssm:py-1 ssm:px-2 ssm:py-1.5 border rounded w-full ssm:w-40 ssm:w-48 xl:w-56 max-w-[1451px]:w-full text-sm ssm:text-xs ssm:text-sm"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Đang chuẩn bị">Đang chuẩn bị</option>
@@ -723,10 +725,11 @@ const SideProject = () => {
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
             </select>
+
             <select
               value={completionLevel}
               onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
+              className="px-2 py-1.5 ssm:px-1.5 ssm:py-1 ssm:px-2 ssm:py-1.5 border rounded w-full ssm:w-40 ssm:w-48 xl:w-56 max-w-[1451px]:w-full text-sm ssm:text-xs ssm:text-sm"
             >
               <option value="all">Mọi tiến độ</option>
               <option value="20">>20%</option>
@@ -736,27 +739,21 @@ const SideProject = () => {
             </select>
 
             {/* Nút xuất báo cáo */}
-            <div className="w-full md:w-auto max-w-[1451px]:w-full flex justify-start">
+            <div className="w-full ssm:w-auto max-w-[1451px]:w-full flex justify-start">
               <button
                 onClick={resetFilters}
-                className="px-4 py-1.5 mr-2 md:px-3 md:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm md:text-xs lg:text-sm max-w-[1451px]:w-full"
+                className="px-4 py-1.5 mr-2 ssm:px-3 ssm:py-1 ssm:px-4 ssm:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm ssm:text-xs ssm:text-sm max-w-[1451px]:w-full"
               >
                 XÓA LỌC
               </button>
-              <button className="bg-green-700 mr-2 text-white px-4 py-1.5 md:px-3 md:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm md:text-xs lg:text-sm w-full md:w-auto max-w-[1451px]:w-full">
+              <button className="bg-green-700 text-white px-4 py-1.5 ssm:px-3 ssm:py-1 ssm:px-4 ssm:py-1.5 rounded font-bold text-sm ssm:text-xs ssm:text-sm w-full ssm:w-auto max-w-[1451px]:w-full">
                 XUẤT BÁO CÁO
               </button>
-              <button
-              onClick={() => setShowAddSideProject(true)}
-              className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold "
-            >
-              TẠO DỰ ÁN MỚI
-            </button>
             </div>
           </div>
 
           {/* Status bar section - hidden on mobile */}
-          <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
+          <div className="hidden ssm:flex flex-col flex-1 min-h-0 pt-3">
             <div className="flex shadow overflow-hidden bg-white w-full mt-1">
               {statuses.map((status) => (
                 <div
@@ -773,9 +770,9 @@ const SideProject = () => {
                     }
                   `}
                 >
-                  <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className=" font-bold">{status.label}</div>
-                  <div className=" text-gray-500">{status.count}</div>
+                  <div className="mb-1 text-ssm">{status.icon}</div>
+                  <div className="text-xs font-bold">{status.label}</div>
+                  <div className="text-sm text-gray-500">{status.count}</div>
                 </div>
               ))}
             </div>
@@ -785,14 +782,14 @@ const SideProject = () => {
 
           <div className="p-2 font-sans">
             {/* Status Bar - hidden on mobile */}
-            <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
+            <div className="hidden ssm:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
               {statusesLabel.map((s) => {
                 const isActive = selectedStatus === s.label;
                 return (
                   <div
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1  font-semibold border-b-[3px] transition-colors duration-150 ${isActive
+                    className={`cursor-pointer px-2 py-1  font-semibold border-b-[3px] transition-colors duration-150 ssm:text-[11px] 2xl:text-base ${isActive
                       ? `${s.color} border-red-600`
                       : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
                       }`}
@@ -812,9 +809,9 @@ const SideProject = () => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3" ref={triggerRef}>
+            <div className="ssm:hidden mb-3" ref={triggerRef}>
               <div
-                className="w-full p-2 border rounded-md  flex items-center justify-between cursor-pointer bg-white"
+                className="w-full p-2 border rounded-ssm  flex items-center justify-between cursor-pointer bg-white"
                 onClick={() => setIsSelectOpen(!isSelectOpen)}
               >
                 <div className="flex items-center gap-2">
@@ -847,7 +844,7 @@ const SideProject = () => {
               </div>
 
               {isSelectOpen && (
-                <div className="z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                <div className="z-10 w-full mt-1 bg-white border rounded-ssm shadow-ssm max-h-60 overflow-y-auto"
                   style={{
                     top: `calc(${triggerRef.current?.getBoundingClientRect().bottom}px + 8px)`
                   }}
@@ -884,11 +881,11 @@ const SideProject = () => {
 
             {/* Desktop Table */}
             <div
-              className="hidden md:flex flex-col"
+              className="hidden ssm:flex flex-col"
               style={{ height: "calc(100vh - 300px)" }}
             >
               <div className="overflow-y-auto">
-                <h1 className="text-l mt-6 md:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>
+                <h1 className="text-l mt-6 ssm:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>
                 <table className="w-full border border-gray-300">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">
@@ -953,7 +950,7 @@ const SideProject = () => {
                                     )}
                                   </button>
                                   {expandedMenuId === project.DuAnID && (
-                                    <div className="absolute ml-6 mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                    <div className="absolute ml-6 mt-1 w-40 bg-white rounded-ssm shadow-ssm z-10 border border-gray-200">
                                       <button
                                         className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                         onClick={(e) => e.stopPropagation()}
@@ -1070,7 +1067,7 @@ const SideProject = () => {
                   <div className="mt-6">
                     <button
                       type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-ssm shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       onClick={() => setShowAddPackage(true)}
                     >
                       <svg
@@ -1132,7 +1129,7 @@ const SideProject = () => {
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
+            <div className="ssm:hidden space-y-3">
               {filteredSubProjects.length > 0 ? (
                 [...filteredSubProjects]
                   .sort((a, b) => {
@@ -1145,7 +1142,7 @@ const SideProject = () => {
                   .map((subProject, index) => (
                     <div
                       key={subProject.DuAnID}
-                      className="bg-white rounded-lg shadow p-4 border border-gray-200"
+                      className="bg-white rounded-ssm shadow p-4 border border-gray-200"
                       onClick={(e) => {
                         // Chỉ chuyển trang nếu không click vào checkbox
                         if (!e.target.closest('input[type="checkbox"]')) {
@@ -1305,7 +1302,7 @@ const SideProject = () => {
                   <div className="mt-6">
                     <button
                       type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-ssm shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       onClick={() => setShowAddPackage(true)}
                     >
                       <svg

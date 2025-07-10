@@ -297,6 +297,26 @@ const MapComponent = ({ projects = [] }) => {
             </div>
           )}
 
+          <div className="absolute top-4 right-4 bg-white min-w-[160px] min-h-[100px] z-[1000] rounded-xl border-2 border-blue-700 p-2">
+            <div className="font-semibold">GHI CHÚ</div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-blue-600"></span>
+              <span>Đang chuẩn bị</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-green-600"></span>
+              <span>Đang thi công</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-yellow-500"></span>
+              <span>Hoàn thành</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-purple-500"></span>
+              <span>Tạm dừng</span>
+            </div>
+          </div>
+
           <MapContainer
             center={mapCenter}
             zoom={13}

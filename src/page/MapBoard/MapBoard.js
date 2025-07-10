@@ -67,6 +67,7 @@ const Dashboard = () => {
     setShowMenu(false);
   });
   
+  const [showFilters, setShowFilters] = useState(false);
 
   const mergedProvinces = [
     "Thành phố Hà Nội",
@@ -506,9 +507,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
-      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
-        <div className="flex items-center space-x-4 pt-0 md:pt-1">
+    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 lg:pt-0 md:pt-0 text-base">
+      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 lg:pt-0 mb-3 lg:mb-0 md:pt-2">
+        <div className="flex items-center space-x-4 pt-0 lg:pt-1">
           <span className="text-gray-500">Thông báo</span>
           <FaRegBell />
           <span></span>
@@ -536,7 +537,7 @@ const Dashboard = () => {
       </header>
 
       {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
-      <div className="md:hidden flex justify-between items-center px-4 mb-2">
+      <div className="lg:hidden flex justify-between items-center px-4 mb-2">
         <button 
           onClick={() => setShowMobileFilters(!showMobileFilters)}
           className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
@@ -555,7 +556,7 @@ const Dashboard = () => {
 
       {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
       {showMobileFilters && (
-        <div className="md:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
+        <div className="lg:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
           {/* Các phần tử filter giống như bản desktop nhưng responsive cho mobile */}
           <div>
             <div>
@@ -685,23 +686,24 @@ const Dashboard = () => {
       </div>
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
-        <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-          <div className="hidden md:flex flex-col md:flex-row items-center gap-2">
-            <div className=" w-full md:w-64">
+        <div className={`bg-white rounded-lg p-4 flex flex-col flex-1 ${showFilters ? 'min-h-screen' : 'min-h-0'}`}>
+          <div className="hidden lg:flex flex-row flex-wrap items-center gap-2 lg:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
+            {/* Ô tìm kiếm */}
+            <div className="w-full lg:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
               <input
                 type="text"
                 placeholder="Tìm dự án"
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="pl-3 pr-10 py-1 border rounded w-full text-sm"
+                className="pl-3 pr-8 py-1.5 lg:py-1 lg:py-1.5 border rounded w-full text-sm lg:text-xs lg:text-sm"
               />
               {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto text-xs">
+                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
                   {searchSuggestions.map((suggestion, index) => (
                     <li
                       key={index}
                       onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
+                      className="px-2 py-1.5 lg:py-1 lg:py-1.5 hover:bg-blue-50 cursor-pointer text-sm lg:text-xs lg:text-sm"
                     >
                       {suggestion}
                     </li>
@@ -709,26 +711,30 @@ const Dashboard = () => {
                 </ul>
               )}
             </div>
-            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-sm text-gray-700 bg-white w-full md:w-auto">
-              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
+
+            {/* Khoảng thời gian */}
+            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 lg:px-1.5 lg:py-0.5 lg:px-2 lg:py-1 text-gray-700 bg-white w-full lg:w-56 lg:w-60 xl:w-64 max-w-[1451px]:w-full">
+              <FaRegCalendarAlt className="w-4 h-4 lg:w-3 lg:h-3 lg:w-4 lg:h-4 text-gray-500 mr-2" />
               <input
                 type="date"
                 value={fromDate}
                 onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] lg:w-[90px] lg:w-[110px] text-sm lg:text-xs lg:text-sm"
               />
               <span className="mx-1">-</span>
               <input
                 type="date"
                 value={toDate}
                 onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent text-sm w-[120px]"
+                className="appearance-none outline-none border-none bg-transparent w-[100px] lg:w-[90px] lg:w-[110px] text-sm lg:text-xs lg:text-sm"
               />
             </div>
+
+            {/* Các dropdown filter */}
             <select
               value={selectedProvince}
               onChange={handleProvinceChange}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 lg:px-1.5 lg:py-1 lg:px-2 lg:py-1.5 border rounded w-full lg:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm lg:text-xs lg:text-sm"
             >
               <option value="">Tất cả tỉnh</option>
               {mergedProvinces.map((province, index) => (
@@ -737,10 +743,11 @@ const Dashboard = () => {
                 </option>
               ))}
             </select>
+
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 lg:px-1.5 lg:py-1 lg:px-2 lg:py-1.5 border rounded w-full lg:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm lg:text-xs lg:text-sm"
             >
               <option value="all">Tất cả trạng thái</option>
               <option value="Đang chuẩn bị">Đang chuẩn bị</option>
@@ -748,10 +755,11 @@ const Dashboard = () => {
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
             </select>
+
             <select
               value={contractor}
               onChange={(e) => setContractor(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 lg:px-1.5 lg:py-1 lg:px-2 lg:py-1.5 border rounded w-full lg:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm lg:text-xs lg:text-sm"
             >
               <option value="all">Tất cả nhà thầu</option>
               {contractorList.map((nhathau) => (
@@ -760,33 +768,36 @@ const Dashboard = () => {
                 </option>
               ))}
             </select>
+
             <select
               value={completionLevel}
               onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-3 py-1 border rounded w-full md:w-48"
+              className="px-2 py-1.5 lg:px-1.5 lg:py-1 lg:px-2 lg:py-1.5 border rounded w-full lg:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm lg:text-xs lg:text-sm"
             >
               <option value="all">Mọi tiến độ</option>
-              <option value="20">&gt;20%</option>
-              <option value="50">&gt;50%</option>
-              <option value="80">&gt;80%</option>
+              <option value="20">>20%</option>
+              <option value="50">>50%</option>
+              <option value="80">>80%</option>
               <option value="100">100%</option>
             </select>
-            <button
-              onClick={resetFilters}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
-            >
-              Xóa lọc
-            </button>
-          </div>
-          <div className="hidden md:flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              XUẤT BÁO CÁO
-            </button>
+
+            {/* Nút xuất báo cáo */}
+            <div className="w-full lg:w-auto max-w-[1451px]:w-full flex justify-start">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-1.5 mr-2 lg:px-3 lg:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm lg:text-xs lg:text-sm max-w-[1451px]:w-full"
+              >
+                XÓA LỌC
+              </button>
+              <button className="bg-green-700 text-white px-4 py-1.5 lg:px-3 lg:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm lg:text-xs lg:text-sm w-full lg:w-auto max-w-[1451px]:w-full">
+                XUẤT BÁO CÁO
+              </button>
+            </div>
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
           {/* Status bar section - hidden on mobile */}
-          <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
+          <div className="hidden lg:flex flex-col flex-1 min-h-0 pt-3">
             <div className="flex shadow overflow-hidden bg-white w-full mt-1">
               {statuses.map((status) => (
                 <div
@@ -804,7 +815,7 @@ const Dashboard = () => {
                   `}
                 >
                   <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className="text-sm font-bold">{status.label}</div>
+                  <div className="text-xs font-bold">{status.label}</div>
                   <div className="text-sm text-gray-500">{status.count}</div>
                 </div>
               ))}
@@ -815,14 +826,14 @@ const Dashboard = () => {
 
           <div className="p-2 font-sans text-[13px]">
             {/* Status Bar - hidden on mobile */}
-            <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
+            <div className="hidden lg:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
               {statusesLabel.map((s) => {
                 const isActive = selectedStatus === s.label;
                 return (
                   <div
                     key={s.label}
                     onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 ${isActive
+                    className={`cursor-pointer px-2 py-1 text-sm font-semibold border-b-[3px] transition-colors duration-150 lg:text-[11px] 2xl:text-base ${isActive
                       ? `${s.color} border-red-600`
                       : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
                       }`}
@@ -842,9 +853,9 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3" ref={triggerRef}>
+            <div className="lg:hidden mb-3" ref={triggerRef}>
               <div
-                className="w-full p-2 border rounded-md text-sm flex items-center justify-between cursor-pointer bg-white"
+                className="w-full p-2 border rounded-lg text-sm flex items-center justify-between cursor-pointer bg-white"
                 onClick={() => setIsSelectOpen(!isSelectOpen)}
               >
                 <div className="flex items-center gap-2">
@@ -872,7 +883,7 @@ const Dashboard = () => {
               </div>
 
               {isSelectOpen && (
-                <div className="z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
+                <div className="z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto"
                   style={{
                     top: `calc(${triggerRef.current?.getBoundingClientRect().bottom}px + 8px)`
                   }}
@@ -909,7 +920,7 @@ const Dashboard = () => {
 
             {/* Desktop Table */}
             <div
-              className="hidden md:flex flex-col"
+              className="hidden lg:flex flex-col"
               style={{ height: "calc(100vh - 300px)" }}
             >
               <div className=" h-full overflow-y-auto">
@@ -918,7 +929,7 @@ const Dashboard = () => {
             </div>
 
             {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
+            <div className="lg:hidden space-y-3">
               {filteredProjects.length > 0 ? (
                 [...filteredProjects]
                   .sort((a, b) => {
