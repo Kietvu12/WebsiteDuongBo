@@ -271,14 +271,6 @@ const WorkItem = () => {
           )}
       </div>
       <div>
-      {selectedProjectId !== null ? (
-            <ProductionChart duAnThanhPhanId={selectedProjectId} />
-          ) : (
-            // Hiển thị thông báo nếu cả hai đều null
-            <div className="no-project-selected">
-              <p>Vui lòng tìm kiếm một dự án để xem</p>
-            </div>
-          )}
       </div>
       <div className='content'>
         <div className='content'>

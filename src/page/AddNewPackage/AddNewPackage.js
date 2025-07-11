@@ -5,37 +5,34 @@ import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from 'axios';
 import { FaCheckCircle, FaPlus, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
+import { kml } from '@mapbox/togeojson';
+import { DOMParser } from 'xmldom';
 
 
-const AddNewPackage = ({projectId, onClose, onSuccess}) => {
-
+const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   // State cho form
   const [formData, setFormData] = useState({
-    TenGoiThau: '',
+    TenGoiThau: goiThau?.TenGoiThau || '',
     DuAn_ID: projectId,
-    GiaTriHĐ: '',
-    Km_BatDau: '',
-    Km_KetThuc: '',
-    ToaDo_BatDau_X: '',
-    ToaDo_BatDau_Y: '',
-    ToaDo_KetThuc_X: '',
-    ToaDo_KetThuc_Y: '',
-    NgayKhoiCong: '',
-    NgayHoanThanh: '',
-    TrangThai: 'Đang chuẩn bị',
-    NhaThauID: '',
-    LoaiHinh_ID: '',
-    ThuocTinhValues: {}
+    GiaTriHĐ: goiThau?.GiaTriHĐ || '',
+    Km_BatDau: goiThau?.Km_BatDau || '',
+    Km_KetThuc: goiThau?.Km_KetThuc || '',
+    ToaDo_BatDau_X: goiThau?.ToaDo_BatDau_X || '',
+    ToaDo_BatDau_Y: goiThau?.ToaDo_BatDau_Y || '',
+    ToaDo_KetThuc_X: goiThau?.ToaDo_KetThuc_X || '',
+    ToaDo_KetThuc_Y: goiThau?.ToaDo_KetThuc_Y || '',
+    NgayKhoiCong: goiThau?.NgayKhoiCong ? goiThau.NgayKhoiCong.split('T')[0] : '',
+    NgayHoanThanh: goiThau?.NgayHoanThanh ? goiThau.NgayHoanThanh.split('T')[0] : '',
+    TrangThai: goiThau?.TrangThai || 'Đang chuẩn bị',
+    NhaThauID: goiThau?.NhaThauID || '',
+    LoaiHinh_ID: goiThau?.LoaiHinh_ID || '',
+    ThuocTinhValues: goiThau?.ThuocTinhValues || {}
   });
-  console.log("Dự án id:", projectId);
-  
+
   const [files, setFiles] = useState([]);
-
-  const handleFileChange = (e) => {
-    setFiles([...e.target.files]);
-  };
-
-  // State khác
+  const [kmlFile, setKmlFile] = useState(null);
+  const [existingFiles, setExistingFiles] = useState(goiThau?.taiLieu || []);
+  const [filesToRemove, setFilesToRemove] = useState([]);
   const [nhaThauList, setNhaThauList] = useState([]);
   const [loaiHinhList, setLoaiHinhList] = useState([]);
   const [thuocTinhList, setThuocTinhList] = useState([]);
@@ -44,22 +41,20 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [selectedAddressType, setSelectedAddressType] = useState(null);
   const [showAddAttribute, setShowAddAttribute] = useState(false);
-  
-
-  // Refs cho bản đồ
   const mapRef = useRef(null);
   const startMarkerRef = useRef(null);
   const endMarkerRef = useRef(null);
+  const routeLayerRef = useRef(null);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-  // Khởi tạo bản đồ
+  // Khởi tạo bản đồ và tải dữ liệu ban đầu
   useEffect(() => {
+    // Khởi tạo bản đồ
     if (!mapRef.current) {
       const map = L.map('map').setView([14.0583, 108.2772], 6);
-
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
-
       mapRef.current = map;
 
       map.on('click', (e) => {
@@ -71,11 +66,23 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
       });
     }
 
-    // Load danh sách nhà thầu và loại hình
+    // Khởi tạo marker nếu có tọa độ
+    if (goiThau?.ToaDo_BatDau_X && goiThau?.ToaDo_BatDau_Y) {
+      setStartPoint({ lat: goiThau.ToaDo_BatDau_Y, lng: goiThau.ToaDo_BatDau_X });
+    }
+    if (goiThau?.ToaDo_KetThuc_X && goiThau?.ToaDo_KetThuc_Y) {
+      setEndPoint({ lat: goiThau.ToaDo_KetThuc_Y, lng: goiThau.ToaDo_KetThuc_X });
+    }
+
     fetchNhaThauList();
     fetchLoaiHinhList();
-  }, []);
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+    // Tải thuộc tính nếu ở chế độ sửa và có LoaiHinh_ID
+    if (isEdit && goiThau?.LoaiHinh_ID) {
+      fetchThuocTinhList(goiThau.LoaiHinh_ID);
+    }
+  }, [isEdit, goiThau]);
+
   const fetchNhaThauList = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
@@ -84,27 +91,47 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
     }
   };
+  const drawRouteOnMap = (coordinates) => {
+    // Xóa layer cũ nếu có
+    if (routeLayerRef.current) {
+      mapRef.current.removeLayer(routeLayerRef.current);
+    }
+
+    // Chuyển đổi tọa độ từ [lng, lat] sang [lat, lng]
+    const latLngs = coordinates.map(coord => [coord[1], coord[0]]);
+
+    // Tạo polyline mới
+    const polyline = L.polyline(latLngs, {
+      color: '#3388ff',
+      weight: 5,
+      opacity: 0.7,
+      lineJoin: 'round'
+    }).addTo(mapRef.current);
+
+    routeLayerRef.current = polyline;
+
+    // Zoom vào toàn bộ tuyến đường
+    mapRef.current.fitBounds(polyline.getBounds());
+  };
 
   const fetchLoaiHinhList = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/loaihinh`);
       if (response.data.success) {
         setLoaiHinhList(response.data.data);
+        if (isEdit && goiThau?.LoaiHinh_ID) {
+          const loaiHinh = response.data.data.find(lh => lh.LoaiHinh_ID == goiThau.LoaiHinh_ID);
+          setSelectedLoaiHinh(loaiHinh);
+        }
       }
     } catch (error) {
       console.error('Lỗi khi tải danh sách loại hình:', error);
     }
   };
 
-  const handleLoaiHinhChange = async (e) => {
-    const value = e.target.value;
-    const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
-    setSelectedLoaiHinh(loaiHinh);
-    setFormData({ ...formData, LoaiHinh_ID: value });
-    setRemovedThuocTinh([]);
-
+  const fetchThuocTinhList = async (loaiHinhId) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/loaihinh/${value}/thuoctinh`);
+      const response = await axios.get(`${API_BASE_URL}/loaihinh/${loaiHinhId}/thuoctinh`);
       if (response.data.success) {
         setThuocTinhList(response.data.data.thuocTinh);
       }
@@ -113,9 +140,21 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
     }
   };
 
+  const handleLoaiHinhChange = async (e) => {
+    const value = e.target.value;
+    const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
+    setSelectedLoaiHinh(loaiHinh);
+    setFormData({ ...formData, LoaiHinh_ID: value, ThuocTinhValues: {} });
+    setRemovedThuocTinh([]);
+    setThuocTinhList([]);
+
+    if (value) {
+      await fetchThuocTinhList(value);
+    }
+  };
+
   const setStartPoint = (latlng) => {
     const { lat, lng } = latlng;
-
     setFormData({
       ...formData,
       ToaDo_BatDau_X: lng,
@@ -140,7 +179,6 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
 
   const setEndPoint = (latlng) => {
     const { lat, lng } = latlng;
-
     setFormData({
       ...formData,
       ToaDo_KetThuc_X: lng,
@@ -165,7 +203,6 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
 
   const handleAddressSearch = async (query, type) => {
     setSelectedAddressType(type);
-
     if (query.length < 3) {
       setAddressSuggestions([]);
       return;
@@ -184,13 +221,11 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
   const selectAddress = (result, type) => {
     const { x: lng, y: lat } = result;
     const latlng = L.latLng(lat, lng);
-
     if (type === 'start') {
       setStartPoint(latlng);
     } else {
       setEndPoint(latlng);
     }
-
     mapRef.current.setView(latlng, 15);
     setAddressSuggestions([]);
   };
@@ -223,9 +258,97 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
     setThuocTinhList([...thuocTinhList, thuocTinh]);
   };
 
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+  
+    // Tách file KML và các file khác
+    const kml = selectedFiles.find(file =>
+      file.name.toLowerCase().endsWith('.kml')
+    );
+    const otherFiles = selectedFiles.filter(file =>
+      !file.name.toLowerCase().endsWith('.kml')
+    );
+  
+    if (kml) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const kmlContent = event.target.result;
+          
+          // Kiểm tra nội dung KML cơ bản
+          if (!kmlContent.includes('<kml') || !kmlContent.includes('<LineString>')) {
+            throw new Error('File không phải định dạng KML hợp lệ');
+          }
+  
+          const kmlDom = new DOMParser().parseFromString(kmlContent, 'text/xml');
+          
+          // Kiểm tra lỗi XML
+          const parserErrors = kmlDom.getElementsByTagName('parsererror');
+          if (parserErrors.length > 0) {
+            throw new Error('Lỗi cú pháp XML trong file KML');
+          }
+  
+          const geoJson = kml(kmlDom);
+  
+          // Kiểm tra cấu trúc GeoJSON
+          if (!geoJson || !geoJson.features || geoJson.features.length === 0) {
+            throw new Error('KML không chứa dữ liệu đường đi');
+          }
+  
+          const lineStringFeature = geoJson.features.find(
+            feature => feature.geometry?.type === 'LineString'
+          );
+  
+          if (!lineStringFeature) {
+            throw new Error('Không tìm thấy đường đi (LineString) trong KML');
+          }
+  
+          const coordinates = lineStringFeature.geometry.coordinates;
+  
+          if (!coordinates || coordinates.length < 2) {
+            throw new Error('Đường đi phải có ít nhất 2 điểm');
+          }
+  
+          // Cập nhật tọa độ đầu cuối
+          const startPoint = coordinates[0];
+          const endPoint = coordinates[coordinates.length - 1];
+  
+          setFormData(prev => ({
+            ...prev,
+            ToaDo_BatDau_X: startPoint[0],
+            ToaDo_BatDau_Y: startPoint[1],
+            ToaDo_KetThuc_X: endPoint[0],
+            ToaDo_KetThuc_Y: endPoint[1]
+          }));
+  
+          // Hiển thị trên bản đồ
+          setStartPoint({ lat: startPoint[1], lng: startPoint[0] });
+          setEndPoint({ lat: endPoint[1], lng: endPoint[0] });
+          drawRouteOnMap(coordinates);
+  
+        } catch (error) {
+          console.error('Lỗi khi đọc file KML:', error);
+          alert(`Lỗi: ${error.message}\nVui lòng kiểm tra lại file KML của bạn.`);
+          setKmlFile(null); // Reset file KML nếu có lỗi
+        }
+      };
+      reader.onerror = () => {
+        alert('Lỗi khi đọc file. Vui lòng thử lại.');
+        setKmlFile(null);
+      };
+      reader.readAsText(kml);
+      setKmlFile(kml);
+    }
+  
+    setFiles(prev => [...prev, ...otherFiles]);
+  };
+  const handleRemoveExistingFile = (taiLieuID) => {
+    setFilesToRemove([...filesToRemove, taiLieuID]);
+    setExistingFiles(existingFiles.filter(file => file.taiLieuID !== taiLieuID));
+  };
+
   const renderInputByType = (thuocTinh) => {
     const value = formData.ThuocTinhValues[thuocTinh.ThuocTinh_ID] || '';
-
     switch (thuocTinh.KieuDuLieu) {
       case 'number':
         return (
@@ -270,11 +393,8 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       const formDataToSend = new FormData();
-
-      // Thêm các trường dữ liệu vào FormData
       formDataToSend.append('TenGoiThau', formData.TenGoiThau);
       formDataToSend.append('DuAn_ID', formData.DuAn_ID);
       formDataToSend.append('GiaTriHĐ', formData.GiaTriHĐ);
@@ -291,19 +411,37 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
       formDataToSend.append('LoaiHinh_ID', formData.LoaiHinh_ID);
       formDataToSend.append('ThuocTinhValues', JSON.stringify(formData.ThuocTinhValues));
 
-      // Thêm các file vào FormData
+      // Thêm danh sách tài liệu cần xóa (nếu có)
+      if (isEdit && filesToRemove.length > 0) {
+        formDataToSend.append('TaiLieuXoa', JSON.stringify(filesToRemove));
+      }
+
+      // Thêm file KML nếu có
+      if (kmlFile) {
+        formDataToSend.append('kmlFile', kmlFile);
+      }
+
+      // Thêm các file khác (không phải KML)
       files.forEach(file => {
         formDataToSend.append('files', file);
       });
 
-      const response = await axios.post(`${API_BASE_URL}/goithau/tao-moi`, formDataToSend, {
+      const url = isEdit
+        ? `${API_BASE_URL}/goithau/sua/${goiThau.GoiThau_ID}`
+        : `${API_BASE_URL}/goithau/tao-moi`;
+
+      const response = await axios({
+        method: isEdit ? 'put' : 'post',
+        url,
+        data: formDataToSend,
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       if (response.data.success) {
-        alert('Tạo gói thầu thành công!');
+        alert(isEdit ? 'Cập nhật gói thầu thành công!' : 'Tạo gói thầu thành công!');
+        // Reset form
         setFormData({
           TenGoiThau: '',
           DuAn_ID: projectId,
@@ -316,33 +454,39 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
           ToaDo_KetThuc_Y: '',
           NgayKhoiCong: '',
           NgayHoanThanh: '',
-          TrangThai: 'dang_chuan_bi',
+          TrangThai: 'Đang chuẩn bị',
           NhaThauID: '',
           LoaiHinh_ID: '',
           ThuocTinhValues: {}
         });
         setFiles([]);
+        setKmlFile(null); // Thêm dòng này để reset KML file
+        setExistingFiles([]);
+        setFilesToRemove([]);
+        setThuocTinhList([]);
+        setRemovedThuocTinh([]);
+        setSelectedLoaiHinh(null);
         onSuccess(response.data.data);
-        onClose()
+        onClose();
       }
     } catch (error) {
-      console.error('Lỗi khi tạo gói thầu:', error);
-      alert('Có lỗi xảy ra khi tạo gói thầu');
+      console.error(`Lỗi khi ${isEdit ? 'cập nhật' : 'tạo'} gói thầu:`, error);
+      alert(`Có lỗi xảy ra khi ${isEdit ? 'cập nhật' : 'tạo'} gói thầu`);
     }
   };
 
   return (
     <div className="container bg-white rounded-lg  mx-auto p-2 max-w-screen-2xl">
       <div className="flex justify-between items-center mb-4"> {/* Thêm div wrapper với flex */}
-    <h1 className="text-xl font-bold">Tạo Mới Gói Thầu</h1>
-    <button
-      onClick={onClose}
-      className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-      aria-label="Đóng"
-    >
-      <FaTimes className="w-5 h-5" />
-    </button>
-  </div>
+        <h1 className="text-xl font-bold">Tạo Mới Gói Thầu</h1>
+        <button
+          onClick={onClose}
+          className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+          aria-label="Đóng"
+        >
+          <FaTimes className="w-5 h-5" />
+        </button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Phần form nhập liệu */}
         <div className="bg-white p-4 rounded-lg shadow">
@@ -571,21 +715,11 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
               </label>
               <input
                 type="file"
-                multiple
+                accept=".kml"
                 onChange={handleFileChange}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png,.zip"
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
               />
-              {files.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">Đã chọn {files.length} file:</p>
-                  <ul className="list-disc pl-5 text-sm text-gray-600">
-                    {files.map((file, index) => (
-                      <li key={index}>{file.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+
             </div>
 
             {/* Nút submit */}
@@ -599,8 +733,6 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
             </div>
           </form>
         </div>
-
-        {/* Phần bản đồ */}
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-3">Bản đồ công trình</h2>
           <div id="map" className="h-96 rounded-md border"></div>
@@ -633,122 +765,122 @@ const AddNewPackage = ({projectId, onClose, onSuccess}) => {
             </div>
           </div>
           <div className="space-y-3 mt-2">
-              <h2 className="text-lg font-semibold border-b pb-2">Vị trí công trình</h2>
+            <h2 className="text-lg font-semibold border-b pb-2">Vị trí công trình</h2>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Điểm bắt đầu</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Điểm bắt đầu</label>
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    onChange={(e) => handleAddressSearch(e.target.value, 'start')}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-                    onClick={() => setSelectedAddressType('start')}
-                  >
-                    Chọn trên bản đồ
-                  </button>
-                </div>
-
-                {selectedAddressType === 'start' && addressSuggestions.length > 0 && (
-                  <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-                    {addressSuggestions.map((result, index) => (
-                      <li
-                        key={index}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => selectAddress(result, 'start')}
-                      >
-                        {result.label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Kinh độ"
-                    className="px-3 py-2 border rounded-md text-sm"
-                    value={formData.ToaDo_BatDau_X}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ToaDo_BatDau_X: e.target.value
-                    })}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Vĩ độ"
-                    className="px-3 py-2 border rounded-md text-sm"
-                    value={formData.ToaDo_BatDau_Y}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ToaDo_BatDau_Y: e.target.value
-                    })}
-                  />
-                </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  onChange={(e) => handleAddressSearch(e.target.value, 'start')}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
+                  onClick={() => setSelectedAddressType('start')}
+                >
+                  Chọn trên bản đồ
+                </button>
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Điểm kết thúc</label>
+              {selectedAddressType === 'start' && addressSuggestions.length > 0 && (
+                <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
+                  {addressSuggestions.map((result, index) => (
+                    <li
+                      key={index}
+                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => selectAddress(result, 'start')}
+                    >
+                      {result.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
-                    onChange={(e) => handleAddressSearch(e.target.value, 'end')}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-                    onClick={() => setSelectedAddressType('end')}
-                  >
-                    Chọn trên bản đồ
-                  </button>
-                </div>
-
-                {selectedAddressType === 'end' && addressSuggestions.length > 0 && (
-                  <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-                    {addressSuggestions.map((result, index) => (
-                      <li
-                        key={index}
-                        className="p-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => selectAddress(result, 'end')}
-                      >
-                        {result.label}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Kinh độ"
-                    className="px-3 py-2 border rounded-md text-sm"
-                    value={formData.ToaDo_KetThuc_X}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ToaDo_KetThuc_X: e.target.value
-                    })}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Vĩ độ"
-                    className="px-3 py-2 border rounded-md text-sm"
-                    value={formData.ToaDo_KetThuc_Y}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      ToaDo_KetThuc_Y: e.target.value
-                    })}
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Kinh độ"
+                  className="px-3 py-2 border rounded-md text-sm"
+                  value={formData.ToaDo_BatDau_X}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    ToaDo_BatDau_X: e.target.value
+                  })}
+                />
+                <input
+                  type="text"
+                  placeholder="Vĩ độ"
+                  className="px-3 py-2 border rounded-md text-sm"
+                  value={formData.ToaDo_BatDau_Y}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    ToaDo_BatDau_Y: e.target.value
+                  })}
+                />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Điểm kết thúc</label>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  onChange={(e) => handleAddressSearch(e.target.value, 'end')}
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
+                  onClick={() => setSelectedAddressType('end')}
+                >
+                  Chọn trên bản đồ
+                </button>
+              </div>
+
+              {selectedAddressType === 'end' && addressSuggestions.length > 0 && (
+                <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
+                  {addressSuggestions.map((result, index) => (
+                    <li
+                      key={index}
+                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => selectAddress(result, 'end')}
+                    >
+                      {result.label}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Kinh độ"
+                  className="px-3 py-2 border rounded-md text-sm"
+                  value={formData.ToaDo_KetThuc_X}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    ToaDo_KetThuc_X: e.target.value
+                  })}
+                />
+                <input
+                  type="text"
+                  placeholder="Vĩ độ"
+                  className="px-3 py-2 border rounded-md text-sm"
+                  value={formData.ToaDo_KetThuc_Y}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    ToaDo_KetThuc_Y: e.target.value
+                  })}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

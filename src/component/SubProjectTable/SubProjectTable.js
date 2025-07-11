@@ -471,7 +471,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       </button>
     </div>
   </div>
-        <div className="w-full overflow-x-auto">
+        <div className="w-1/2 overflow-x-auto">
           <table className="divide-y divide-gray-200 border text-sm">
             <thead className="bg-gray-50">
               <tr>
