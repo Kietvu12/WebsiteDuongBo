@@ -119,31 +119,13 @@ const Sidebar = () => {
           draggable={false}
         />
       </div>
-
-      {/* Icon avatar bên phải */}
-      {/* <button
-        aria-label="User Account"
-        onClick={() => navigate('/account-info')}
-        className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md flex items-center justify-center cursor-pointer"
-      >
-        <img
-          src={avatarIcon}
-          alt="Avatar"
-          className="object-cover w-full h-full"
-          draggable={false}
-        />
-      </button> */}
     </header>
-
-    {/* Overlay đen khi mở sidebar mobile */}
     {sidebarOpen && (
       <div
         className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden"
         onClick={() => setSidebarOpen(false)}
       />
     )}
-
-    {/* Sidebar chính */}
     <aside
       className={`
         fixed top-0 left-0 bottom-0 z-40 bg-gray-100 shadow-md font-sans
@@ -154,7 +136,6 @@ const Sidebar = () => {
         md:static 
       `}
     >
-      {/* Phần trên sidebar */}
       <div
         className="relative bg-center bg-cover p-5"
         style={{ backgroundImage: `url(${backgroundSidebar})` }}

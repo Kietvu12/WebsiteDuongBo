@@ -10,9 +10,6 @@ import AddNewPlan from '../AddNewPlan/AddNewPlan';
 import AddNewCategories from '../AddNewCategories/AddNewCategories';
 import UpdateProgress from '../UpdateProgress/UpdateProgress';
 import IssueList from '../IssueList/IssueList';
-import GanttTimeline from '../TimelineChart/TimelineChart';
-import TimelineCell from '../TimelineCell/TimelineCell'
-
 const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -23,7 +20,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showIssuePopup, setShowIssuePopup] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-  const [dateRange, setDateRange] = useState({ start: null, end: null });
 
   const handleOpenIssuePopup = (plan, projectId) => {
     setSelectedPlan(plan);
@@ -64,40 +60,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     progressData: []
   });
   console.log("Gói thầu bên này:", packageId);
-
-  const calculateDateRange = useCallback((data) => {
-    let allDates = [];
-    
-    const allPackages = [].concat(
-      data?.duAnThanhPhan?.danhSachGoiThau || [],
-      data?.duAnTong?.danhSachGoiThauTrucTiep || [],
-      data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-    );
-
-    allPackages.forEach(pkg => {
-      if (pkg.ngayKhoiCong) allDates.push(new Date(pkg.ngayKhoiCong));
-      if (pkg.ngayHoanThanh) allDates.push(new Date(pkg.ngayHoanThanh));
-      
-      pkg.danhSachHangMuc?.forEach(item => {
-        item.danhSachKeHoach?.forEach(plan => {
-          if (plan.ngayBatDau) allDates.push(new Date(plan.ngayBatDau));
-          if (plan.ngayKetThuc) allDates.push(new Date(plan.ngayKetThuc));
-        });
-      });
-    });
-
-    if (allDates.length > 0) {
-      const startDate = new Date(Math.min(...allDates.map(date => date.getTime())));
-      const endDate = new Date(Math.max(...allDates.map(date => date.getTime())));
-      setDateRange({ start: startDate, end: endDate });
-    }
-  }, []);
-  
-  useEffect(() => {
-    if (data) {
-      calculateDateRange(data);
-    }
-  }, [data, calculateDateRange]);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const fetchData = useCallback(async () => {
@@ -509,13 +471,11 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       </button>
     </div>
   </div>
-
-        <div className="w-full overflow-x-auto">
-          <div className="w-full overflow-x-auto">
+        <div className="w-1/2 overflow-x-auto">
           <table className="divide-y divide-gray-200 border text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-19">STT</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Mã số</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Công việc</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Khối lượng thực hiện</th>
@@ -526,7 +486,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Bắt đầu</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Kết thúc</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Thao tác</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Timeline</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -573,13 +532,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                           </button>
                         </div>
                       </td>
-
-                      <TimelineCell 
-                        startDate={packageItem.ngayKhoiCong}
-                        endDate={packageItem.ngayHoanThanh}
-                        progress={packageItem.tienDoThucHien || 0}
-                        dateRange={dateRange}
-                      />
                     </tr>
 
 
@@ -644,15 +596,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                                 </button>
                               </div>
                             </td>
-                            
-                            <TimelineCell 
-                              startDate={item.ngayBatDau}
-                              endDate={item.ngayKetThuc}
-                              progress={item.tongKhoiLuongKeHoach 
-                                ? (item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100 
-                                : 0}
-                              dateRange={dateRange}
-                            />
                           </tr>
 
 
@@ -721,15 +664,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                                   </button>
                                 </div>
                               </td>
-
-                              <TimelineCell 
-                                startDate={plan.ngayBatDau}
-                                endDate={plan.ngayKetThuc}
-                                progress={plan.khoiLuongKeHoach
-                                  ? (plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100
-                                  : 0}
-                                dateRange={dateRange}
-                              />
                             </tr>
 
                           ))}
@@ -740,7 +674,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                 ))}
             </tbody>
           </table>
-        </div>
         </div>
       </div>
       <div className="md:hidden space-y-3">

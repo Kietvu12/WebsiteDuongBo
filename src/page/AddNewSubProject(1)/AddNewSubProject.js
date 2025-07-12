@@ -709,24 +709,24 @@ const AddNewSubProjects = ({ DuAnID, onClose, onSuccess }) => {
                     Thêm dự án mới
                 </h1>
                 <>
-                <button
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base hover:shadow transition-all"
-                    onClick={() => setShowDocThongMinh(true)}
-                >
-                    <span>Đọc thông minh</span>
-                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-base animate-pulse">
-                        AI
-                    </span>
-                </button>
-                <button
-                    onClick={onClose}
-                    className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                    aria-label="Đóng"
-                >
-                    <FaTimes className="w-5 h-5" />
-                </button>
-</>
+                    <button
+                        type="button"
+                        className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base hover:shadow transition-all"
+                        onClick={() => setShowDocThongMinh(true)}
+                    >
+                        <span>Đọc thông minh</span>
+                        <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-base animate-pulse">
+                            AI
+                        </span>
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+                        aria-label="Đóng"
+                    >
+                        <FaTimes className="w-5 h-5" />
+                    </button>
+                </>
                 {showDocThongMinh && (
                     <DocThongMinh
                         onClose={() => setShowDocThongMinh(false)}

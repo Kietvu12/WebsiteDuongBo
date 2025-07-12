@@ -124,8 +124,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'dadb_1',
+  password: process.env.DB_PASSWORD || '123456',
+  database: process.env.DB_NAME || 'dulieuduongbo',
   waitForConnections: true,
   connectionLimit: parseInt(process.env.DB_POOL_LIMIT) || 20,
   queueLimit: 0,
@@ -1207,6 +1207,21 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     }
 
     // 2. Lấy danh sách nhà thầu liên quan
+    let routeData = null;
+    if (goiThau[0].PathData) {
+      // Nếu có KML: Parse JSON từ PathData
+      routeData = {
+        type: 'kml',
+        path: JSON.parse(goiThau[0].PathData)
+      };
+    } else {
+      // Nếu không có KML: Dùng tọa độ đầu-cuối
+      routeData = {
+        type: 'default',
+        start: [goiThau[0].ToaDo_BatDau_X, goiThau[0].ToaDo_BatDau_Y],
+        end: [goiThau[0].ToaDo_KetThuc_X, goiThau[0].ToaDo_KetThuc_Y]
+      };
+    }
     const [nhaThauLienQuan] = await pool.query(
       `SELECT nt.*, gtn.VaiTro
        FROM goithau_nhathau gtn
@@ -1340,6 +1355,7 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
         thongTinChung: {
           ...goiThau[0],
           nhaThau: nhaThauLienQuan,
+          routeData,
           danhGiaRuiRo,
           riskScore,
           khoiLuongThiCong,
@@ -3685,23 +3701,45 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
     // Start transaction
     await pool.query('START TRANSACTION');
 
-    // 1. Insert main tender package info
+    // 1. Xử lý file KML nếu có
+    let pathData = null;
+    const kmlFile = req.files?.find(file => 
+      path.extname(file.originalname).toLowerCase() === '.kml'
+    );
+
+    if (kmlFile) {
+      try {
+        const kmlContent = fs.readFileSync(kmlFile.path, 'utf-8');
+        const kmlDom = new DOMParser().parseFromString(kmlContent);
+        const geoJson = kml(kmlDom);
+        
+        if (geoJson.features?.[0]?.geometry?.coordinates) {
+          pathData = JSON.stringify(geoJson.features[0].geometry.coordinates);
+        }
+        fs.unlinkSync(kmlFile.path); // Xóa file tạm sau khi xử lý
+      } catch (error) {
+        console.error('Lỗi xử lý KML:', error);
+        // Vẫn tiếp tục xử lý dù KML lỗi
+      }
+    }
+
+    // 2. Insert main tender package info (thêm PathData)
     const [goiThauResult] = await pool.query(
       `INSERT INTO goithau (
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, PathData
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, pathData
       ]
     );
 
     const GoiThau_ID = goiThauResult.insertId;
 
-    // 2. Insert into goithau_nhathau table if NhaThauID is provided
+    // 3. Insert into goithau_nhathau table if NhaThauID is provided
     if (NhaThauID) {
       await pool.query(
         'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
@@ -3709,14 +3747,14 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       );
     }
 
-    // 3. Link tender package to its type
+    // 4. Link tender package to its type
     if (LoaiHinh_ID) {
       await pool.query(
         'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
         [GoiThau_ID, LoaiHinh_ID]
       );
 
-      // 4. Insert attribute values if provided
+      // 5. Insert attribute values if provided
       if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
         for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
           await pool.query(
@@ -3729,8 +3767,307 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       }
     }
 
-    // 5. Handle file uploads
+    // 6. Handle other file uploads (non-KML)
     const taiLieuResults = [];
+    const otherFiles = req.files?.filter(file => 
+      path.extname(file.originalname).toLowerCase() !== '.kml'
+    ) || [];
+
+    if (otherFiles.length > 0) {
+      const newFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
+      if (!fs.existsSync(newFolder)) {
+        fs.mkdirSync(newFolder, { recursive: true });
+      }
+
+      for (const file of otherFiles) {
+        const newPath = path.join(newFolder, file.filename);
+        fs.renameSync(file.path, newPath);
+
+        const [fileResult] = await pool.query(
+          `INSERT INTO tailieu (
+            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+            DuongDan, NguoiUpload, MoTa
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            'GOITHAU',
+            GoiThau_ID,
+            file.originalname,
+            'KHAC',
+            `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
+            req.user?.userId || null,
+            ''
+          ]
+        );
+
+        taiLieuResults.push({
+          taiLieuID: fileResult.insertId,
+          tenTaiLieu: file.originalname,
+          duongDan: `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
+        });
+      }
+    }
+
+    // Commit transaction
+    await pool.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Tạo gói thầu mới thành công',
+      data: {
+        GoiThau_ID,
+        LoaiHinh_ID,
+        ThuocTinhValues,
+        taiLieu: taiLieuResults,
+        hasKml: !!pathData
+      }
+    });
+
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    
+    // Clean up uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        try {
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        } catch (err) {
+          console.error('Error deleting file:', err);
+        }
+      });
+    }
+
+    console.error('Error creating tender package:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi tạo gói thầu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.delete('/goithau/xoa/:GoiThau_ID', async (req, res) => {
+  try {
+    const { GoiThau_ID } = req.params;
+
+    // Kiểm tra GoiThau_ID hợp lệ
+    if (!GoiThau_ID || isNaN(GoiThau_ID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'GoiThau_ID không hợp lệ'
+      });
+    }
+
+    // Start transaction
+    await pool.query('START TRANSACTION');
+
+    // 1. Lấy danh sách tài liệu để xóa file vật lý sau
+    const [taiLieuRows] = await pool.query(
+      'SELECT DuongDan FROM tailieu WHERE LoaiDoiTuong = ? AND DoiTuongID = ?',
+      ['GOITHAU', GoiThau_ID]
+    );
+
+    // 2. Xóa dữ liệu liên quan từ các bảng
+    // Xóa thuộc tính của gói thầu
+    await pool.query(
+      'DELETE FROM giatrithuoctinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
+      ['goithau', GoiThau_ID]
+    );
+
+    // Xóa liên kết loại hình
+    await pool.query(
+      'DELETE FROM doituongloaihinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
+      ['goithau', GoiThau_ID]
+    );
+
+    // Xóa liên kết nhà thầu
+    await pool.query(
+      'DELETE FROM goithau_nhathau WHERE GoiThau_ID = ?',
+      [GoiThau_ID]
+    );
+
+    // Xóa tài liệu
+    await pool.query(
+      'DELETE FROM tailieu WHERE LoaiDoiTuong = ? AND DoiTuongID = ?',
+      ['GOITHAU', GoiThau_ID]
+    );
+
+    // Xóa gói thầu chính
+    const [deleteResult] = await pool.query(
+      'DELETE FROM goithau WHERE GoiThau_ID = ?',
+      [GoiThau_ID]
+    );
+
+    // Kiểm tra xem gói thầu có tồn tại và bị xóa không
+    if (deleteResult.affectedRows === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy gói thầu'
+      });
+    }
+
+    // 3. Xóa thư mục và file vật lý
+    const folderPath = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
+    if (fs.existsSync(folderPath)) {
+      try {
+        fs.rmSync(folderPath, { recursive: true, force: true });
+      } catch (err) {
+        console.error('Error deleting folder:', err);
+      }
+    }
+
+    // Commit transaction
+    await pool.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Xóa gói thầu thành công',
+      data: { GoiThau_ID }
+    });
+
+  } catch (error) {
+    await pool.query('ROLLBACK');
+    console.error('Error deleting tender package:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi xóa gói thầu',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (req, res) => {
+  try {
+    const { GoiThau_ID } = req.params;
+    const {
+      TenGoiThau,
+      DuAn_ID,
+      GiaTriHĐ,
+      Km_BatDau,
+      Km_KetThuc,
+      ToaDo_BatDau_X,
+      ToaDo_BatDau_Y,
+      ToaDo_KetThuc_X,
+      ToaDo_KetThuc_Y,
+      NgayKhoiCong,
+      NgayHoanThanh,
+      TrangThai,
+      NhaThauID,
+      LoaiHinh_ID,
+      ThuocTinhValues,
+      TaiLieuXoa // Danh sách ID tài liệu cần xóa
+    } = req.body;
+
+    // Kiểm tra GoiThau_ID hợp lệ
+    if (!GoiThau_ID || isNaN(GoiThau_ID)) {
+      return res.status(400).json({
+        success: false,
+        message: 'GoiThau_ID không hợp lệ'
+      });
+    }
+
+    // Start transaction
+    await pool.query('START TRANSACTION');
+
+    // 1. Kiểm tra gói thầu tồn tại
+    const [existingGoiThau] = await pool.query(
+      'SELECT * FROM goithau WHERE GoiThau_ID = ?',
+      [GoiThau_ID]
+    );
+
+    if (existingGoiThau.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy gói thầu'
+      });
+    }
+
+    // 2. Cập nhật thông tin gói thầu chính
+    await pool.query(
+      `UPDATE goithau SET
+        TenGoiThau = ?, DuAn_ID = ?, GiaTriHĐ = ?, Km_BatDau = ?, Km_KetThuc = ?,
+        ToaDo_BatDau_X = ?, ToaDo_BatDau_Y = ?, ToaDo_KetThuc_X = ?, ToaDo_KetThuc_Y = ?,
+        NgayKhoiCong = ?, NgayHoanThanh = ?, TrangThai = ?, NhaThauID = ?
+      WHERE GoiThau_ID = ?`,
+      [
+        TenGoiThau || existingGoiThau[0].TenGoiThau,
+        DuAn_ID || existingGoiThau[0].DuAn_ID,
+        GiaTriHĐ || existingGoiThau[0].GiaTriHĐ,
+        Km_BatDau || existingGoiThau[0].Km_BatDau,
+        Km_KetThuc || existingGoiThau[0].Km_KetThuc,
+        ToaDo_BatDau_X || existingGoiThau[0].ToaDo_BatDau_X,
+        ToaDo_BatDau_Y || existingGoiThau[0].ToaDo_BatDau_Y,
+        ToaDo_KetThuc_X || existingGoiThau[0].ToaDo_KetThuc_X,
+        ToaDo_KetThuc_Y || existingGoiThau[0].ToaDo_KetThuc_Y,
+        NgayKhoiCong || existingGoiThau[0].NgayKhoiCong,
+        NgayHoanThanh || existingGoiThau[0].NgayHoanThanh,
+        TrangThai || existingGoiThau[0].TrangThai,
+        NhaThauID || existingGoiThau[0].NhaThauID,
+        GoiThau_ID
+      ]
+    );
+
+    // 3. Cập nhật liên kết nhà thầu
+    if (NhaThauID) {
+      await pool.query(
+        'DELETE FROM goithau_nhathau WHERE GoiThau_ID = ?',
+        [GoiThau_ID]
+      );
+      await pool.query(
+        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
+        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
+      );
+    }
+
+    // 4. Cập nhật liên kết loại hình
+    if (LoaiHinh_ID) {
+      await pool.query(
+        'DELETE FROM doituongloaihinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
+        ['goithau', GoiThau_ID]
+      );
+      await pool.query(
+        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, ?, ?)',
+        [GoiThau_ID, 'goithau', LoaiHinh_ID]
+      );
+    }
+
+    // 5. Cập nhật thuộc tính
+    if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
+      await pool.query(
+        'DELETE FROM giatrithuoctinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
+        ['goithau', GoiThau_ID]
+      );
+      for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
+        await pool.query(
+          `INSERT INTO giatrithuoctinh 
+          (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+          VALUES (?, ?, ?, ?)`,
+          [ThuocTinh_ID, GoiThau_ID, 'goithau', GiaTri]
+        );
+      }
+    }
+
+    // 6. Xóa tài liệu nếu có TaiLieuXoa
+    const taiLieuResults = [];
+    if (TaiLieuXoa && Array.isArray(TaiLieuXoa) && TaiLieuXoa.length > 0) {
+      for (const taiLieuID of TaiLieuXoa) {
+        const [taiLieu] = await pool.query(
+          'SELECT DuongDan FROM tailieu WHERE TaiLieuID = ? AND LoaiDoiTuong = ? AND DoiTuongID = ?',
+          [taiLieuID, 'GOITHAU', GoiThau_ID]
+        );
+        if (taiLieu.length > 0) {
+          const filePath = path.join(__dirname, taiLieu[0].DuongDan);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+          await pool.query(
+            'DELETE FROM tailieu WHERE TaiLieuID = ?',
+            [taiLieuID]
+          );
+        }
+      }
+    }
+
+    // 7. Xử lý file tải lên mới
     if (req.files && req.files.length > 0) {
       const newFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
       if (!fs.existsSync(newFolder)) {
@@ -3770,7 +4107,7 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
 
     res.json({
       success: true,
-      message: 'Tạo gói thầu mới thành công',
+      message: 'Cập nhật gói thầu thành công',
       data: {
         GoiThau_ID,
         LoaiHinh_ID,
@@ -3781,8 +4118,8 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
 
   } catch (error) {
     await pool.query('ROLLBACK');
-    
-    // Clean up uploaded files if error occurs
+
+    // Xóa file đã tải lên nếu có lỗi
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
         try {
@@ -3793,10 +4130,10 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       });
     }
 
-    console.error('Error creating tender package:', error);
+    console.error('Error updating tender package:', error);
     res.status(500).json({
       success: false,
-      message: 'Lỗi hệ thống khi tạo gói thầu',
+      message: 'Lỗi hệ thống khi cập nhật gói thầu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -4664,6 +5001,101 @@ app.post('/vuongmac/tao-moi', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi tạo vướng mắc',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+app.put('/vuongmac/cap-nhat/:id', async (req, res) => {
+  try {
+    const vuongMacId = req.params.id;
+    const {
+      LoaiVuongMac,
+      MoTaChiTiet,
+      NgayPhatSinh,
+      NgayKetThuc,
+      MucDo,
+      BienPhapXuLy,
+      NguoiCapNhatID
+    } = req.body;
+
+    // Validate required fields
+    if (!vuongMacId || !NguoiCapNhatID) {
+      return res.status(400).json({
+        success: false,
+        message: 'Thiếu thông tin bắt buộc (ID vướng mắc hoặc người cập nhật)'
+      });
+    }
+
+    // Kiểm tra vướng mắc tồn tại
+    const [existing] = await pool.query(
+      'SELECT * FROM vuongmac WHERE VuongMacID = ? LIMIT 1',
+      [vuongMacId]
+    );
+    
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy vướng mắc'
+      });
+    }
+
+    // Cập nhật vướng mắc
+    const [result] = await pool.query(
+      `UPDATE vuongmac SET
+        LoaiVuongMac = COALESCE(?, LoaiVuongMac),
+        MoTaChiTiet = COALESCE(?, MoTaChiTiet),
+        NgayPhatSinh = COALESCE(?, NgayPhatSinh),
+        NgayKetThuc = ?,
+        MucDo = COALESCE(?, MucDo),
+        BienPhapXuLy = COALESCE(?, BienPhapXuLy),
+        NguoiCapNhatID = ?,
+        NgayCapNhat = NOW()
+      WHERE VuongMacID = ?`,
+      [
+        LoaiVuongMac,
+        MoTaChiTiet,
+        NgayPhatSinh,
+        NgayKetThuc || null,
+        MucDo,
+        BienPhapXuLy,
+        NguoiCapNhatID,
+        vuongMacId
+      ]
+    );
+
+    // Ghi log lịch sử cập nhật
+    if (result.affectedRows > 0) {
+      const logMessage = BienPhapXuLy && BienPhapXuLy.trim() !== '' 
+        ? 'Cập nhật thông tin vướng mắc kèm biện pháp xử lý' 
+        : 'Cập nhật thông tin vướng mắc';
+      
+      await pool.query(
+        `INSERT INTO vuongmac_lichsu (
+          VuongMacID, HanhDong, NoiDungThayDoi, NguoiThucHienID
+        ) VALUES (?, ?, ?, ?)`,
+        [
+          vuongMacId,
+          'Cập nhật',
+          logMessage,
+          NguoiCapNhatID
+        ]
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Cập nhật vướng mắc thành công',
+      data: {
+        affectedRows: result.affectedRows,
+        hasBienPhap: !!BienPhapXuLy
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi cập nhật vướng mắc:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Lỗi hệ thống khi cập nhật vướng mắc',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

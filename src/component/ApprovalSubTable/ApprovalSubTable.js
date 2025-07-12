@@ -160,20 +160,7 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
                   data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tenDuAn) || []
                 )}</td>
                 <td colSpan="5" className="px-2 sm:px-4 py-2 text-sm">
-                  Tổng số vướng mắc: {([]).concat(
-                    data?.duAnThanhPhan?.tongVuongMac || [],
-                    data?.duAnTong?.tongVuongMac || [],
-                    data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongVuongMac) || []
-                  )}
-                  (Đã phê duyệt: {([]).concat(
-                    data?.duAnThanhPhan?.tongDaPheDuyet || [],
-                    data?.duAnTong?.tongDaPheDuyet || [],
-                    data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongDaPheDuyet) || []
-                  )} | Chưa phê duyệt: {([]).concat(
-                    data?.duAnThanhPhan?.tongChuaPheDuyet || [],
-                    data?.duAnTong?.tongChuaPheDuyet || [],
-                    data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongChuaPheDuyet) || []
-                  )})
+                 
                 </td>
                 <td className="px-2 sm:px-4 py-2">
                 </td>
@@ -308,21 +295,6 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
       <div className="sm:hidden space-y-3">
         {/* Level 1 - Dự án */}
         <div className="bg-green-50 p-3 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="font-medium text-gray-900">DA-{([]).concat(
-                data?.duAnThanhPhan?.duAnId || [],
-                data?.duAnTong?.duAnId || [],
-                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.duAnId) || []
-              )}</div>
-              <div className="text-sm text-gray-700 mt-1">{([]).concat(
-                data?.duAnThanhPhan?.tenDuAn || [],
-                data?.duAnTong?.tenDuAn || [],
-                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tenDuAn) || []
-              )}</div>
-            </div>
-            <div className="text-sm font-medium">1</div>
-          </div>
 
           <div className="mt-2 text-sm">
             <div className="text-gray-700">Tổng số vướng mắc: {([]).concat(

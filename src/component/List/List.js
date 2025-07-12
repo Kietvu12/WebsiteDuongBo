@@ -1,6 +1,8 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { FaListOl, FaHashtag, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import React, { useEffect, useState, useRef } from 'react';
+import { FaListOl, FaHashtag, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
+import AddNewPackage from '../../page/AddNewPackage/AddNewPackage';
+import Portal from '../Portal';
 
 const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileListToggle }) => {
   const [packages, setPackages] = useState([]);
@@ -8,20 +10,13 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
   const [error, setError] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  const handlePackageClick = (packageId) => {
-    const selected = packages.find(p => p.GoiThau_ID === packageId);
-    setSelectedProject(selected);
-    if (onPackageSelect) {
-      onPackageSelect(packageId);
-    }
-    if (window.innerWidth < 1050) {  // Changed from 768 to 1050 (ssm breakpoint)
-      setIsDropdownOpen(false);
-      if (onMobileListToggle) onMobileListToggle(false);
-    }
-  };
+  const [contextMenu, setContextMenu] = useState(null);
+  const [showEditPopup, setShowEditPopup] = useState(false); // State để hiển thị pop-up chỉnh sửa
+  const [selectedPackage, setSelectedPackage] = useState(null); // State lưu gói thầu đang chỉnh sửa
+  const contextMenuRef = useRef(null);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
   const fetchPackages = async () => {
     try {
       setLoading(true);
@@ -30,7 +25,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
         const fetchedPackages = response.data.data;
         setPackages(fetchedPackages);
 
-        if (fetchedPackages.length > 0) {
+        if (fetchedPackages.length > 0 && !selectedProject) {
           handlePackageClick(fetchedPackages[0].GoiThau_ID);
         }
       } else {
@@ -45,6 +40,88 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
     }
   };
 
+  const handlePackageClick = (packageId) => {
+    const selected = packages.find(p => p.GoiThau_ID === packageId);
+    setSelectedProject(selected);
+    if (onPackageSelect) {
+      onPackageSelect(packageId);
+    }
+    if (window.innerWidth < 1050) {
+      setIsDropdownOpen(false);
+      if (onMobileListToggle) onMobileListToggle(false);
+    }
+  };
+
+  const handleContextMenu = (e, packageId) => {
+    e.preventDefault();
+    
+    const itemRect = e.currentTarget.getBoundingClientRect();
+    const scrollY = window.scrollY || window.pageYOffset;
+    
+    // Tính toán vị trí để menu xuất hiện bên phải item
+    setContextMenu({
+      packageId,
+      x: itemRect.left+40, 
+      y: itemRect.top + scrollY,
+      itemHeight: itemRect.height
+    });
+  };
+  const handleClickOutside = (event) => {
+    if (contextMenuRef.current && !contextMenuRef.current.contains(event.target)) {
+      setContextMenu(null);
+    }
+  };
+
+  const handleDeletePackage = async (packageId) => {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/goithau/xoa/${packageId}`);
+      if (response.data.success) {
+        setPackages(packages.filter(p => p.GoiThau_ID !== packageId));
+        if (selectedProject?.GoiThau_ID === packageId) {
+          setSelectedProject(null);
+          if (packages.length > 1) {
+            handlePackageClick(packages[0].GoiThau_ID);
+          }
+        }
+        alert('Xóa gói thầu thành công');
+      } else {
+        alert(response.data.message);
+      }
+    } catch (err) {
+      console.error('Error deleting package:', err);
+      alert('Lỗi khi xóa gói thầu: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setContextMenu(null);
+    }
+  };
+
+  const handleEditPackage = (packageId) => {
+    const packageToEdit = packages.find(p => p.GoiThau_ID === packageId);
+    setSelectedPackage(packageToEdit);
+    setShowEditPopup(true);
+    setContextMenu(null);
+  };
+
+  const handleEditSuccess = (updatedPackage) => {
+    setPackages(packages.map(p => 
+      p.GoiThau_ID === updatedPackage.GoiThau_ID ? { ...p, ...updatedPackage } : p
+    ));
+    setSelectedProject({ ...selectedProject, ...updatedPackage });
+    setShowEditPopup(false);
+    setSelectedPackage(null);
+    alert('Cập nhật gói thầu thành công');
+  };
+
+  const handleEditClose = () => {
+    setShowEditPopup(false);
+    setSelectedPackage(null);
+  };
+
+  useEffect(() => {
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     fetchPackages();
   }, [subProjectId]);
@@ -53,15 +130,14 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
-    <div className="flex flex-col w-full h-full bg-white">
-      {/* Desktop View - shows on screens larger than ssm (1050px) */}
+    <div className="flex flex-col w-full h-full bg-white relative">
+      {/* Desktop View */}
       <div className="ssm:flex flex-1 p-2.5 h-full hidden">
         <div className="flex flex-col h-full min-h-[300px] max-h-[840px] rounded shadow overflow-hidden w-full">
           <div className="flex items-center bg-[#006591] text-white p-3 text-base md:text-xl font-bold flex-shrink-0">
             <FaListOl className="mr-3 text-sm md:text-lg" />
             DANH SÁCH GÓI THẦU
           </div>
-
           <div className="p-2.5 overflow-y-auto flex-grow">
             {packages.map((item, index) => (
               <div 
@@ -72,6 +148,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                     : ''
                 }`}
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
+                onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
               >
                 <div className='flex flex-row min-w-[80px]'>
                   <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
@@ -90,7 +167,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
         </div>
       </div>
 
-      {/* Mobile/Dropdown View - shows on screens smaller than ssm (1050px) */}
+      {/* Mobile/Dropdown View */}
       <div className="ssm:hidden">
         <button 
           className="flex items-center justify-between w-full bg-[#006591] text-white p-3 text-base font-bold"
@@ -105,7 +182,6 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
           </div>
           {isDropdownOpen ? <FaChevronUp /> : <FaChevronDown />}
         </button>
-
         <div className={`absolute z-10 w-full bg-white shadow-lg max-h-60 overflow-y-auto transition-all duration-300 ${
           isDropdownOpen ? 'block' : 'hidden'
         }`}>
@@ -118,6 +194,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                   : ''
               }`}
               onClick={() => handlePackageClick(item.GoiThau_ID)}
+              onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
             >
               <div className="flex items-center text-[#006591] font-bold text-sm">
                 <FaHashtag className="mr-2" />
@@ -130,6 +207,54 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
           ))}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+  <div
+    ref={contextMenuRef}
+    className="absolute bg-white shadow-lg rounded-md border border-gray-200 z-50 w-32"
+    style={{
+      top: `${contextMenu.y}px`,
+      left: `${contextMenu.x}px`,
+      transform: 'translateY(-10%)' // Điều chỉnh để căn giữa theo chiều dọc
+    }}
+  >
+    <div className="border-b border-gray-200 px-3 py-2 text-xs font-semibold text-gray-500">
+      THAO TÁC
+    </div>
+    <div
+      className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center"
+      onClick={() => handleEditPackage(contextMenu.packageId)}
+    >
+      <FaEdit className="mr-2 text-blue-600" size={12} />
+      <span>Sửa</span>
+    </div>
+    <div
+      className="px-3 py-2 hover:bg-red-50 cursor-pointer text-sm flex items-center"
+      onClick={() => handleDeletePackage(contextMenu.packageId)}
+    >
+      <FaTrash className="mr-2 text-red-600" size={12} />
+      <span>Xóa</span>
+    </div>
+  </div>
+)}
+
+      {/* Pop-up chỉnh sửa */}
+      {showEditPopup && selectedPackage && (
+  <Portal>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+        <AddNewPackage
+          isEdit={true}
+          projectId={subProjectId}
+          goiThau={selectedPackage}
+          onClose={handleEditClose}
+          onSuccess={handleEditSuccess}
+        />
+      </div>
+    </div>
+  </Portal>
+)}
     </div>
   );
 };
