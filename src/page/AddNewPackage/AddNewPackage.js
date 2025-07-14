@@ -9,6 +9,7 @@ import { kml } from '@mapbox/togeojson';
 import { DOMParser } from 'xmldom';
 import vietnamGeoJson from '../../assets/data/vietnam.json'
 import * as turf from '@turf/turf';
+import './AddNewPackage.css'
 
 const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   // State cho form
@@ -148,6 +149,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
     }
   };
+  
   const drawRouteOnMap = (coordinates) => {
     // Xóa layer cũ nếu có
     if (routeLayerRef.current) {
@@ -157,9 +159,28 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     // Chuyển đổi tọa độ từ [lng, lat] sang [lat, lng]
     const latLngs = coordinates.map(coord => [coord[1], coord[0]]);
 
-    // Tạo polyline mới
+    // Xác định màu sắc dựa trên trạng thái
+    let routeColor;
+    switch(formData.TrangThai) {
+      case 'Đang chuẩn bị':
+        routeColor = '#3b82f6'; // blue-600
+        break;
+      case 'Đang thi công':
+        routeColor = '#16a34a'; // green-600
+        break;
+      case 'Hoàn thành':
+        routeColor = '#eab308'; // yellow-500
+        break;
+      case 'Tạm dừng':
+        routeColor = '#9333ea'; // purple-500
+        break;
+      default:
+        routeColor = '#3388ff'; // màu mặc định
+    }
+
+    // Tạo polyline mới với màu tương ứng trạng thái
     const polyline = L.polyline(latLngs, {
-      color: '#3388ff',
+      color: routeColor,
       weight: 5,
       opacity: 0.7,
       lineJoin: 'round'
@@ -170,6 +191,45 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     // Zoom vào toàn bộ tuyến đường
     mapRef.current.fitBounds(polyline.getBounds());
   };
+
+  // Thêm legend vào bản đồ
+  useEffect(() => {
+    if (mapRef.current) {
+      const legend = L.control({ position: 'bottomright' });
+      
+      legend.onAdd = () => {
+        const div = L.DomUtil.create('div', 'info legend');
+        const statuses = [
+          { status: 'Đang chuẩn bị', color: '#3b82f6' },
+          { status: 'Đang thi công', color: '#16a34a' },
+          { status: 'Hoàn thành', color: '#eab308' },
+          { status: 'Tạm dừng', color: '#9333ea' }
+        ];
+        
+        let html = '<h4>Trạng thái</h4>';
+        statuses.forEach(({ status, color }) => {
+          html += `
+            <div style="display: flex; align-items: center; margin: 5px 0;">
+              <span style="display: inline-block; width: 20px; height: 3px; background: ${color}; margin-right: 5px;"></span>
+              <span>${status}</span>
+            </div>
+          `;
+        });
+        
+        div.innerHTML = html;
+        return div;
+      };
+      
+      legend.addTo(mapRef.current);
+      
+      // Cleanup khi component unmount
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.removeControl(legend);
+        }
+      };
+    }
+  }, [mapRef.current]);
 
   const fetchLoaiHinhList = async () => {
     try {
@@ -223,9 +283,18 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     } else {
       const marker = L.marker(latlng, {
         icon: L.divIcon({
-          className: 'start-marker',
-          html: '<div style="background-color: blue; width: 20px; height: 20px; border-radius: 50%;"></div>',
-          iconSize: [20, 20]
+          html: `
+            <div style="
+              background-color: white;
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              border: 2px solid black;
+              box-shadow: 0 0 3px rgba(0,0,0,0.5);
+            "></div>
+          `,
+          iconSize: [16, 16], // Kích thước tổng bao gồm cả border
+          iconAnchor: [8, 8] // Điểm neo ở giữa marker
         })
       }).addTo(mapRef.current);
       startMarkerRef.current = marker;
@@ -246,11 +315,20 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       endMarkerRef.current.setLatLng(latlng);
     } else {
       const marker = L.marker(latlng, {
-        icon: L.divIcon({
-          className: 'end-marker',
-          html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%;"></div>',
-          iconSize: [20, 20]
-        })
+      icon: L.divIcon({
+        html: `
+          <div style="
+            background-color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid black;
+            box-shadow: 0 0 3px rgba(0,0,0,0.5);
+          "></div>
+        `,
+        iconSize: [16, 16], // Kích thước tổng bao gồm cả border
+        iconAnchor: [8, 8] // Điểm neo ở giữa marker
+      })
       }).addTo(mapRef.current);
       endMarkerRef.current = marker;
     }

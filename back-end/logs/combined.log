@@ -121919,3 +121919,11 @@
 2025-07-11 10:38:55 [DEBUG]: Connection acquired (ID: 125)
 2025-07-11 10:38:55 [DEBUG]: Connection released (ID: 140)
 2025-07-11 10:38:55 [DEBUG]: Connection released (ID: 125)
+2025-07-12 12:07:58 [INFO]: Server started on port 5000
+2025-07-12 12:07:58 [INFO]: Environment: development
+2025-07-12 12:07:58 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
+2025-07-12 12:07:58 [WARN]: Server started without database connection
+2025-07-14 08:25:57 [INFO]: Server started on port 5000
+2025-07-14 08:25:57 [INFO]: Environment: development
+2025-07-14 08:25:57 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
+2025-07-14 08:25:57 [WARN]: Server started without database connection
