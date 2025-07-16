@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import downIcon from '../../assets/img/down.png';
 import axios from 'axios';
-import { FaPlus, FaTrash, FaInfoCircle } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaInfoCircle, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { FiPlus, FiChevronLeft, FiCalendar, FiSearch, FiFilter } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
@@ -10,6 +10,7 @@ import AddNewPlan from '../AddNewPlan/AddNewPlan';
 import AddNewCategories from '../AddNewCategories/AddNewCategories';
 import UpdateProgress from '../UpdateProgress/UpdateProgress';
 import IssueList from '../IssueList/IssueList';
+import TimeZoomHeader from '../TimelineChart/TimelineChart';
 const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -50,6 +51,25 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     categories: {},
     items: {}
   });
+  const [timeZoom, setTimeZoom] = useState('year'); // 'year', 'month', 'day'
+  const [visibleRange, setVisibleRange] = useState({
+    start: null,
+    end: null
+  });
+  const [timeRange, setTimeRange] = useState({
+    min: null,
+    max: null
+  });
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isHoveringGantt, setIsHoveringGantt] = useState(false);
+
+  const ganttRef = useRef(null);
+  const timelineRef = useRef(null);
+  const headerRef = useRef(null);
+  const bodyRef = useRef(null);
+  const ganttAreaRef = useRef(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -96,6 +116,610 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         [id]: !prev[type][id]
       }
     }));
+  };
+  useEffect(() => {
+    if (!data) return;
+
+    const allPackages = [].concat(
+      data?.duAnThanhPhan?.danhSachGoiThau || [],
+      data?.duAnTong?.danhSachGoiThauTrucTiep || [],
+      data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
+    );
+
+    if (allPackages.length === 0) return;
+
+    let minDate = new Date(allPackages[0].ngayKhoiCong);
+    let maxDate = new Date(allPackages[0].ngayHoanThanh);
+
+    allPackages.forEach(pkg => {
+      const start = new Date(pkg.ngayKhoiCong);
+      const end = new Date(pkg.ngayHoanThanh);
+
+      if (start < minDate) minDate = start;
+      if (end > maxDate) maxDate = end;
+
+      pkg.danhSachHangMuc?.forEach(item => {
+        item.danhSachKeHoach?.forEach(plan => {
+          const planStart = new Date(plan.ngayBatDau);
+          const planEnd = new Date(plan.ngayKetThuc);
+
+          if (planStart < minDate) minDate = planStart;
+          if (planEnd > maxDate) maxDate = planEnd;
+        });
+      });
+    });
+
+    // Extend the time range beyond the data range for better zoom out
+    const extendedMin = new Date(minDate);
+    extendedMin.setFullYear(minDate.getFullYear() - 2);
+
+    const extendedMax = new Date(maxDate);
+    extendedMax.setFullYear(maxDate.getFullYear() + 2);
+
+    setTimeRange({
+      min: extendedMin,
+      max: extendedMax
+    });
+
+    setVisibleRange({
+      start: minDate,
+      end: maxDate
+    });
+
+    // Default to showing the current year
+    const currentYear = new Date().getFullYear();
+    setSelectedYear(currentYear);
+  }, [data]);
+
+  // Handle scroll zoom on gantt area hover
+  const handleGanttWheel = useCallback((e) => {
+    if (!isHoveringGantt) return;
+
+    e.preventDefault();
+
+    const delta = e.deltaY;
+    const newZoomLevel = Math.max(0.1, Math.min(5, zoomLevel + (delta > 0 ? -0.1 : 0.1)));
+
+    setZoomLevel(newZoomLevel);
+
+    // Adjust visible range based on zoom level
+    if (timeZoom === 'year') {
+      const yearRange = timeRange.max.getFullYear() - timeRange.min.getFullYear();
+      const visibleYears = Math.max(5, Math.min(50, Math.round(yearRange / newZoomLevel)));
+
+      const centerYear = selectedYear || new Date().getFullYear();
+      const startYear = Math.max(
+        timeRange.min.getFullYear(),
+        centerYear - Math.floor(visibleYears / 2)
+      );
+      const endYear = Math.min(
+        timeRange.max.getFullYear(),
+        centerYear + Math.ceil(visibleYears / 2)
+      );
+
+      setVisibleRange({
+        start: new Date(startYear, 0, 1),
+        end: new Date(endYear, 11, 31)
+      });
+    } else if (timeZoom === 'month') {
+      const monthRange = 12;
+      const visibleMonths = Math.max(3, Math.min(24, Math.round(monthRange / newZoomLevel)));
+
+      const centerMonth = selectedMonth !== null ? selectedMonth : new Date().getMonth();
+      const startMonth = Math.max(0, centerMonth - Math.floor(visibleMonths / 2));
+      const endMonth = Math.min(11, centerMonth + Math.ceil(visibleMonths / 2));
+
+      setVisibleRange({
+        start: new Date(selectedYear, startMonth, 1),
+        end: new Date(selectedYear, endMonth + 1, 0)
+      });
+    } else if (timeZoom === 'day') {
+      const dayRange = 30;
+      const visibleDays = Math.max(7, Math.min(90, Math.round(dayRange / newZoomLevel)));
+
+      const centerDate = new Date(selectedYear, selectedMonth, 15);
+      const startDate = new Date(centerDate);
+      startDate.setDate(centerDate.getDate() - Math.floor(visibleDays / 2));
+
+      const endDate = new Date(centerDate);
+      endDate.setDate(centerDate.getDate() + Math.ceil(visibleDays / 2));
+
+      setVisibleRange({
+        start: startDate,
+        end: endDate
+      });
+    }
+  }, [zoomLevel, timeZoom, selectedYear, selectedMonth, timeRange, isHoveringGantt]);
+
+  // Sync horizontal scrolling between header and body
+  useEffect(() => {
+    const header = headerRef.current;
+    const body = bodyRef.current;
+
+    if (!header || !body) return;
+
+    const handleScroll = (e) => {
+      if (e.target === header) {
+        body.scrollLeft = header.scrollLeft;
+      } else {
+        header.scrollLeft = body.scrollLeft;
+      }
+    };
+
+    header.addEventListener('scroll', handleScroll);
+    body.addEventListener('scroll', handleScroll);
+
+    return () => {
+      header.removeEventListener('scroll', handleScroll);
+      body.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Add wheel event listener for gantt zoom
+  useEffect(() => {
+    const ganttArea = ganttAreaRef.current;
+    if (!ganttArea) return;
+
+    ganttArea.addEventListener('wheel', handleGanttWheel, { passive: false });
+
+    return () => {
+      ganttArea.removeEventListener('wheel', handleGanttWheel);
+    };
+  }, [handleGanttWheel]);
+
+
+  const renderTimelineHeader = () => {
+    if (!timeRange.min || !timeRange.max) return null;
+
+    if (timeZoom === 'year') {
+      const startYear = visibleRange.start.getFullYear();
+      const endYear = visibleRange.end.getFullYear();
+      const years = [];
+
+      for (let year = startYear; year <= endYear; year++) {
+        years.push(year);
+      }
+
+      return (
+        <div className="flex">
+          {years.map(year => (
+            <div
+              key={year}
+              className="flex-1 min-w-[80px] text-center py-2 border-r border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100"
+              onClick={() => {
+                setSelectedYear(year);
+                setTimeZoom('month');
+                setZoomLevel(1);
+              }}
+            >
+              {year}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (timeZoom === 'month') {
+      const startDate = new Date(visibleRange.start);
+      const endDate = new Date(visibleRange.end);
+      const months = [];
+
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        months.push(new Date(currentDate));
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+
+      return (
+        <div className="flex">
+          {months.map((month, index) => (
+            <div
+              key={index}
+              className="flex-1 min-w-[60px] text-center py-2 border-r border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100"
+              onClick={() => {
+                setSelectedMonth(month.getMonth());
+                setTimeZoom('day');
+                setZoomLevel(1);
+              }}
+            >
+              {month.toLocaleString('default', { month: 'short' })}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (timeZoom === 'day') {
+      const startDate = new Date(visibleRange.start);
+      const endDate = new Date(visibleRange.end);
+      const days = [];
+
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        days.push(new Date(currentDate));
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      return (
+        <div className="flex">
+          {days.map((day, index) => (
+            <div
+              key={index}
+              className="flex-1 min-w-[30px] text-center py-2 border-r border-gray-200 bg-gray-50"
+            >
+              {day.getDate()}
+            </div>
+          ))}
+        </div>
+      );
+    }
+  };
+
+  const calculateBarPosition = (startDate, endDate) => {
+    if (!visibleRange.start || !visibleRange.end) return { left: 0, width: 0 };
+
+    const totalDuration = visibleRange.end - visibleRange.start;
+    const barStart = Math.max(0, new Date(startDate) - visibleRange.start);
+    const barEnd = Math.min(totalDuration, new Date(endDate) - visibleRange.start);
+    const barDuration = barEnd - barStart;
+
+    const left = (barStart / totalDuration) * 100;
+    const width = (barDuration / totalDuration) * 100;
+
+    return { left, width };
+  };
+
+  const renderGanttBar = (startDate, endDate, progress, level = 0) => {
+    if (!startDate || !endDate) return null;
+
+    const { left, width } = calculateBarPosition(startDate, endDate);
+    const progressWidth = progress ? Math.min(100, progress) * width / 100 : 0;
+
+    return (
+      <div
+        className="absolute h-4 top-1/2 transform -translate-y-1/2 rounded"
+        style={{
+          left: `${left}%`,
+          width: `${width}%`,
+          marginLeft: `${level * 8}px`
+        }}
+      >
+        <div
+          className="absolute h-full bg-blue-300 rounded"
+          style={{ width: '100%' }}
+        />
+        <div
+          className="absolute h-full bg-blue-600 rounded"
+          style={{ width: `${progressWidth}%` }}
+        />
+      </div>
+    );
+  };
+  const renderPackageRow = (packageItem, packageIndex) => {
+    // Tính toán chiều rộng cố định cho các cột
+    const columnWidths = {
+      id: 'w-20',          
+      name: 'min-w-[200px] flex-1', 
+      actual: 'w-24',   
+      plan: 'w-24',      
+      unit: 'w-16',   
+      progress: 'w-24',
+      duration: 'w-20',
+      start: 'w-24',
+      end: 'w-24', 
+      actions: 'w-24'
+    };
+  
+    const renderDataCell = (content, width, align = 'left', extraClasses = '') => {
+      const alignmentClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
+      return (
+        <div className={`${width} p-2 border-r border-gray-200 flex items-center ${alignmentClass} ${extraClasses}`}>
+          {content}
+        </div>
+      );
+    };
+  
+    return (
+      <React.Fragment key={`package-${packageItem.goiThauId}`}>
+        {/* Package Row */}
+        <div className="flex items-stretch border-b border-gray-200 hover:bg-blue-50 min-h-8">
+          {/* Data columns (50% width) */}
+          <div className="w-1/2 flex">
+            {renderDataCell(
+              `GT-${packageItem.goiThauId}`,
+              columnWidths.id
+            )}
+            
+            {renderDataCell(
+              <>
+                <button
+                  onClick={() => toggleItem('packages', packageItem.goiThauId)}
+                  className="flex items-center focus:outline-none mr-1"
+                >
+                  {expandedItems.packages[packageItem.goiThauId] ? (
+                    <FaChevronDown size={12} />
+                  ) : (
+                    <FaChevronRight size={12} />
+                  )}
+                </button>
+                <span className="truncate font-medium">{packageItem.tenGoiThau}</span>
+              </>,
+              columnWidths.name
+            )}
+  
+            {renderDataCell(
+              packageItem.tongKhoiLuongThucHien?.toLocaleString(),
+              columnWidths.actual,
+              'right'
+            )}
+  
+            {renderDataCell(
+              packageItem.tongKhoiLuongKeHoach?.toLocaleString(),
+              columnWidths.plan,
+              'right'
+            )}
+  
+            {renderDataCell(
+              '',
+              columnWidths.unit
+            )}
+  
+            {renderDataCell(
+              packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
+                ? `${Math.round((packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100)}%`
+                : '',
+              columnWidths.progress,
+              'right'
+            )}
+  
+            {renderDataCell(
+              calculateDays(packageItem.ngayKhoiCong, packageItem.ngayHoanThanh),
+              columnWidths.duration,
+              'center'
+            )}
+  
+            {renderDataCell(
+              formatDate(packageItem.ngayKhoiCong),
+              columnWidths.start
+            )}
+  
+            {renderDataCell(
+              formatDate(packageItem.ngayHoanThanh),
+  columnWidths.end
+            )}
+  
+            {renderDataCell(
+              <button
+                className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                title="Thêm hạng mục"
+                onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
+              >
+                <FaPlus size={14} />
+              </button>,
+              columnWidths.actions,
+              'left',
+              'flex space-x-2'
+            )}
+          </div>
+  
+          {/* Gantt chart area (50% width) */}
+          <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 right-1 flex items-center">
+              {renderGanttBar(
+                packageItem.ngayKhoiCong, 
+                packageItem.ngayHoanThanh,
+                packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
+                  ? (packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100
+                  : 0,
+                0 // Level 0 for package
+              )}
+            </div>
+          </div>
+        </div>
+  
+        {/* Expanded items */}
+        {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
+          const progress = item.tongKhoiLuongKeHoach
+            ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
+            : 0;
+  
+          const bgColor = progress >= 100 ? 'bg-green-50' : progress >= 40 ? 'bg-yellow-50' : 'bg-red-50';
+  
+          return (
+            <React.Fragment key={`item-${item.hangMucId}`}>
+              <div className={`flex items-stretch border-b border-gray-200 ${bgColor} hover:${bgColor.replace('50', '100')} min-h-8`}>
+                <div className="w-1/2 flex">
+                  {renderDataCell(
+                    `HM-${item.hangMucId}`,
+                    columnWidths.id
+                  )}
+                  
+                  {renderDataCell(
+                    <>
+                      <button
+                        onClick={() => toggleItem('items', item.hangMucId)}
+                        className="flex items-center focus:outline-none mr-1"
+                      >
+                        {expandedItems.items[item.hangMucId] ? (
+                          <FaChevronDown size={12} />
+                        ) : (
+                          <FaChevronRight size={12} />
+                        )}
+                      </button>
+                      <span className="truncate">Hạng mục: {item.tenHangMuc}</span>
+                    </>,
+                    columnWidths.name
+                  )}
+  
+                  {renderDataCell(
+                    item.tongKhoiLuongThucHien?.toLocaleString(),
+                    columnWidths.actual,
+                    'right'
+                  )}
+  
+                  {renderDataCell(
+                    item.tongKhoiLuongKeHoach?.toLocaleString(),
+                    columnWidths.plan,
+                    'right'
+                  )}
+  
+                  {renderDataCell(
+  item.danhSachKeHoach?.[0]?.donViTinh || '',
+                    columnWidths.unit
+                  )}
+  
+                  {renderDataCell(
+                    `${progress.toFixed(0)}%`,
+                    columnWidths.progress,
+                    'right',
+                    'font-medium'
+                  )}
+  
+                  {renderDataCell(
+                    item.danhSachKeHoach?.[0] ? calculateDays(
+                      item.danhSachKeHoach[0].ngayBatDau,
+                      item.danhSachKeHoach[0].ngayKetThuc
+                    ) : '',
+                    columnWidths.duration,
+                    'center'
+                  )}
+  
+                  {renderDataCell(
+                    item.danhSachKeHoach?.[0]?.ngayBatDau && formatDate(item.danhSachKeHoach[0].ngayBatDau),
+                    columnWidths.start
+                  )}
+  
+                  {renderDataCell(
+                    item.danhSachKeHoach?.[0]?.ngayKetThuc && formatDate(item.danhSachKeHoach[0].ngayKetThuc),
+                    columnWidths.end
+                  )}
+  
+                  {renderDataCell(
+                    <>
+                      <button
+                        className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                        title="Thêm kế hoạch"
+                        onClick={() => handleAddPlanClick(item.hangMucId)}
+                      >
+                        <FaPlus size={14} />
+                      </button>
+                      <button
+                        className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                        title="Xóa hạng mục"
+                        onClick={() => handleDeleteHangMuc(item.hangMucId)}
+                      >
+                        <FaTrash size={14} />
+                      </button>
+                    </>,
+                    columnWidths.actions,
+                    'left',
+                    'flex space-x-2'
+                  )}
+                </div>
+  
+                {/* Gantt chart area */}
+                <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 right-1 flex items-center">
+                    {item.danhSachKeHoach?.[0] && renderGanttBar(
+                      item.danhSachKeHoach[0].ngayBatDau,
+                      item.danhSachKeHoach[0].ngayKetThuc,
+                      progress,
+                      1 // Level 1 for item
+                    )}
+                  </div>
+                </div>
+              </div>
+  
+              {/* Plans */}
+              {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => {
+                const planProgress = plan.khoiLuongKeHoach
+                  ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100)
+                  : 0;
+  
+                return (
+                  <div key={`plan-${plan.keHoachId}`} className="flex items-stretch border-b border-gray-200 hover:bg-gray-50 min-h-8">
+                    <div className="w-1/2 flex">
+  {renderDataCell(
+                        `KH-${plan.keHoachId}`,
+                        columnWidths.id
+                      )}
+                      
+                      {renderDataCell(
+                        plan.tenCongTac,
+                        columnWidths.name
+                      )}
+  
+                      {renderDataCell(
+                        plan.tongKhoiLuongThucHien?.toLocaleString(),
+                        columnWidths.actual,
+                        'right'
+                      )}
+  
+                      {renderDataCell(
+                        plan.khoiLuongKeHoach?.toLocaleString(),
+                        columnWidths.plan,
+                        'right'
+                      )}
+  
+                      {renderDataCell(
+                        plan.donViTinh,
+                        columnWidths.unit
+                      )}
+  
+                      {renderDataCell(
+                        `${planProgress.toFixed(0)}%`,
+                        columnWidths.progress,
+                        'right'
+                      )}
+  
+                      {renderDataCell(
+                        calculateDays(plan.ngayBatDau, plan.ngayKetThuc),
+                        columnWidths.duration,
+                        'center'
+                      )}
+  
+                      {renderDataCell(
+                        formatDate(plan.ngayBatDau),
+                        columnWidths.start
+                      )}
+  
+                      {renderDataCell(
+                        formatDate(plan.ngayKetThuc),
+                        columnWidths.end
+                      )}
+  
+                      {renderDataCell(
+                        <button
+                          className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                          title="Xóa kế hoạch"
+                          onClick={() => handleDeleteKeHoach(plan.keHoachId)}
+                        >
+                          <FaTrash size={14} />
+                        </button>,
+                        columnWidths.actions,
+                        'left'
+                      )}
+                    </div>
+  
+                    {/* Gantt chart area */}
+                    <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
+                      <div className="absolute inset-y-0 left-0 right-1 flex items-center">
+                        {renderGanttBar(
+                          plan.ngayBatDau,
+                          plan.ngayKetThuc,
+                          planProgress,
+                          2 // Level 2 for plan
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          );
+        })}
+      </React.Fragment>
+    );
   };
 
   const formatDate = (dateString) => {
@@ -418,262 +1042,114 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   return (
     <div className="w-full overflow-x-auto p-2">
       <div className="hidden md:block">
-          {/* Phần tìm kiếm và lọc ngày */}
-  <div className="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-md shadow-sm">
-    {/* Ô tìm kiếm */}
-    <div className="flex-1">
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <FiSearch className="text-gray-400" />
-        </div>
-        <input
-          type="text"
-          className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          placeholder="Tìm kiếm công việc, hạng mục..."
-        />
-      </div>
-    </div>
-
-    {/* Bộ lọc ngày tháng */}
-    <div className="flex flex-col sm:flex-row gap-4">
-      {/* Ngày bắt đầu */}
-      <div className="flex-1">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FiCalendar className="text-gray-400" />
+        {/* Phần tìm kiếm và lọc ngày */}
+        <div className="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-md shadow-sm">
+          {/* Ô tìm kiếm */}
+          <div className="flex-1">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Tìm kiếm công việc, hạng mục..."
+              />
+            </div>
           </div>
-          <input
-            type="date"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-          <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Từ ngày</label>
-        </div>
-      </div>
 
-      {/* Ngày kết thúc */}
-      <div className="flex-1">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FiCalendar className="text-gray-400" />
+          {/* Bộ lọc ngày tháng */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Ngày bắt đầu */}
+            <div className="flex-1">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiCalendar className="text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+                <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Từ ngày</label>
+              </div>
+            </div>
+
+            {/* Ngày kết thúc */}
+            <div className="flex-1">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiCalendar className="text-gray-400" />
+                </div>
+                <input
+                  type="date"
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                />
+                <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Đến ngày</label>
+              </div>
+            </div>
+
+            {/* Nút áp dụng */}
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2">
+              <FiFilter className="w-4 h-4" />
+              <span>Lọc</span>
+            </button>
           </div>
-          <input
-            type="date"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          />
-          <label className="absolute -top-2 left-2 px-1 text-xs text-gray-500 bg-white">Đến ngày</label>
         </div>
-      </div>
+        <div className="w-full overflow-hidden">
+          <div className="mb-4 flex items-center">
+            <div className="text-sm font-medium">
+              Current view: {timeZoom} {selectedYear && `- ${selectedYear}`} {selectedMonth !== null && `- ${new Date(selectedYear, selectedMonth, 1).toLocaleString('default', { month: 'long' })}`}
+            </div>
+            <div className="ml-4 text-sm text-gray-500">
+              (Hover over Gantt chart and scroll to zoom in/out)
+            </div>
+          </div>
 
-      {/* Nút áp dụng */}
-      <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2">
-        <FiFilter className="w-4 h-4" />
-        <span>Lọc</span>
-      </button>
-    </div>
-  </div>
-        <div className="w-1/2 overflow-x-auto">
-          <table className="divide-y divide-gray-200 border text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Mã số</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Công việc</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Khối lượng thực hiện</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Khối lượng kế hoạch</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Đơn vị</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Tiến độ thực hiện</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Thời gian (ngày)</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Bắt đầu</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Kết thúc</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <div className="border rounded-lg overflow-hidden">
+            {/* Fixed header */}
+            <div className="sticky top-0 z-10 bg-white">
+              <div className="flex border-b border-gray-200 bg-gray-50">
+                {/* Fixed columns header (50% width) */}
+                <div className="w-1/2 flex">
+
+                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium">Mã số</div>
+                  <div className="flex-1 min-w-[200px] px-2 py-2 border-r border-gray-200 font-medium">Công việc</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">KL thực hiện</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">KL kế hoạch</div>
+                  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium">Đơn vị</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">Tiến độ</div>
+                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center">Thời gian</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Bắt đầu</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Kết thúc</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Thao tác</div>
+                </div>
+
+                {/* Timeline header (50% width) */}
+                <div
+                  className="w-1/2 overflow-x-auto border-l border-gray-200"
+                  ref={headerRef}
+                >
+                  {renderTimelineHeader()}
+                </div>
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: '600px' }}
+              ref={bodyRef}
+            >
               {([]).concat(
                 data?.duAnThanhPhan?.danhSachGoiThau || [],
                 data?.duAnTong?.danhSachGoiThauTrucTiep || [],
                 data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
               )
                 .filter(packageItem => !packageId || packageItem.goiThauId === packageId)
-                .map((packageItem, packageIndex) => (
-
-                  <React.Fragment key={`package-${packageItem.goiThauId}`}>
-                    <tr className="group bg-blue-50 hover:bg-blue-100">
-                      <td className="px-3 py-2 whitespace-nowrap pl-8">{`${packageIndex + 1}`}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">GT-{packageItem.goiThauId}</td>
-                      <td className="px-3 py-2 whitespace-nowrap font-medium">
-                        <button
-                          onClick={() => toggleItem('packages', packageItem.goiThauId)}
-                          className="flex items-center focus:outline-none"
-                        >
-                          <img
-                            src={downIcon}
-                            alt="Toggle"
-                            className={`w-3 h-3 mr-1 transform ${expandedItems.packages[packageItem.goiThauId] ? 'rotate-180' : ''}`}
-                          />
-                          <span className="truncate">{packageItem.tenGoiThau}</span>
-                        </button>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{packageItem.tongKhoiLuongKeHoach?.toLocaleString()}</td>
-                      <td className="px-3 py-2 whitespace-nowrap"></td>
-                      <td className="px-3 py-2 whitespace-nowrap"></td>
-                      <td className="px-3 py-2 whitespace-nowrap"></td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayKhoiCong)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(packageItem.ngayHoanThanh)}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <div className="flex space-x-2">
-                          <button
-                            className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                            title="Thêm hạng mục"
-                            onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
-                          >
-                            <FaPlus size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-
-
-                    {/* Level 2: Items - Only show if expanded */}
-                    {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
-                      const progress = item.tongKhoiLuongKeHoach
-                        ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
-                        : 0;
-
-                      const bgColor =
-                        progress >= 100
-                          ? 'bg-green-100'
-                          : progress >= 40
-                            ? 'bg-yellow-100'
-                            : 'bg-red-100';
-
-                      return (
-                        <React.Fragment key={`item-${item.hangMucId}`}>
-                          <tr className={`group ${bgColor} hover:${bgColor.replace('100', '200')}`}>
-                            <td className="px-3 py-2 whitespace-nowrap pl-12">{`${packageIndex + 1}.${itemIndex + 1}`}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">HM-{item.hangMucId}</td>
-                            <td className="px-3 py-2 font-medium">
-                              <button
-                                onClick={() => toggleItem('items', item.hangMucId)}
-                                className="flex items-center focus:outline-none"
-                              >
-                                <img
-                                  src={downIcon}
-                                  alt="Toggle"
-                                  className={`w-3 h-3 mr-1 transform ${expandedItems.items[item.hangMucId] ? 'rotate-180' : ''}`}
-                                />
-                                <span className="truncate"> Hạng mục: {item.tenHangMuc}</span>
-                              </button>
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">{item.tongKhoiLuongKeHoach?.toLocaleString()}</td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              {item.danhSachKeHoach?.[0]?.donViTinh || ''}
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap font-medium">
-                              {progress.toFixed(0)}%
-                            </td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap"></td>
-                            <td className="px-3 py-2 whitespace-nowrap">
-                              <div className="flex space-x-2">
-                                <button
-                                  className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                                  title="Thêm kế hoạch"
-                                  onClick={() => handleAddPlanClick(item.hangMucId)}
-                                >
-                                  <FaPlus size={14} />
-                                </button>
-
-                                <button
-                                  className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                                  title="Xóa hạng mục"
-                                  onClick={() => handleDeleteHangMuc(item.hangMucId)}
-                                >
-                                  <FaTrash size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-
-
-                          {/* Level 3: Plans - Only show if expanded */}
-                          {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => (
-                            <tr
-                              key={`plan-${plan.keHoachId}`}
-                              className="group bg-white hover:bg-gray-50 border-t relative"
-                            >
-                              <td className="px-3 py-2 whitespace-nowrap pl-20">
-                                {`${packageIndex + 1}.${itemIndex + 1}.${planIndex + 1}`}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">KH-{plan.keHoachId}</td>
-
-                              <td className="px-3 py-4 pl-4 relative h-[80px]">
-                                <div className="flex flex-col space-y-2">
-                                  <div>{plan.tenCongTac}</div>
-                                  <div className="flex gap-2 opacity-0 group-hover:opacity-90 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-300">
-                                    <button
-                                      onClick={() => handleViewDetails(plan)}
-                                      className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
-                                    >
-                                      Chi tiết tiến độ
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenIssuePopup(plan, duAnThanhPhanId)}
-                                      className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
-                                    >
-                                      Khó khăn vướng mắc
-                                    </button>
-                                    <button
-                                      onClick={() => handleOpenProgressPopup(plan)}
-                                      className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all"
-                                    >
-                                      Cập nhật tiến độ
-                                    </button>
-                                    <button className="px-3 py-1 text-xs font-bold text-white bg-blue-800 rounded-lg opacity-80 hover:opacity-100 transition-all">
-                                      Chỉnh sửa
-                                    </button>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">{plan.tongKhoiLuongThucHien?.toLocaleString()}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">{plan.khoiLuongKeHoach?.toLocaleString()}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">{plan.donViTinh}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {plan.khoiLuongKeHoach
-                                  ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100).toFixed(0) + '%'
-                                  : '0%'}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                {calculateDays(plan.ngayBatDau, plan.ngayKetThuc)}
-                              </td>
-                              <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayBatDau)}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">{formatDate(plan.ngayKetThuc)}</td>
-                              <td className="px-3 py-2 whitespace-nowrap">
-                                <div className="flex space-x-2">
-
-
-                                  <button
-                                    className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                                    title="Xóa hạng mục"
-                                    onClick={() => handleDeleteKeHoach(plan.keHoachId)}
-                                  >
-                                    <FaTrash size={14} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-
-                          ))}
-                        </React.Fragment>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
-            </tbody>
-          </table>
+                .map((packageItem, packageIndex) => renderPackageRow(packageItem, packageIndex))
+              }
+            </div>
+          </div>
         </div>
       </div>
       <div className="md:hidden space-y-3">
@@ -799,12 +1275,12 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                           <FaPlus size={14} />
                         </button>
                         <button
-                                  className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                                  title="Xóa hạng mục"
-                                  onClick={() => handleDeleteHangMuc(item.hangMucId)}
-                                >
-                                  <FaTrash size={14} />
-                                </button>
+                          className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                          title="Xóa hạng mục"
+                          onClick={() => handleDeleteHangMuc(item.hangMucId)}
+                        >
+                          <FaTrash size={14} />
+                        </button>
                       </div>
                     </div>
 

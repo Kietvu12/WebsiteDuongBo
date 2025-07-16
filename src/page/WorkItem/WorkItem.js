@@ -12,9 +12,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import SubProjectTable from '../../component/SubProjectTable/SubProjectTable';
 import ProductionChart from '../../component/Chart/Chart'
 import { FaRegCalendarAlt, FaRegBell } from "react-icons/fa";
-import GanttTimeline from '../../component/TimelineChart/TimelineChart';
-
-
+import ConstructionGantt from '../../component/TimelineChart/TimelineChart'
 const useClickOutside = (ref, callback) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -261,19 +259,11 @@ const WorkItem = () => {
         </div>
       </div>
       <div>
-      {selectedProjectId !== null ? (
-            <GanttTimeline duAnThanhPhanId={selectedProjectId} />
-          ) : (
-            // Hiển thị thông báo nếu cả hai đều null
-            <div className="no-project-selected">
-              <p>Vui lòng tìm kiếm một dự án để xem</p>
-            </div>
-          )}
+
       </div>
       <div>
       </div>
       <div className='content'>
-        <div className='content'>
           {selectedProjectId !== null ? (
             <SubProjectTable duAnThanhPhanId={selectedProjectId} />
           ) : (
@@ -282,7 +272,6 @@ const WorkItem = () => {
               <p>Vui lòng tìm kiếm một dự án để xem</p>
             </div>
           )}
-        </div>
       </div>
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -7,7 +8,8 @@ import { FaCheckCircle, FaPlus, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import { kml } from '@mapbox/togeojson';
 import { DOMParser } from 'xmldom';
-
+import vietnamGeoJson from '../../assets/data/vietnam.json'
+import './AddNewPackage.css'
 
 const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   // State cho form
@@ -51,7 +53,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   useEffect(() => {
     // Khởi tạo bản đồ
     if (!mapRef.current) {
-      const map = L.map('map').setView([14.0583, 108.2772], 6);
+      const map = L.map('map').setView([16.0583, 108.2772], 5);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
@@ -83,6 +85,62 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     }
   }, [isEdit, goiThau]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // 1️⃣ Xóa các layer overlay cũ (mask + border)
+    if (map._maskLayer) map.removeLayer(map._maskLayer);
+
+    // 2️⃣ Tạo polygon "world" bao quanh toàn bản đồ (dùng lat,lng)
+    const outer = [
+      [ 90, -180],
+      [ 90,  180],
+      [-90,  180],
+      [-90, -180]
+    ];
+
+    // 3️⃣ Chuẩn bị mảng các hole từ GeoJSON Việt Nam
+    const holes = vietnamGeoJson.features.flatMap(feature => {
+      const coords = feature.geometry.coordinates;
+      if (feature.geometry.type === 'Polygon') {
+        // coords: [ [ [lng,lat], ... ] , ... ]
+        return coords.map(ring =>
+          ring.map(([lng, lat]) => [lat, lng])
+        );
+      } else /* MultiPolygon */ {
+        // coords: [ [ [ [lng,lat], ... ], ... ] , ... ]
+        return coords.flatMap(poly =>
+          poly.map(ring =>
+            ring.map(([lng, lat]) => [lat, lng])
+          )
+        );
+      }
+    });
+
+    // 4️⃣ Vẽ mask đen với "hole" ngay vùng Việt Nam
+    const maskLayer = L.polygon(
+      [ outer, ...holes ],
+      {
+        fillColor: '#000',
+        fillOpacity: 0.5,
+        weight: 0,
+        interactive: false
+      }
+    ).addTo(map);
+
+    // 7️⃣ Lưu lại để cleanup lần sau
+    map._maskLayer   = maskLayer;
+
+    // Cleanup khi unmount hoặc khi effect chạy lại
+    return () => {
+      if (map._maskLayer)   map.removeLayer(map._maskLayer);
+      map._maskLayer = null;
+    };
+  }, [mapRef.current]);
+
+
+
   const fetchNhaThauList = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
@@ -91,6 +149,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
     }
   };
+  
   const drawRouteOnMap = (coordinates) => {
     // Xóa layer cũ nếu có
     if (routeLayerRef.current) {
@@ -100,9 +159,28 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     // Chuyển đổi tọa độ từ [lng, lat] sang [lat, lng]
     const latLngs = coordinates.map(coord => [coord[1], coord[0]]);
 
-    // Tạo polyline mới
+    // Xác định màu sắc dựa trên trạng thái
+    let routeColor;
+    switch(formData.TrangThai) {
+      case 'Đang chuẩn bị':
+        routeColor = '#3b82f6'; // blue-600
+        break;
+      case 'Đang thi công':
+        routeColor = '#16a34a'; // green-600
+        break;
+      case 'Hoàn thành':
+        routeColor = '#eab308'; // yellow-500
+        break;
+      case 'Tạm dừng':
+        routeColor = '#9333ea'; // purple-500
+        break;
+      default:
+        routeColor = '#3388ff'; // màu mặc định
+    }
+
+    // Tạo polyline mới với màu tương ứng trạng thái
     const polyline = L.polyline(latLngs, {
-      color: '#3388ff',
+      color: routeColor,
       weight: 5,
       opacity: 0.7,
       lineJoin: 'round'
@@ -113,6 +191,45 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     // Zoom vào toàn bộ tuyến đường
     mapRef.current.fitBounds(polyline.getBounds());
   };
+
+  // Thêm legend vào bản đồ
+  useEffect(() => {
+    if (mapRef.current) {
+      const legend = L.control({ position: 'bottomright' });
+      
+      legend.onAdd = () => {
+        const div = L.DomUtil.create('div', 'info legend');
+        const statuses = [
+          { status: 'Đang chuẩn bị', color: '#3b82f6' },
+          { status: 'Đang thi công', color: '#16a34a' },
+          { status: 'Hoàn thành', color: '#eab308' },
+          { status: 'Tạm dừng', color: '#9333ea' }
+        ];
+        
+        let html = '<h4>Trạng thái</h4>';
+        statuses.forEach(({ status, color }) => {
+          html += `
+            <div style="display: flex; align-items: center; margin: 5px 0;">
+              <span style="display: inline-block; width: 20px; height: 3px; background: ${color}; margin-right: 5px;"></span>
+              <span>${status}</span>
+            </div>
+          `;
+        });
+        
+        div.innerHTML = html;
+        return div;
+      };
+      
+      legend.addTo(mapRef.current);
+      
+      // Cleanup khi component unmount
+      return () => {
+        if (mapRef.current) {
+          mapRef.current.removeControl(legend);
+        }
+      };
+    }
+  }, [mapRef.current]);
 
   const fetchLoaiHinhList = async () => {
     try {
@@ -155,20 +272,29 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
 
   const setStartPoint = (latlng) => {
     const { lat, lng } = latlng;
-    setFormData({
-      ...formData,
-      ToaDo_BatDau_X: lng,
-      ToaDo_BatDau_Y: lat
-    });
+    setFormData(prev => ({
+      ...prev,
+      ToaDo_BatDau_X: lng.toString(),
+      ToaDo_BatDau_Y: lat.toString()
+    }));
 
     if (startMarkerRef.current) {
       startMarkerRef.current.setLatLng(latlng);
     } else {
       const marker = L.marker(latlng, {
         icon: L.divIcon({
-          className: 'start-marker',
-          html: '<div style="background-color: blue; width: 20px; height: 20px; border-radius: 50%;"></div>',
-          iconSize: [20, 20]
+          html: `
+            <div style="
+              background-color: white;
+              width: 20px;
+              height: 20px;
+              border-radius: 50%;
+              border: 2px solid black;
+              box-shadow: 0 0 3px rgba(0,0,0,0.5);
+            "></div>
+          `,
+          iconSize: [16, 16], // Kích thước tổng bao gồm cả border
+          iconAnchor: [8, 8] // Điểm neo ở giữa marker
         })
       }).addTo(mapRef.current);
       startMarkerRef.current = marker;
@@ -179,21 +305,30 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
 
   const setEndPoint = (latlng) => {
     const { lat, lng } = latlng;
-    setFormData({
-      ...formData,
-      ToaDo_KetThuc_X: lng,
-      ToaDo_KetThuc_Y: lat
-    });
+    setFormData(prev => ({
+      ...prev,
+      ToaDo_KetThuc_X: lng.toString(),
+      ToaDo_KetThuc_Y: lat.toString()
+    }));
 
     if (endMarkerRef.current) {
       endMarkerRef.current.setLatLng(latlng);
     } else {
       const marker = L.marker(latlng, {
-        icon: L.divIcon({
-          className: 'end-marker',
-          html: '<div style="background-color: red; width: 20px; height: 20px; border-radius: 50%;"></div>',
-          iconSize: [20, 20]
-        })
+      icon: L.divIcon({
+        html: `
+          <div style="
+            background-color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid black;
+            box-shadow: 0 0 3px rgba(0,0,0,0.5);
+          "></div>
+        `,
+        iconSize: [16, 16], // Kích thước tổng bao gồm cả border
+        iconAnchor: [8, 8] // Điểm neo ở giữa marker
+      })
       }).addTo(mapRef.current);
       endMarkerRef.current = marker;
     }
@@ -260,88 +395,81 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-  
-    // Tách file KML và các file khác
-    const kml = selectedFiles.find(file =>
-      file.name.toLowerCase().endsWith('.kml')
-    );
-    const otherFiles = selectedFiles.filter(file =>
-      !file.name.toLowerCase().endsWith('.kml')
-    );
-  
-    if (kml) {
+    const kmlFile = selectedFiles.find(f => f.name.toLowerCase().endsWith('.kml'));
+    
+    if (kmlFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
           const kmlContent = event.target.result;
-          
-          // Kiểm tra nội dung KML cơ bản
-          if (!kmlContent.includes('<kml') || !kmlContent.includes('<LineString>')) {
-            throw new Error('File không phải định dạng KML hợp lệ');
-          }
-  
           const kmlDom = new DOMParser().parseFromString(kmlContent, 'text/xml');
-          
-          // Kiểm tra lỗi XML
-          const parserErrors = kmlDom.getElementsByTagName('parsererror');
-          if (parserErrors.length > 0) {
-            throw new Error('Lỗi cú pháp XML trong file KML');
-          }
-  
           const geoJson = kml(kmlDom);
-  
-          // Kiểm tra cấu trúc GeoJSON
-          if (!geoJson || !geoJson.features || geoJson.features.length === 0) {
-            throw new Error('KML không chứa dữ liệu đường đi');
+          
+          console.log('Parsed GeoJSON:', geoJson); // Debug
+
+          // Kiểm tra kỹ cấu trúc GeoJSON
+          if (!geoJson?.features?.length) {
+            throw new Error('KML không có dữ liệu features');
           }
-  
-          const lineStringFeature = geoJson.features.find(
-            feature => feature.geometry?.type === 'LineString'
+
+          const lineString = geoJson.features.find(
+            f => f.geometry?.type === 'LineString'
           );
-  
-          if (!lineStringFeature) {
-            throw new Error('Không tìm thấy đường đi (LineString) trong KML');
+          
+          if (!lineString) {
+            throw new Error('Không tìm thấy LineString trong KML');
           }
-  
-          const coordinates = lineStringFeature.geometry.coordinates;
-  
-          if (!coordinates || coordinates.length < 2) {
-            throw new Error('Đường đi phải có ít nhất 2 điểm');
+
+          const coordinates = lineString.geometry.coordinates;
+          console.log('LineString coordinates:', coordinates); // Debug
+
+          if (!coordinates?.length || coordinates.length < 2) {
+            throw new Error('LineString phải có ít nhất 2 điểm');
           }
-  
-          // Cập nhật tọa độ đầu cuối
-          const startPoint = coordinates[0];
-          const endPoint = coordinates[coordinates.length - 1];
-  
+
+          // Lấy điểm đầu và cuối - đảm bảo đúng thứ tự [lng, lat]
+          const [startLng, startLat] = coordinates[0];
+          const [endLng, endLat] = coordinates[coordinates.length - 1];
+
+          console.log('Start:', { lng: startLng, lat: startLat });
+          console.log('End:', { lng: endLng, lat: endLat });
+
+          console.log('Before setting formData:', formData);
+
+          // Cập nhật state
           setFormData(prev => ({
             ...prev,
-            ToaDo_BatDau_X: startPoint[0],
-            ToaDo_BatDau_Y: startPoint[1],
-            ToaDo_KetThuc_X: endPoint[0],
-            ToaDo_KetThuc_Y: endPoint[1]
+            ToaDo_BatDau_X: startLng.toString(),
+            ToaDo_BatDau_Y: startLat.toString(),
+            ToaDo_KetThuc_X: endLng.toString(),
+            ToaDo_KetThuc_Y: endLat.toString()
           }));
-  
-          // Hiển thị trên bản đồ
-          setStartPoint({ lat: startPoint[1], lng: startPoint[0] });
-          setEndPoint({ lat: endPoint[1], lng: endPoint[0] });
+
+          console.log('After setting formData:', {
+            ToaDo_BatDau_X: startLng.toString(),
+            ToaDo_BatDau_Y: startLat.toString(),
+            ToaDo_KetThuc_X: endLng.toString(),
+            ToaDo_KetThuc_Y: endLat.toString()
+          });
+
+          console.log('Raw KML content:', kmlContent); // Kiểm tra nội dung KML
+          console.log('KML DOM:', kmlDom); // Kiểm tra DOM sau khi parse
+          console.log('GeoJSON:', geoJson); // Kiểm tra GeoJSON sau khi convert
+
+          // Cập nhật bản đồ
+          setStartPoint({ lat: startLat, lng: startLng });
+          setEndPoint({ lat: endLat, lng: endLng });
           drawRouteOnMap(coordinates);
-  
+
         } catch (error) {
-          console.error('Lỗi khi đọc file KML:', error);
-          alert(`Lỗi: ${error.message}\nVui lòng kiểm tra lại file KML của bạn.`);
-          setKmlFile(null); // Reset file KML nếu có lỗi
+          console.error('Error processing KML:', error);
+          alert(`Lỗi xử lý KML: ${error.message}`);
         }
       };
-      reader.onerror = () => {
-        alert('Lỗi khi đọc file. Vui lòng thử lại.');
-        setKmlFile(null);
-      };
-      reader.readAsText(kml);
-      setKmlFile(kml);
+      reader.readAsText(kmlFile);
     }
-  
-    setFiles(prev => [...prev, ...otherFiles]);
   };
+
   const handleRemoveExistingFile = (taiLieuID) => {
     setFilesToRemove([...filesToRemove, taiLieuID]);
     setExistingFiles(existingFiles.filter(file => file.taiLieuID !== taiLieuID));

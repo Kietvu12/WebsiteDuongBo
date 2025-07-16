@@ -11,6 +11,28 @@ import {
   FaChevronDown,
   FaChevronRight, FaChevronUp
 } from 'react-icons/fa';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+// Đăng ký các thành phần cần thiết từ ChartJS
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 const ProjectManagement = ({ tenDuAn, projectId }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -18,6 +40,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
     tenDuAn: '',
     tenHangMuc: ''
   });
+  const [viewMode, setViewMode] = useState('list');
   const [formData, setFormData] = useState({
     khoiLuongThucHien: '',
     moTaVuongMac: '',
@@ -53,7 +76,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
       });
     }
   };
-  console.log(selectedPlan);
+
 
 
   const handleInputChange = (e) => {
@@ -127,6 +150,101 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
     const now = new Date();
     return Math.max(0, Math.ceil((end - now) / (1000 * 60 * 60 * 24)));
   }, [selectedPlan]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  // Lấy danh sách năm có dữ liệu
+  const availableYears = Array.from(
+    new Set(
+      selectedPlan?.tienDoThucHien?.map(item => 
+        new Date(item.NgayCapNhat).getFullYear()
+      ) || []
+    )
+  ).sort();
+
+  // Chuẩn bị dữ liệu sản lượng từng tháng
+  const prepareMonthlyProductionData = () => {
+    // Khởi tạo mảng 12 tháng
+    const monthlyProduction = Array(12).fill(0);
+    
+    // Tính tổng sản lượng từng tháng
+    (selectedPlan?.tienDoThucHien || []).forEach(item => {
+      const itemYear = new Date(item.NgayCapNhat).getFullYear();
+      const itemMonth = new Date(item.NgayCapNhat).getMonth();
+      
+      if (itemYear === selectedYear) {
+        monthlyProduction[itemMonth] += item.KhoiLuongThucHien || 0;
+      }
+    });
+
+    return {
+      labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
+               'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+      datasets: [
+        {
+          label: `Sản lượng thi công năm ${selectedYear}`,
+          data: monthlyProduction,
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.1,
+          fill: false,
+          pointBackgroundColor: 'rgb(75, 192, 192)',
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }
+      ]
+    };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            return `${context.dataset.label}: ${context.raw.toLocaleString()} ${selectedPlan?.donViTinh}`;
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          targetLine: {
+            type: 'line',
+            yMin: selectedPlan?.khoiLuongKeHoach,
+            yMax: selectedPlan?.khoiLuongKeHoach,
+            borderColor: 'rgb(255, 99, 132)',
+            borderWidth: 2,
+            borderDash: [6, 6],
+            label: {
+              content: 'Mục tiêu',
+              enabled: true,
+              position: 'right'
+            }
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: `Sản lượng (${selectedPlan?.donViTinh})`
+        },
+        min: 0,
+        suggestedMax: selectedPlan?.khoiLuongKeHoach ? selectedPlan.khoiLuongKeHoach * 1.2 : undefined,
+      },
+      x: {
+        title: {
+          display: true,
+          text: 'Tháng'
+        }
+      }
+    }
+  };
+  console.log("Tiến độ:", selectedPlan);
+  
 
   return (
     <div className="flex flex-col md:flex-row min-w-[600px] h-screen bg-gray-50">
@@ -335,61 +453,101 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
               </form>
             </div>
             <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-800 mb-3">Lịch sử báo cáo</h2>
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-lg font-semibold text-gray-800">
+          Tiến độ: {selectedPlan.tenCongTac}
+        </h2>
+        {selectedPlan.tienDoThucHien?.length > 0 && (
+          <button
+            onClick={() => setViewMode(viewMode === 'list' ? 'chart' : 'list')}
+            className="px-3 py-1 bg-blue-100 text-blue-600 rounded text-sm hover:bg-blue-200 transition"
+          >
+            {viewMode === 'list' ? 'Xem dạng biểu đồ' : 'Xem dạng danh sách'}
+          </button>
+        )}
+      </div>
 
-              {selectedPlan.tienDoThucHien?.length > 0 ? (
-                <div className="space-y-2">
-                  {selectedPlan.tienDoThucHien.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 border rounded-lg ${item.MoTaVuongMac
-                          ? 'border-orange-200 bg-orange-50'
-                          : 'border-gray-200'
-                        }`}
-                    >
-                      {/* Dòng 1: Ghi chú và ngày */}
-                      <div className="flex justify-between items-baseline">
-                        <span className="font-bold text-gray-700 text-sm truncate max-w-[70%]">
-                          {item.GhiChu}
-                        </span>
-                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                          {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
-                        </span>
-                      </div>
+      {selectedPlan.tienDoThucHien?.length === 0 ? (
+        <div className="text-center py-6 text-gray-400 text-sm">
+          Chưa có báo cáo tiến độ nào cho kế hoạch này
+        </div>
+      ) : viewMode === 'list' ? (
+        // Chế độ xem danh sách
+        <div className="space-y-2">
+          {selectedPlan.tienDoThucHien.map((item, index) => (
+            <div
+              key={index}
+              className={`p-3 border rounded-lg ${
+                item.MoTaVuongMac
+                  ? 'border-orange-200 bg-orange-50'
+                  : 'border-gray-200'
+              }`}
+            >
+              <div className="flex justify-between items-baseline">
+                <span className="font-bold text-gray-700 text-sm truncate max-w-[70%]">
+                  {item.GhiChu || 'Không có ghi chú'}
+                </span>
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                  {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
 
-                      {/* Dòng 2: Khối lượng */}
-                      <div className="flex justify-between my-1.5">
-                        <span className="text-sm text-gray-600">Khối lượng:</span>
-                        <span className="font-bold text-blue-600">
-                          +{item.KhoiLuongThucHien} {selectedPlan.donViTinh}
-                        </span>
-                      </div>
+              <div className="flex justify-between my-1.5">
+                <span className="text-sm text-gray-600">Khối lượng:</span>
+                <span className="font-bold text-blue-600">
+                  +{item.KhoiLuongThucHien.toLocaleString()} {selectedPlan.donViTinh}
+                </span>
+              </div>
 
-                      {/* Mô tả công việc */}
-                      <p className="text-sm text-gray-800 mb-1 line-clamp-2">
-                        {item.MoTaCongViec}
-                      </p>
+              {item.MoTaCongViec && (
+                <p className="text-sm text-gray-800 mb-1 line-clamp-2">
+                  {item.MoTaCongViec}
+                </p>
+              )}
 
-                      {/* Vướng mắc (nếu có) */}
-                      {item.MoTaVuongMac && (
-                        <div className="mt-1.5 pt-1.5 border-t border-orange-100">
-                          <div className="text-xs font-semibold text-orange-600">
-                            Vướng mắc: {issueTypes.find(t => t.value === item.LoaiVuongMac)?.label}
-                          </div>
-                          <p className="text-xs text-gray-700 mt-0.5">
-                            {item.MoTaVuongMac}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 text-sm">
-                  Chưa có báo cáo tiến độ nào
+              {item.MoTaVuongMac && (
+                <div className="mt-1.5 pt-1.5 border-t border-orange-100">
+                  <div className="text-xs font-semibold text-orange-600">
+                    Vướng mắc: {issueTypes?.find(t => t.value === item.LoaiVuongMac)?.label || 'Khác'}
+                  </div>
+                  <p className="text-xs text-gray-700 mt-0.5">
+                    {item.MoTaVuongMac}
+                  </p>
                 </div>
               )}
             </div>
+          ))}
+        </div>
+      ) : (
+        // Chế độ xem biểu đồ
+<div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Sản lượng thi công: {selectedPlan?.tenCongTac}</h3>
+        {availableYears.length > 0 && (
+          <select 
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-1 border rounded text-sm"
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="h-80">
+        <Line data={prepareMonthlyProductionData()} options={chartOptions} />
+      </div>
+
+      <div className="mt-4 text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <p>Tổng kế hoạch: {selectedPlan?.khoiLuongKeHoach?.toLocaleString()} {selectedPlan?.donViTinh}</p>
+        <p>Đường biểu đồ thể hiện sản lượng thi công từng tháng</p>
+      </div>
+    </div>
+
+      )}
+    </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">

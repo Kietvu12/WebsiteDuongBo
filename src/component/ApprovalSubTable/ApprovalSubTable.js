@@ -147,24 +147,6 @@ const ApprovalSubTable = ({ duAnThanhPhanId }) => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {/* Level 1 - Dự án */}
-              <tr className="bg-green-50 hover:bg-green-100">
-                <td className="px-2 sm:px-4 py-2">1</td>
-                <td className="px-2 sm:px-4 py-2">DA-{([]).concat(
-                  data?.duAnThanhPhan?.duAnId || [],
-                  data?.duAnTong?.duAnId || [],
-                  data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.duAnId) || []
-                )}</td>
-                <td className="px-2 sm:px-4 py-2 font-medium">{([]).concat(
-                  data?.duAnThanhPhan?.tenDuAn || [],
-                  data?.duAnTong?.tenDuAn || [],
-                  data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tenDuAn) || []
-                )}</td>
-                <td colSpan="5" className="px-2 sm:px-4 py-2 text-sm">
-                 
-                </td>
-                <td className="px-2 sm:px-4 py-2">
-                </td>
-              </tr>
 
               {/* Level 2 - Gói thầu */}
               {([]).concat(

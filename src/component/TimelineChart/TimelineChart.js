@@ -1,283 +1,177 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FaChevronDown, FaChevronRight, FaPlus, FaTrash, FaEye } from 'react-icons/fa';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 
-const GanttTimeline = ({ 
-  duAnThanhPhanId, 
-  packageId,
-  API_BASE_URL = process.env.REACT_APP_API_BASE_URL 
-}) => {
-  const navigate = useNavigate();
-  
-  // State quản lý data
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  
-  // State quản lý UI
-  const [expandedItems, setExpandedItems] = useState({});
-  const [dateRange, setDateRange] = useState({ start: null, end: null });
-  const [zoomLevel, setZoomLevel] = useState(1);
+const TimeZoomHeader = () => {
+  const [zoomLevel, setZoomLevel] = useState(0); // 0: năm, 1: quý, 2: tháng, 3: ngày
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [displayItems, setDisplayItems] = useState([]);
 
-  // Fetch data
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/detail`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setData(result.data);
-      calculateDateRange(result.data);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [duAnThanhPhanId, API_BASE_URL]);
-
-  // Tính toán phạm vi ngày
-  const calculateDateRange = (data) => {
-    let allDates = [];
-    
-    // Lấy tất cả ngày từ các gói thầu
-    const allPackages = [].concat(
-      data?.duAnThanhPhan?.danhSachGoiThau || [],
-      data?.duAnTong?.danhSachGoiThauTrucTiep || [],
-      data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-    );
-
-    allPackages.forEach(pkg => {
-      if (pkg.ngayKhoiCong) allDates.push(new Date(pkg.ngayKhoiCong));
-      if (pkg.ngayHoanThanh) allDates.push(new Date(pkg.ngayHoanThanh));
-      
-      pkg.danhSachHangMuc?.forEach(item => {
-        item.danhSachKeHoach?.forEach(plan => {
-          if (plan.ngayBatDau) allDates.push(new Date(plan.ngayBatDau));
-          if (plan.ngayKetThuc) allDates.push(new Date(plan.ngayKetThuc));
-        });
-      });
-    });
-
-    if (allDates.length > 0) {
-      const startDate = new Date(Math.min(...allDates.map(date => date.getTime())));
-      const endDate = new Date(Math.max(...allDates.map(date => date.getTime())));
-      setDateRange({ start: startDate, end: endDate });
-    }
-  };
-
+  // Xử lý sự kiện lăn chuột
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const handleWheel = (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        // Zoom in
+        setZoomLevel(prev => Math.min(prev + 1, 3));
+      } else {
+        // Zoom out
+        setZoomLevel(prev => Math.max(prev - 1, 0));
+      }
+    };
 
-  // Hàm xử lý dropdown
-  const toggleItem = (id) => {
-    setExpandedItems(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
+    const container = document.getElementById('time-zoom-container');
+    container.addEventListener('wheel', handleWheel, { passive: false });
 
-  // Render thanh tiến độ
-  const renderProgressBar = (startDate, endDate, progress, color) => {
-    if (!dateRange.start || !dateRange.end || !startDate || !endDate) return null;
-    
-    const totalDays = (dateRange.end - dateRange.start) / (1000 * 60 * 60 * 24);
-    const startOffset = (new Date(startDate) - dateRange.start) / (1000 * 60 * 60 * 24);
-    const duration = (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24);
-    
-    const progressWidth = duration * (progress / 100);
-    
-    return (
-      <div 
-        className="absolute h-6 flex items-center"
-        style={{
-          left: `${(startOffset / totalDays) * 100}%`,
-          width: `${(duration / totalDays) * 100}%`
-        }}
-      >
-        <div className="relative h-3 w-full bg-gray-200 rounded-full overflow-hidden">
-          <div 
-            className={`absolute h-full ${color}`}
-            style={{ width: `${progressWidth / duration * 100}%` }}
-          ></div>
-        </div>
-      </div>
-    );
-  };
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
-  // Render header timeline (các tháng)
-  const renderTimelineHeader = () => {
-    if (!dateRange.start || !dateRange.end) return null;
+  // Cập nhật các mục hiển thị khi zoomLevel hoặc currentDate thay đổi
+  useEffect(() => {
+    const year = currentDate.getFullYear();
     
-    const months = [];
-    const current = new Date(dateRange.start);
-    current.setDate(1); // Bắt đầu từ ngày đầu tháng
-    
-    while (current <= dateRange.end) {
-      months.push(new Date(current));
-      current.setMonth(current.getMonth() + 1);
+    switch (zoomLevel) {
+      case 0: // Hiển thị các năm
+        setDisplayItems(Array.from({ length: 5 }, (_, i) => year - 2 + i));
+        break;
+      
+      case 1: // Hiển thị các quý
+        setDisplayItems([1, 2, 3, 4].map(q => `Quý ${q} ${year}`));
+        break;
+      
+      case 2: { // Hiển thị các tháng trong quý hiện tại
+        const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
+        const startMonth = (currentQuarter - 1) * 3;
+        setDisplayItems(
+          Array.from({ length: 3 }, (_, i) => {
+            const month = new Date(year, startMonth + i, 1);
+            return month.toLocaleString('default', { month: 'long' });
+          })
+        );
+        break;
+      }
+      
+      case 3: { // Hiển thị các ngày trong tháng hiện tại
+        const daysInMonth = new Date(
+          year, 
+          currentDate.getMonth() + 1, 
+          0
+        ).getDate();
+        
+        setDisplayItems(
+          Array.from({ length: daysInMonth }, (_, i) => i + 1)
+        );
+        break;
+      }
+      
+      default:
+        setDisplayItems([]);
     }
+  }, [zoomLevel, currentDate]);
+
+  // Xử lý khi click vào một mục
+  const handleItemClick = (index) => {
+    const year = currentDate.getFullYear();
     
-    return (
-      <div className="flex border-b sticky top-0 bg-white z-10">
-        <div className="w-64 border-r"></div> {/* Cột trống cho tên công việc */}
-        <div className="flex-1 flex">
-          {months.map((month, index) => (
-            <div 
-              key={index} 
-              className="flex-1 text-center text-xs py-2 border-r"
-            >
-              {month.toLocaleDateString('vi-VN', { month: 'short', year: 'numeric' })}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    switch (zoomLevel) {
+      case 0: // Chọn năm
+        setCurrentDate(new Date(displayItems[index], 0, 1));
+        setZoomLevel(1); // Tự động zoom vào quý
+        break;
+      
+      case 1: // Chọn quý
+        const quarterStartMonth = index * 3;
+        setCurrentDate(new Date(year, quarterStartMonth, 1));
+        setZoomLevel(2); // Tự động zoom vào tháng
+        break;
+      
+      case 2: // Chọn tháng
+        const currentQuarter = Math.floor(currentDate.getMonth() / 3);
+        const monthInYear = currentQuarter * 3 + index;
+        setCurrentDate(new Date(year, monthInYear, 1));
+        setZoomLevel(3); // Tự động zoom vào ngày
+        break;
+      
+      case 3: // Chọn ngày
+        setCurrentDate(new Date(
+          year, 
+          currentDate.getMonth(), 
+          displayItems[index]
+        ));
+        break;
+    }
   };
-
-  // Render các mục công việc
-  const renderWorkItems = () => {
-    if (!data || !dateRange.start || !dateRange.end) return null;
-    
-    const allPackages = [].concat(
-      data?.duAnThanhPhan?.danhSachGoiThau || [],
-      data?.duAnTong?.danhSachGoiThauTrucTiep || [],
-      data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-    ).filter(packageItem => !packageId || packageItem.goiThauId === packageId);
-
-    return (
-      <div className="divide-y">
-        {allPackages.map((packageItem, pkgIndex) => (
-          <React.Fragment key={`pkg-${packageItem.goiThauId}`}>
-            {/* Package row */}
-            <div className="flex group hover:bg-gray-50">
-              <div className="w-64 border-r p-2 flex items-center">
-                <button
-                  onClick={() => toggleItem(`pkg-${packageItem.goiThauId}`)}
-                  className="mr-2 text-gray-600"
-                >
-                  {expandedItems[`pkg-${packageItem.goiThauId}`] ? (
-                    <FaChevronDown size={14} />
-                  ) : (
-                    <FaChevronRight size={14} />
-                  )}
-                </button>
-                <span className="font-medium">GT-{packageItem.goiThauId}: {packageItem.tenGoiThau}</span>
-              </div>
-              <div className="flex-1 relative h-8">
-                {renderProgressBar(
-                  packageItem.ngayKhoiCong,
-                  packageItem.ngayHoanThanh,
-                  packageItem.tienDoThucHien || 0,
-                  'bg-blue-500'
-                )}
-              </div>
-            </div>
-            
-            {/* Category items - chỉ hiển thị khi mở rộng */}
-            {expandedItems[`pkg-${packageItem.goiThauId}`] && 
-              packageItem.danhSachHangMuc?.map((item, itemIndex) => (
-                <React.Fragment key={`item-${item.hangMucId}`}>
-                  <div className="flex group hover:bg-gray-50">
-                    <div className="w-64 border-r p-2 flex items-center pl-8">
-                      <button
-                        onClick={() => toggleItem(`item-${item.hangMucId}`)}
-                        className="mr-2 text-gray-600"
-                      >
-                        {expandedItems[`item-${item.hangMucId}`] ? (
-                          <FaChevronDown size={14} />
-                        ) : (
-                          <FaChevronRight size={14} />
-                        )}
-                      </button>
-                      <span>HM-{item.hangMucId}: {item.tenHangMuc}</span>
-                    </div>
-                    <div className="flex-1 relative h-8">
-                      {renderProgressBar(
-                        item.ngayBatDau,
-                        item.ngayKetThuc,
-                        item.tongKhoiLuongKeHoach 
-                          ? (item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100 
-                          : 0,
-                        'bg-green-500'
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Plan items - chỉ hiển thị khi mở rộng */}
-                  {expandedItems[`item-${item.hangMucId}`] && 
-                    item.danhSachKeHoach?.map((plan, planIndex) => {
-                      const progress = plan.khoiLuongKeHoach
-                        ? (plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100
-                        : 0;
-                      const progressColor = progress >= 100 ? 'bg-green-500' :
-                                          progress >= 70 ? 'bg-yellow-500' : 'bg-red-500';
-                      
-                      return (
-                        <div key={`plan-${plan.keHoachId}`} className="flex group hover:bg-gray-50">
-                          <div className="w-64 border-r p-2 flex items-center pl-12">
-                            <span>KH-{plan.keHoachId}: {plan.tenCongTac}</span>
-                          </div>
-                          <div className="flex-1 relative h-8">
-                            {renderProgressBar(
-                              plan.ngayBatDau,
-                              plan.ngayKetThuc,
-                              progress,
-                              progressColor
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                </React.Fragment>
-              ))}
-          </React.Fragment>
-        ))}
-      </div>
-    );
-  };
-
-  if (loading) return <div className="text-center py-8">Đang tải dữ liệu...</div>;
-  if (error) return <div className="text-center py-8 text-red-500">Lỗi: {error}</div>;
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      {/* Zoom controls */}
-      <div className="bg-gray-100 p-2 flex justify-end">
+    <div 
+      id="time-zoom-container"
+      style={{
+        width: '100%',
+        padding: '20px',
+        border: '1px solid #ddd',
+        borderRadius: '8px',
+        userSelect: 'none'
+      }}
+    >
+      <div style={{ marginBottom: '10px' }}>
         <button 
-          onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))}
-          className="px-3 py-1 bg-white border rounded-l"
+          onClick={() => setZoomLevel(prev => Math.max(prev - 1, 0))}
+          disabled={zoomLevel === 0}
         >
-          -
+          Zoom Out
         </button>
+        <span style={{ margin: '0 10px' }}>
+          {['Năm', 'Quý', 'Tháng', 'Ngày'][zoomLevel]}
+        </span>
         <button 
-          onClick={() => setZoomLevel(prev => Math.min(2, prev + 0.1))}
-          className="px-3 py-1 bg-white border rounded-r"
+          onClick={() => setZoomLevel(prev => Math.min(prev + 1, 3))}
+          disabled={zoomLevel === 3}
         >
-          +
+          Zoom In
         </button>
       </div>
       
-      {/* Timeline header */}
-      {renderTimelineHeader()}
-      
-      {/* Timeline content */}
-      <div 
-        className="overflow-auto"
-        style={{ transform: `scaleX(${zoomLevel})`, transformOrigin: 'left' }}
-      >
-        {renderWorkItems()}
+      <div style={{ 
+        display: 'flex',
+        overflowX: 'auto',
+        gap: '10px',
+        padding: '10px 0'
+      }}>
+        {displayItems.map((item, index) => (
+          <div
+            key={index}
+            onClick={() => handleItemClick(index)}
+            style={{
+              padding: '10px 15px',
+              border: '1px solid #eee',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              backgroundColor: isItemActive(item, index) ? '#e3f2fd' : 'white',
+              minWidth: '60px',
+              textAlign: 'center'
+            }}
+          >
+            {item}
+          </div>
+        ))}
       </div>
     </div>
   );
+
+  // Kiểm tra xem mục có đang được chọn không
+  function isItemActive(item, index) {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const date = currentDate.getDate();
+    
+    switch (zoomLevel) {
+      case 0: return item === year;
+      case 1: return index === Math.floor(month / 3);
+      case 2: return index === month % 3;
+      case 3: return item === date;
+      default: return false;
+    }
+  }
 };
 
-export default GanttTimeline;
+export default TimeZoomHeader;
