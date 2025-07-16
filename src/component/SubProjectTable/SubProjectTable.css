@@ -1,0 +1,36 @@
+/* Thêm vào file CSS của bạn */
+.table-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.table-header, .table-body {
+  display: flex;
+  width: 100%;
+}
+
+.table-header {
+  flex-shrink: 0;
+}
+
+.table-body {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.fixed-columns {
+  width: 50%;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.timeline-column {
+  width: 50%;
+  flex-shrink: 0;
+}
+
+/* Đảm bảo các cột con có chiều rộng cố định */
+.fixed-columns > div {
+  flex-shrink: 0;
+}

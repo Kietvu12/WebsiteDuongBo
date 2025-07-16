@@ -1,3 +1,10 @@
 2025-06-30 16:15:17 [ERROR]: HTTP server close error: Server is not running.
 2025-07-11 10:08:25 [ERROR]: Request Error:2025-07-12 12:07:58 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
 2025-07-14 08:25:57 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
+2025-07-15 08:57:53 [ERROR]: Database connection check failed:
+2025-07-15 10:05:29 [ERROR]: Request Error:
+2025-07-15 10:05:49 [ERROR]: Request Error:
+2025-07-15 10:06:04 [ERROR]: Request Error:
+2025-07-15 10:09:35 [ERROR]: Request Error:
+2025-07-15 16:02:35 [ERROR]: Uncaught Exception: Can't add new command when connection is in closed state
+2025-07-15 16:02:36 [ERROR]: Database connection check failed:

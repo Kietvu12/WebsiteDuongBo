@@ -63,17 +63,18 @@ const ProgressChart = ({ data }) => {
   );
 };
 
-const LegendItem = ({ color, label, value }) => (
-  <div className="flex items-center">
-    <div
-      className="w-3 h-3 mr-2 flex-shrink-0 rounded-full"
-      style={{ backgroundColor: color }}
-    ></div>
-    <div className="flex items-baseline">
-      <span className="text-sm xs:text-xs font-medium text-gray-600 mr-1">{label}:</span>
-      <span className="text-base xs:text-sm font-bold text-gray-800">{value}</span>
+function LegendItem({ color, label, value }) {
+  return (
+    <div className="flex justify-between items-center">
+      <div className="flex items-center gap-2">
+        <div className="w-3 h-3 flex-shrink-0 rounded-full" style={{ backgroundColor: color }} />
+        <span className="text-sm xs:text-xs font-medium text-gray-600">{label}:</span> {/* Fixed width for alignment */}
+      </div>
+      <span className="text-base xs:text-sm font-bold text-gray-800 mr-20">{value}</span>
     </div>
-  </div>
-);
+  );
+}
+
+
 
 export default ProgressChart;

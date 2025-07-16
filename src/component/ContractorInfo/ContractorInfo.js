@@ -35,20 +35,31 @@ const ContractorInfo = ({ data }) => {
         <FaUsers className="text-gray-500 mr-2" size={14} />
         <h2 className="text-lg font-semibold text-gray-800">NHÀ THẦU CHÍNH</h2>
       </div>
-      <div className="p-4 max-h-50 overflow-y-auto">
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Tên công ty:</span> {contractorNames || 'Không có thông tin nhà thầu'}</p>
+      <div className="p-4 max-h-50 overflow-y-auto flex flex-col justify-between h-auto"> {/* Quan trọng: justify-between */}
+        {/* Phần thông tin nhà thầu */}
+        <div>
+          <div className="mb-2 flex items-start">
+            <p className="text-xm font-bold text-gray-800 w-1/4">Tên công ty:</p>
+            <p className="text-xm font-medium text-gray-800 truncate flex-grow">
+              {contractorNames || 'Không có thông tin nhà thầu'}
+            </p>
+          </div>
+          <div className="mb-2 flex items-start">
+            <p className="text-xm font-bold text-gray-800 w-1/4">Địa chỉ:</p>
+            <p className="text-xm font-medium text-gray-800 break-words whitespace-normal flex-grow">
+              {data.DiaChiTruSo || 'Không có thông tin nhà thầu'}
+            </p>
+          </div>
+          <div className="mb-2 flex items-start">
+            <p className="text-xm font-bold text-gray-800 w-1/4">Mã số thuế:</p>
+            <p className="text-xm font-medium text-gray-800 truncate flex-grow">
+              {data.MaSoThue || 'Không có thông tin nhà thầu'}
+            </p>
+          </div>
         </div>
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 break-words whitespace-normal">
-            <span className='text-xm font-bold text-gray-800'>Địa chỉ: </span>
-            {data.DiaChiTruSo || 'Không có thông tin nhà thầu'}
-          </p>
-        </div>
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Mã số thuế: </span>{data.MaSoThue || 'Không có thông tin nhà thầu'}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-4 justify-items-center">
+
+        {/* Phần ngày tháng - LUÔN Ở DƯỚI CÙNG */}
+        <div className="grid grid-cols-3 gap-4 justify-items-center pt-4"> {/* pt-4 để tạo khoảng cách */}
           <div className="w-full text-center">
             <span className="block text-sm font-medium text-gray-500">Ngày bắt đầu</span>
             <span className="text-sm font-bold text-[#15294A] bg-[#B4D5F6] rounded-full px-2 py-1">

@@ -1,0 +1,7 @@
+2025-07-15 16:02:35 [ERROR]: uncaughtException: Can't add new command when connection is in closed state
+Error: Can't add new command when connection is in closed state
+    at PoolConnection._addCommandClosedState (D:\Minh\dadb\dadb2\WebsiteDuongBo\back-end\node_modules\mysql2\lib\base\connection.js:159:17)
+    at PoolConnection.ping (D:\Minh\dadb\dadb2\WebsiteDuongBo\back-end\node_modules\mysql2\lib\base\connection.js:748:17)
+    at Timeout._onTimeout (D:\Minh\dadb\dadb2\WebsiteDuongBo\back-end\server.js:141:32)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)
