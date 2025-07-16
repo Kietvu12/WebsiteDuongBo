@@ -796,32 +796,6 @@ const Dashboard = () => {
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
-          {/* Status bar section - hidden on mobile */}
-          <div className="hidden lg:flex flex-col flex-1 min-h-0 pt-3">
-            <div className="flex shadow overflow-hidden bg-white w-full mt-1">
-              {statuses.map((status) => (
-                <div
-                  key={status.label}
-                  onClick={() => handleStatusClick(status.label)}
-                  className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${status.label !== "Tổng số dự án"
-                      ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
-                      : ""
-                    }
-                    ${activeStatus === status.label
-                      ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
-                      : "bg-gray-100 text-gray-600"
-                    }
-                  `}
-                >
-                  <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className="text-xs font-bold">{status.label}</div>
-                  <div className="text-sm text-gray-500">{status.count}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
 
           <div className="p-2 font-sans text-[13px]">

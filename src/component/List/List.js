@@ -173,7 +173,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
               >
                 <div className="absolute top-1 right-1 flex gap-1">
                   <button 
-                    className={`${actionButtonStyle} relative`}
+                    className={`${actionButtonStyle} relative bg-blue-700`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditPackage(item.GoiThau_ID);
@@ -181,10 +181,10 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                     title="Sửa"
                     style={{ right: '1rem' }} // Đẩy nút sửa sang trái
                   >
-                    <FaEdit size={12} />
+                    <FaEdit size={12}/>
                   </button>
                   <button 
-                    className={`${actionButtonStyle} relative`}
+                    className={`${actionButtonStyle} relative bg-red-700`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleConfirmDelete(item.GoiThau_ID);;
@@ -244,7 +244,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
 
               <div className="absolute top-1 right-1 flex gap-1">
                 <button 
-                  className={`${actionButtonStyle} relative`}
+                  className={`${actionButtonStyle} relative bg-blue-700`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditPackage(item.GoiThau_ID);
@@ -255,7 +255,7 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                   <FaEdit size={12} />
                 </button>
                 <button 
-                  className={`${actionButtonStyle} relative`}
+                  className={`${actionButtonStyle} relative bd-red-700`}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleConfirmDelete(item.GoiThau_ID);;
