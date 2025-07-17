@@ -47,6 +47,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   const startMarkerRef = useRef(null);
   const endMarkerRef = useRef(null);
   const routeLayerRef = useRef(null);
+  const [requiredFieldsError, setRequiredFieldsError] = useState({});
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   // Khởi tạo bản đồ và tải dữ liệu ban đầu
@@ -272,6 +273,28 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     if (value) {
       await fetchThuocTinhList(value);
     }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // Kiểm tra các trường cơ bản
+    const requiredFields = [
+      'TenGoiThau', 'GiaTriHĐ', 'Km_BatDau', 'Km_KetThuc', 
+      'ToaDo_BatDau_X', 'ToaDo_BatDau_Y', 'ToaDo_KetThuc_X', 'ToaDo_KetThuc_Y',
+      'NgayKhoiCong', 'NgayHoanThanh', 'NhaThauID', 'LoaiHinh_ID'
+    ];
+
+    requiredFields.forEach(field => {
+      if (!formData[field]) {
+        errors[field] = ' ';
+        isValid = false;
+      }
+    });
+
+    setRequiredFieldsError(errors);
+    return isValid;
   };
 
   const setStartPoint = (latlng) => {
@@ -525,6 +548,20 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      const firstErrorField = Object.keys(requiredFieldsError)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+                        document.querySelector(`[data-thuoctinh="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+        }
+      }
+      return;
+    }
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('TenGoiThau', formData.TenGoiThau);
@@ -600,7 +637,10 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         setSelectedLoaiHinh(null);
         onSuccess(response.data.data);
         onClose();
-      }
+      } else {
+          // Xử lý khi server trả về lỗi
+          throw new Error(response.data.message || 'Có lỗi xảy ra khi xử lý dữ liệu');
+        }
     } catch (error) {
       console.error(`Lỗi khi ${isEdit ? 'cập nhật' : 'tạo'} gói thầu:`, error);
       alert(`Có lỗi xảy ra khi ${isEdit ? 'cập nhật' : 'tạo'} gói thầu`);
@@ -632,11 +672,16 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="text"
                   name="TenGoiThau"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    requiredFieldsError.TenGoiThau ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.TenGoiThau}
                   onChange={handleInputChange}
                   required
                 />
+                {requiredFieldsError.TenGoiThau && (
+                  <p className="mt-1 text-xs text-red-600">{requiredFieldsError.TenGoiThau}</p>
+                )}
               </div>
 
               <div>
@@ -644,10 +689,15 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="number"
                   name="GiaTriHĐ"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    requiredFieldsError.GiaTriHĐ ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.GiaTriHĐ}
                   onChange={handleInputChange}
                 />
+                {requiredFieldsError.GiaTriHĐ && (
+                  <p className="mt-1 text-xs text-red-600">{requiredFieldsError.GiaTriHĐ}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -657,7 +707,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                     type="text"
                     step="0.01"
                     name="Km_BatDau"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      requiredFieldsError.Km_BatDau ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     value={formData.Km_BatDau}
                     onChange={handleInputChange}
                   />
@@ -668,7 +720,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                     type="text"
                     step="0.01"
                     name="Km_KetThuc"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      requiredFieldsError.Km_KetThuc ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     value={formData.Km_KetThuc}
                     onChange={handleInputChange}
                   />
@@ -688,7 +742,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                   <input
                     type="date"
                     name="NgayKhoiCong"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      requiredFieldsError.NgayKhoiCong ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     value={formData.NgayKhoiCong}
                     onChange={handleInputChange}
                   />
@@ -698,7 +754,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                   <input
                     type="date"
                     name="NgayHoanThanh"
-                    className="w-full px-3 py-2 border rounded-md text-sm"
+                    className={`w-full px-3 py-2 border rounded-md text-sm ${
+                      requiredFieldsError.NgayHoanThanh ? 'border-red-500' : 'border-gray-300'
+                    }`}
                     value={formData.NgayHoanThanh}
                     onChange={handleInputChange}
                   />
@@ -714,7 +772,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nhà thầu</label>
                 <select
                   name="NhaThauID"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    requiredFieldsError.NhaThauID ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.NhaThauID}
                   onChange={handleInputChange}
                 >
@@ -729,7 +789,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Loại hình</label>
                 <select
                   name="LoaiHinh_ID"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    requiredFieldsError.LoaiHinh_ID ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.LoaiHinh_ID}
                   onChange={handleLoaiHinhChange}
                 >
@@ -744,7 +806,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
                 <select
                   name="TrangThai"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  className={`w-full px-3 py-2 border rounded-md text-sm ${
+                    requiredFieldsError.TrangThai ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.TrangThai}
                   onChange={handleInputChange}
                 >
@@ -780,6 +844,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                       <div
                         key={thuocTinh.ThuocTinh_ID}
                         className="p-1 border border-gray-200 rounded hover:border-blue-300 transition-colors"
+                        data-thuoctinh={`thuocTinh_${thuocTinh.ThuocTinh_ID}`}
                       >
                         <div className="flex items-start space-x-1">
                           <div className="flex-1 space-y-1">
@@ -802,6 +867,11 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                             )}
                           </div>
                         </div>
+                        {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`] && (
+                          <p className="mt-1 text-xxs text-red-600">
+                            {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`]}
+                          </p>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -937,7 +1007,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="text"
                   placeholder="Kinh độ"
-                  className="px-3 py-2 border rounded-md text-sm"
+                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_BatDau_X ? 'border-red-500' : 'border-gray-300'}`}
                   value={formData.ToaDo_BatDau_X}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -947,7 +1017,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="text"
                   placeholder="Vĩ độ"
-                  className="px-3 py-2 border rounded-md text-sm"
+                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_BatDau_Y ? 'border-red-500' : 'border-gray-300'}`}
                   value={formData.ToaDo_BatDau_Y}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -994,7 +1064,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="text"
                   placeholder="Kinh độ"
-                  className="px-3 py-2 border rounded-md text-sm"
+                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_KetThuc_X ? 'border-red-500' : 'border-gray-300'}`}
                   value={formData.ToaDo_KetThuc_X}
                   onChange={(e) => setFormData({
                     ...formData,
@@ -1004,7 +1074,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                 <input
                   type="text"
                   placeholder="Vĩ độ"
-                  className="px-3 py-2 border rounded-md text-sm"
+                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_KetThuc_Y ? 'border-red-500' : 'border-gray-300'}`}
                   value={formData.ToaDo_KetThuc_Y}
                   onChange={(e) => setFormData({
                     ...formData,

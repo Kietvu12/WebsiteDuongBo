@@ -431,6 +431,8 @@ const AddNewProject = () => {
         };
     }, []);
 
+    const [requiredFieldsError, setRequiredFieldsError] = useState({});
+
     const [formData, setFormData] = useState({
         TenDuAn: '',
         TinhThanh: '',
@@ -460,6 +462,7 @@ const AddNewProject = () => {
             alert('Lỗi khi tải danh sách loại hình');
         }
     };
+
     useEffect(() => {
         const fetchContractors = async () => {
             try {
@@ -479,6 +482,35 @@ const AddNewProject = () => {
 
         fetchContractors();
     }, [API_BASE_URL]);
+
+    const validateForm = () => {
+        const errors = {};
+        let isValid = true;
+
+        // Kiểm tra các trường cơ bản
+        const requiredFields = [
+            'TenDuAn',
+            'TinhThanh',
+            'ChuDauTu',
+            'NgayKhoiCong',
+            'TrangThai',
+            'NguonVon',
+            'TongChieuDai',
+            'KeHoachHoanThanh',
+            'LoaiHinh_ID'
+        ];
+
+        requiredFields.forEach(field => {
+        if (!formData[field]) {
+            errors[field] = ' ';
+            isValid = false;
+        }
+        });
+
+        setRequiredFieldsError(errors);
+        return isValid;
+    };
+
     const handleLoaiHinhChange = async (e) => {
         const value = e.target.value;
         const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
@@ -567,6 +599,20 @@ const AddNewProject = () => {
     };
     const onFinish = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            const firstErrorField = Object.keys(requiredFieldsError)[0];
+            if (firstErrorField) {
+                const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+                                document.querySelector(`[data-thuoctinh="${firstErrorField}"]`);
+                if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+                }
+            }
+            return;
+        }
+
         setLoading(true);
     
         // Validate TenDuAn and LoaiHinh_ID
@@ -737,7 +783,8 @@ const AddNewProject = () => {
                             Loại dự án:
                         </label>
                         <select
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                            className={`flex-1 px-2 py-1 border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                ${requiredFieldsError.LoaiHinh_ID ? 'border-red-500' : 'border-gray-300'}`}
                             onChange={handleLoaiHinhChange}
                             value={formData.LoaiHinh_ID}
                         >
@@ -772,7 +819,8 @@ const AddNewProject = () => {
                             <input
                                 type="text"
                                 name="TenDuAn"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TenDuAn ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TenDuAn}
                                 onChange={handleInputChange}
                                 required
@@ -786,7 +834,8 @@ const AddNewProject = () => {
                             <input
                                 type="text"
                                 name="TongChieuDai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TongChieuDai ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TongChieuDai}
                                 onChange={handleInputChange}
                                 required
@@ -800,7 +849,8 @@ const AddNewProject = () => {
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                        ${requiredFieldsError.NgayKhoiCong? 'border-red-500' : 'border-gray-300'}`}
                                     value={formData.NgayKhoiCong}
                                     onChange={(e) => handleDateChange('NgayKhoiCong', e.target.value)}
                                 />
@@ -814,7 +864,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="ChuDauTu"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.ChuDauTu ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.ChuDauTu}
                                 onChange={handleInputChange}
                             >
@@ -834,7 +885,8 @@ const AddNewProject = () => {
                                 Tỉnh thành
                             </label>
                             <div
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base bg-white cursor-pointer"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base bg-white cursor-pointer
+                                    ${requiredFieldsError.TinhThanh? 'border-red-500' : 'border-gray-300'}`}
                                 onClick={() => setShowDropdown(!showDropdown)}
                             >
                                 {selectedProvinces.length > 0
@@ -843,7 +895,7 @@ const AddNewProject = () => {
                             </div>
                             {showDropdown && (
                                 <div
-                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-base transition-all duration-200 ease-out animate-slide-down z-50"
+                                    className="absolute left-0 top-full mt-1 w-full bg-white border  rounded shadow-lg max-h-52 overflow-auto text-base transition-all duration-200 ease-out animate-slide-down z-50"
                                 >
                                     {mergedProvinces.map((tinh, index) => (
                                         <div
@@ -870,7 +922,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="NguonVon"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.NguonVon ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
@@ -888,7 +941,8 @@ const AddNewProject = () => {
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-full pl-7 pr-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                        ${requiredFieldsError.KeHoachHoanThanh ? 'border-red-500' : 'border-gray-300'}`}
                                     value={formData.KeHoachHoanThanh}
                                     onChange={(e) => handleDateChange('KeHoachHoanThanh', e.target.value)}
                                 />
@@ -902,7 +956,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="TrangThai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TrangThai ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TrangThai}
                                 onChange={handleInputChange}
                             >

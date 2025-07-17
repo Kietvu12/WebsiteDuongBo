@@ -11,3 +11,17 @@
   margin: 0 0 5px;
   color: #555;
 }
+
+.border-red-500 {
+  border-color: #ef4444;
+}
+
+.text-red-600 {
+  color: #dc2626;
+}
+
+.error-message {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
