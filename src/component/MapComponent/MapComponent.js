@@ -304,7 +304,7 @@ const MapComponent = ({ projects = [] }) => {
               <span>Đang chuẩn bị</span>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="inline-block h-[3px] w-8 bg-green-600"></span>
+              <span className="inline-block h-[3px] w-8 bg-[#33FF57]"></span>
               <span>Đang thi công</span>
             </div>
             <div className="flex items-center space-x-2">
@@ -314,6 +314,10 @@ const MapComponent = ({ projects = [] }) => {
             <div className="flex items-center space-x-2">
               <span className="inline-block h-[3px] w-8 bg-purple-500"></span>
               <span>Tạm dừng</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-red-600"></span>
+              <span>Chậm tiến độ</span>
             </div>
           </div>
 

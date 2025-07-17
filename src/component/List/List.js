@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef } from 'react';
 import { FaListOl, FaHashtag, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
 import AddNewPackage from '../../page/AddNewPackage/AddNewPackage';
 import Portal from '../Portal';
+import sua from '../../assets/img/sua.png'
+import xoa from '../../assets/img/xoa.png'
 
 const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileListToggle }) => {
   const [packages, setPackages] = useState([]);
@@ -171,27 +173,26 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
                 onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
               >
-                <div className="absolute top-1 right-1 flex gap-1">
+                <div className="absolute top-2 right-1 flex gap-4">
                   <button 
-                    className={`${actionButtonStyle} relative bg-blue-700`}
+                    className="hover:bg-gray-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditPackage(item.GoiThau_ID);
                     }}
                     title="Sửa"
-                    style={{ right: '1rem' }} // Đẩy nút sửa sang trái
                   >
-                    <FaEdit size={12}/>
+                    <img src={sua} className="w-4 h-4" />
                   </button>
-                  <button 
-                    className={`${actionButtonStyle} relative bg-red-700`}
+                  <button
+                    className="hover:bg-gray-100"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleConfirmDelete(item.GoiThau_ID);;
                     }}
                     title="Xóa"
                   >
-                    <FaTrash size={12} />
+                    <img src={xoa} className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -242,27 +243,26 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
               onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
             >
 
-              <div className="absolute top-1 right-1 flex gap-1">
+              <div className="absolute top-2 right-1 flex gap-4">
                 <button 
-                  className={`${actionButtonStyle} relative bg-blue-700`}
+                  className="hover:bg-gray-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditPackage(item.GoiThau_ID);
                   }}
                   title="Sửa"
-                  style={{ right: '1rem' }} // Đẩy nút sửa sang trái
                 >
-                  <FaEdit size={12} />
+                  <img src={sua} className="w-4 h-4" />
                 </button>
-                <button 
-                  className={`${actionButtonStyle} relative bd-red-700`}
+                <button
+                  className="hover:bg-gray-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleConfirmDelete(item.GoiThau_ID);;
                   }}
                   title="Xóa"
                 >
-                  <FaTrash size={12} />
+                  <img src={xoa} className="w-4 h-4" />
                 </button>
               </div>
 

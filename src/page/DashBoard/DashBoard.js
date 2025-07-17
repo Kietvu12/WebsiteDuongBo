@@ -111,7 +111,8 @@ const Dashboard = () => {
     "Đang chuẩn bị": 0,
     "Đang thi công": 0,
     "Hoàn thành": 0,
-    "Tạm dừng": 0
+    "Tạm dừng": 0,
+    "Chậm tiến độ": 0
   });
 
   const statuses = [
@@ -120,6 +121,7 @@ const Dashboard = () => {
     { label: "Đang thi công", count: statusCounts["Đang thi công"] },
     { label: "Hoàn thành", count: statusCounts["Hoàn thành"] },
     { label: "Tạm dừng", count: statusCounts["Tạm dừng"] },
+    { label: "Chậm tiến độ", count: statusCounts["Chậm tiến độ"] },
   ];
 
   const [activeStatus, setActiveStatus] = useState("Tổng số dự án");
@@ -128,8 +130,7 @@ const Dashboard = () => {
     {
       label: "Tổng số dự án",
       count: statusCounts.total,
-      color: "text-red-600",
-      box: "bg-red-600",
+      color: "text-red-600"
     },
     {
       label: "Đang chuẩn bị",
@@ -154,12 +155,19 @@ const Dashboard = () => {
       count: statusCounts["Tạm dừng"],
       color: "text-red-600",
       box: "bg-purple-500",
+    },
+
+    {
+      label: "Chậm tiến độ",
+      count: statusCounts["Chậm tiến độ"],
+      color: "text-red-600",
+      box: "bg-red-600",
     }
   ];
 
   const getStatusColor = (status) => {
     const foundStatus = statusesLabel.find((s) => s.label === status);
-    return foundStatus ? foundStatus.box : "bg-gray-400";
+    return foundStatus ? foundStatus.box : "bg-white";
   };
 
   const calculateStatusCounts = (projects) => {
@@ -168,7 +176,8 @@ const Dashboard = () => {
       "Đang chuẩn bị": 0,
       "Đang thi công": 0,
       "Hoàn thành": 0,
-      "Tạm dừng": 0
+      "Tạm dừng": 0,
+      "Chậm tiến độ": 0
     };
 
     projects.forEach((project) => {
@@ -643,6 +652,7 @@ const Dashboard = () => {
               <option value="Đang thi công">Đang thi công</option>
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
+              <option value="Chậm tiến độ">Chậm tiến độ</option>
             </select>
           </div>
 
@@ -767,6 +777,7 @@ const Dashboard = () => {
               <option value="Đang thi công">Đang thi công</option>
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
+              <option value="Chậm tiến độ">Chậm tiến độ</option>
             </select>
 
             <select
@@ -874,7 +885,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)?.box ||
-                      "bg-gray-200"
+                      "bg-white"
                       }`}
                   ></span>
                   {selectedStatus || "Tất cả"}

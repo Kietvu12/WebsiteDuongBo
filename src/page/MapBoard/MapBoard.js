@@ -111,7 +111,8 @@ const Dashboard = () => {
     "Đang chuẩn bị": 0,
     "Đang thi công": 0,
     "Hoàn thành": 0,
-    "Tạm dừng": 0
+    "Tạm dừng": 0,
+    "Chậm tiến độ": 0
   });
 
   const statuses = [
@@ -129,7 +130,6 @@ const Dashboard = () => {
       label: "Tổng số dự án",
       count: statusCounts.total,
       color: "text-red-600",
-      box: "bg-red-600",
     },
     {
       label: "Đang chuẩn bị",
@@ -154,12 +154,18 @@ const Dashboard = () => {
       count: statusCounts["Tạm dừng"],
       color: "text-red-600",
       box: "bg-purple-500",
+    },
+    {
+      label: "Chậm tiến độ",
+      count: statusCounts["Chậm tiến độ"],
+      color: "text-red-600",
+      box: "bg-red-600",
     }
   ];
 
   const getStatusColor = (status) => {
     const foundStatus = statusesLabel.find((s) => s.label === status);
-    return foundStatus ? foundStatus.box : "bg-gray-400";
+    return foundStatus ? foundStatus.box : "bg-white";
   };
 
   const calculateStatusCounts = (projects) => {
@@ -168,7 +174,8 @@ const Dashboard = () => {
       "Đang chuẩn bị": 0,
       "Đang thi công": 0,
       "Hoàn thành": 0,
-      "Tạm dừng": 0
+      "Tạm dừng": 0,
+      "Chậm tiến độ": 0
     };
 
     projects.forEach((project) => {
@@ -545,13 +552,6 @@ const Dashboard = () => {
           <FaFilter className="text-gray-600" />
           <span>Bộ lọc</span>
         </button>
-        
-        <button 
-          onClick={handleExportReport}
-          className="bg-green-700 text-white px-4 py-1 rounded font-bold"
-        >
-          XUẤT BÁO CÁO
-        </button>
       </div>
 
       {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
@@ -630,6 +630,7 @@ const Dashboard = () => {
               <option value="Đang thi công">Đang thi công</option>
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
+              <option value="Chậm tiến độ">Tạm dừng</option>
             </select>
           </div>
 
@@ -662,19 +663,6 @@ const Dashboard = () => {
               <option value="80">&gt;80%</option>
               <option value="100">100%</option>
             </select>
-          </div>
-
-          {/* Reset Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                resetFilters();
-                setShowMobileFilters(false);
-              }}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded font-medium"
-            >
-              Xóa lọc
-            </button>
           </div>
         </div>
       )}
@@ -754,6 +742,7 @@ const Dashboard = () => {
               <option value="Đang thi công">Đang thi công</option>
               <option value="Hoàn thành">Hoàn thành</option>
               <option value="Tạm dừng">Tạm dừng</option>
+              <option value="Chậm tiến độ">Chậm tiến độ</option>
             </select>
 
             <select
@@ -781,18 +770,6 @@ const Dashboard = () => {
               <option value="100">100%</option>
             </select>
 
-            {/* Nút xuất báo cáo */}
-            <div className="w-full lg:w-auto max-w-[1451px]:w-full flex justify-start">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-1.5 mr-2 lg:px-3 lg:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm lg:text-xs lg:text-sm max-w-[1451px]:w-full"
-              >
-                XÓA LỌC
-              </button>
-              <button className="bg-green-700 text-white px-4 py-1.5 lg:px-3 lg:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm lg:text-xs lg:text-sm w-full lg:w-auto max-w-[1451px]:w-full">
-                XUẤT BÁO CÁO
-              </button>
-            </div>
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
@@ -835,7 +812,7 @@ const Dashboard = () => {
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)?.box ||
-                      "bg-gray-200"
+                      "bg-white"
                       }`}
                   ></span>
                   {selectedStatus || "Tất cả"}

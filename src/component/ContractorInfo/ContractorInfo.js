@@ -37,7 +37,7 @@ const ContractorInfo = ({ data }) => {
       </div>
       <div className="p-4 max-h-50 overflow-y-auto flex flex-col justify-between h-auto"> {/* Quan trọng: justify-between */}
         {/* Phần thông tin nhà thầu */}
-        <div>
+        <div className="text-sm">
           <div className="mb-2 flex items-start">
             <p className="text-xm font-bold text-gray-800 w-1/4">Tên công ty:</p>
             <p className="text-xm font-medium text-gray-800 truncate flex-grow">

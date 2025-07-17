@@ -11,22 +11,6 @@ import AddNewCategories from '../AddNewCategories/AddNewCategories';
 import UpdateProgress from '../UpdateProgress/UpdateProgress';
 import IssueList from '../IssueList/IssueList';
 import TimeZoomHeader from '../TimelineChart/TimelineChart';
-
-const Tooltip = ({ content, position }) => {
-  return (
-    <div 
-      className="absolute bg-black text-white text-xs p-2 rounded pointer-events-none z-50 whitespace-nowrap"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        transform: 'translate(-50%, -100%)'
-      }}
-    >
-      {content}
-    </div>
-  );
-};
-
 const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -37,12 +21,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showIssuePopup, setShowIssuePopup] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-
-  const [tooltip, setTooltip] = useState({
-    visible: false,
-    content: '',
-    position: { x: 0, y: 0 }
-  });
 
   const handleOpenIssuePopup = (plan, projectId) => {
     setSelectedPlan(plan);
@@ -391,37 +369,11 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     return { left, width };
   };
 
-  const renderGanttBar = (startDate, endDate, progress, level = 0, planData = null) => {
+  const renderGanttBar = (startDate, endDate, progress, level = 0) => {
     if (!startDate || !endDate) return null;
 
     const { left, width } = calculateBarPosition(startDate, endDate);
     const progressWidth = progress ? Math.min(100, progress) * width / 100 : 0;
-
-    const handleMouseEnter = (e) => {
-      if (!planData) return;
-      
-      const rect = e.currentTarget.getBoundingClientRect();
-      setTooltip({
-        visible: true,
-        content: `
-          Plan: ${planData.khoiLuongKeHoach?.toLocaleString() || 0} ${planData.donViTinh || ''}
-          Actual: ${planData.tongKhoiLuongThucHien?.toLocaleString() || 0} ${planData.donViTinh || ''}
-          Progress: ${progress?.toFixed(0) || 0}%
-        `,
-        position: {
-          x: rect.left + rect.width / 2,
-          y: rect.top
-        }
-      });
-    };
-
-    const handleMouseLeave = () => {
-      setTooltip({
-        visible: false,
-        content: '',
-        position: { x: 0, y: 0 }
-      });
-    };
 
     return (
       <div
@@ -431,8 +383,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
           width: `${width}%`,
           marginLeft: `${level * 8}px`
         }}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         <div
           className="absolute h-full bg-blue-300 rounded"
@@ -445,32 +395,34 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       </div>
     );
   };
-
   const renderPackageRow = (packageItem, packageIndex) => {
     // Tính toán chiều rộng cố định cho các cột
-    const columnWidths = {
-      id: 'w-20',          
-      name: 'min-w-[200px] flex-1',
-      progress: 'w-24',
-      duration: 'w-20',
-      start: 'w-24',
-      end: 'w-24', 
-      actions: 'w-24'
-    };
-
+const columnWidths = {
+  id: 'w-20 flex-shrink-0',          
+  name: 'min-w-[200px] flex-1', 
+  actual: 'w-24 flex-shrink-0',   
+  plan: 'w-24 flex-shrink-0',      
+  unit: 'w-16 flex-shrink-0',   
+  progress: 'w-24 flex-shrink-0',
+  duration: 'w-20 flex-shrink-0',
+  start: 'w-24 flex-shrink-0',
+  end: 'w-24 flex-shrink-0', 
+  actions: 'w-24 flex-shrink-0'
+};
+  
     const renderDataCell = (content, width, align = 'left', extraClasses = '') => {
-      const alignmentClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
+      const alignmentClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
       return (
-        <div className={`${width} p-2 border-r border-gray-200 ${alignmentClass} ${extraClasses} truncate`}>
+        <div className={`${width} p-2 border-r border-gray-200 flex items-center ${alignmentClass} ${extraClasses} box-border flex-shrink-0`}>
           {content}
         </div>
       );
     };
-
+  
     return (
       <React.Fragment key={`package-${packageItem.goiThauId}`}>
         {/* Package Row */}
-        <div className="flex items-stretch border-b border-gray-200 hover:bg-blue-50 min-h-10">
+        <div className="flex items-stretch border-b border-gray-200 hover:bg-blue-50 min-h-8">
           {/* Data columns (50% width) */}
           <div className="w-1/2 flex">
             {renderDataCell(
@@ -479,7 +431,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
             )}
             
             {renderDataCell(
-              <div className="flex items-center">
+              <>
                 <button
                   onClick={() => toggleItem('packages', packageItem.goiThauId)}
                   className="flex items-center focus:outline-none mr-1"
@@ -491,50 +443,67 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                   )}
                 </button>
                 <span className="truncate font-medium">{packageItem.tenGoiThau}</span>
-              </div>,
+              </>,
               columnWidths.name
             )}
-
+  
+            {renderDataCell(
+              packageItem.tongKhoiLuongThucHien?.toLocaleString(),
+              columnWidths.actual,
+              'right'
+            )}
+  
+            {renderDataCell(
+              packageItem.tongKhoiLuongKeHoach?.toLocaleString(),
+              columnWidths.plan,
+              'right'
+            )}
+  
+            {renderDataCell(
+              '',
+              columnWidths.unit
+            )}
+  
             {renderDataCell(
               packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
                 ? `${Math.round((packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100)}%`
-                : '-',
+                : '',
               columnWidths.progress,
               'right'
             )}
-
+  
             {renderDataCell(
               calculateDays(packageItem.ngayKhoiCong, packageItem.ngayHoanThanh),
               columnWidths.duration,
               'center'
             )}
-
+  
             {renderDataCell(
               formatDate(packageItem.ngayKhoiCong),
               columnWidths.start
             )}
-
+  
             {renderDataCell(
               formatDate(packageItem.ngayHoanThanh),
-              columnWidths.end
+  columnWidths.end
             )}
-
+  
             {renderDataCell(
-              <div className="flex justify-center">
-                <button
-                  className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                  title="Thêm hạng mục"
-                  onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
-                >
-                  <FaPlus size={14} />
-                </button>
-              </div>,
-              columnWidths.actions
+              <button
+                className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+                title="Thêm hạng mục"
+                onClick={() => handleAddCategoryClick(packageItem.goiThauId)}
+              >
+                <FaPlus size={14} />
+              </button>,
+              columnWidths.actions,
+              'left',
+              'flex space-x-2'
             )}
           </div>
-
+  
           {/* Gantt chart area (50% width) */}
-          <div className="w-1/2 relative flex items-center min-h-10 border-l border-gray-200 overflow-hidden">
+          <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
             <div className="absolute inset-y-0 left-0 right-1 flex items-center">
               {renderGanttBar(
                 packageItem.ngayKhoiCong, 
@@ -542,24 +511,23 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                 packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
                   ? (packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100
                   : 0,
-                0,
-                packageItem // Truyền dữ liệu package
+                0 // Level 0 for package
               )}
             </div>
           </div>
         </div>
-
+  
         {/* Expanded items */}
         {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
           const progress = item.tongKhoiLuongKeHoach
             ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
             : 0;
-
+  
           const bgColor = progress >= 100 ? 'bg-green-50' : progress >= 40 ? 'bg-yellow-50' : 'bg-red-50';
-
+  
           return (
             <React.Fragment key={`item-${item.hangMucId}`}>
-              <div className={`flex items-stretch border-b border-gray-200 ${bgColor} hover:${bgColor.replace('50', '100')} min-h-10`}>
+              <div className={`flex items-stretch border-b border-gray-200 ${bgColor} hover:${bgColor.replace('50', '100')} min-h-8`}>
                 <div className="w-1/2 flex">
                   {renderDataCell(
                     `HM-${item.hangMucId}`,
@@ -567,7 +535,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                   )}
                   
                   {renderDataCell(
-                    <div className="flex items-center">
+                    <>
                       <button
                         onClick={() => toggleItem('items', item.hangMucId)}
                         className="flex items-center focus:outline-none mr-1"
@@ -579,38 +547,55 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                         )}
                       </button>
                       <span className="truncate">Hạng mục: {item.tenHangMuc}</span>
-                    </div>,
+                    </>,
                     columnWidths.name
                   )}
-
+  
+                  {renderDataCell(
+                    item.tongKhoiLuongThucHien?.toLocaleString(),
+                    columnWidths.actual,
+                    'right'
+                  )}
+  
+                  {renderDataCell(
+                    item.tongKhoiLuongKeHoach?.toLocaleString(),
+                    columnWidths.plan,
+                    'right'
+                  )}
+  
+                  {renderDataCell(
+  item.danhSachKeHoach?.[0]?.donViTinh || '',
+                    columnWidths.unit
+                  )}
+  
                   {renderDataCell(
                     `${progress.toFixed(0)}%`,
                     columnWidths.progress,
                     'right',
                     'font-medium'
                   )}
-
+  
                   {renderDataCell(
                     item.danhSachKeHoach?.[0] ? calculateDays(
                       item.danhSachKeHoach[0].ngayBatDau,
                       item.danhSachKeHoach[0].ngayKetThuc
-                    ) : '-',
+                    ) : '',
                     columnWidths.duration,
                     'center'
                   )}
-
+  
                   {renderDataCell(
-                    item.danhSachKeHoach?.[0]?.ngayBatDau ? formatDate(item.danhSachKeHoach[0].ngayBatDau) : '-',
+                    item.danhSachKeHoach?.[0]?.ngayBatDau && formatDate(item.danhSachKeHoach[0].ngayBatDau),
                     columnWidths.start
                   )}
-
+  
                   {renderDataCell(
-                    item.danhSachKeHoach?.[0]?.ngayKetThuc ? formatDate(item.danhSachKeHoach[0].ngayKetThuc) : '-',
+                    item.danhSachKeHoach?.[0]?.ngayKetThuc && formatDate(item.danhSachKeHoach[0].ngayKetThuc),
                     columnWidths.end
                   )}
-
+  
                   {renderDataCell(
-                    <div className="flex justify-center space-x-2">
+                    <>
                       <button
                         className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
                         title="Thêm kế hoạch"
@@ -625,35 +610,36 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                       >
                         <FaTrash size={14} />
                       </button>
-                    </div>,
-                    columnWidths.actions
+                    </>,
+                    columnWidths.actions,
+                    'left',
+                    'flex space-x-2'
                   )}
                 </div>
-
+  
                 {/* Gantt chart area */}
-                <div className="w-1/2 relative flex items-center min-h-10 border-l border-gray-200 overflow-hidden">
+                <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
                   <div className="absolute inset-y-0 left-0 right-1 flex items-center">
                     {item.danhSachKeHoach?.[0] && renderGanttBar(
                       item.danhSachKeHoach[0].ngayBatDau,
                       item.danhSachKeHoach[0].ngayKetThuc,
                       progress,
-                      1,
-                      item.danhSachKeHoach[0] // Truyền dữ liệu plan
+                      1 // Level 1 for item
                     )}
                   </div>
                 </div>
               </div>
-
+  
               {/* Plans */}
               {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => {
                 const planProgress = plan.khoiLuongKeHoach
                   ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100)
                   : 0;
-
+  
                 return (
-                  <div key={`plan-${plan.keHoachId}`} className="flex items-stretch border-b border-gray-200 hover:bg-gray-50 min-h-10">
+                  <div key={`plan-${plan.keHoachId}`} className="flex items-stretch border-b border-gray-200 hover:bg-gray-50 min-h-8">
                     <div className="w-1/2 flex">
-                      {renderDataCell(
+  {renderDataCell(
                         `KH-${plan.keHoachId}`,
                         columnWidths.id
                       )}
@@ -662,52 +648,67 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                         plan.tenCongTac,
                         columnWidths.name
                       )}
-
+  
+                      {renderDataCell(
+                        plan.tongKhoiLuongThucHien?.toLocaleString(),
+                        columnWidths.actual,
+                        'right'
+                      )}
+  
+                      {renderDataCell(
+                        plan.khoiLuongKeHoach?.toLocaleString(),
+                        columnWidths.plan,
+                        'right'
+                      )}
+  
+                      {renderDataCell(
+                        plan.donViTinh,
+                        columnWidths.unit
+                      )}
+  
                       {renderDataCell(
                         `${planProgress.toFixed(0)}%`,
                         columnWidths.progress,
                         'right'
                       )}
-
+  
                       {renderDataCell(
                         calculateDays(plan.ngayBatDau, plan.ngayKetThuc),
                         columnWidths.duration,
                         'center'
                       )}
-
+  
                       {renderDataCell(
                         formatDate(plan.ngayBatDau),
                         columnWidths.start
                       )}
-
+  
                       {renderDataCell(
                         formatDate(plan.ngayKetThuc),
                         columnWidths.end
                       )}
-
+  
                       {renderDataCell(
-                        <div className="flex justify-center">
-                          <button
-                            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                            title="Xóa kế hoạch"
-                            onClick={() => handleDeleteKeHoach(plan.keHoachId)}
-                          >
-                            <FaTrash size={14} />
-                          </button>
-                        </div>,
-                        columnWidths.actions
+                        <button
+                          className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
+                          title="Xóa kế hoạch"
+                          onClick={() => handleDeleteKeHoach(plan.keHoachId)}
+                        >
+                          <FaTrash size={14} />
+                        </button>,
+                        columnWidths.actions,
+                        'left'
                       )}
                     </div>
-
+  
                     {/* Gantt chart area */}
-                    <div className="w-1/2 relative flex items-center min-h-10 border-l border-gray-200 overflow-hidden">
+                    <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
                       <div className="absolute inset-y-0 left-0 right-1 flex items-center">
                         {renderGanttBar(
                           plan.ngayBatDau,
                           plan.ngayKetThuc,
                           planProgress,
-                          2,
-                          plan // Truyền dữ liệu plan
+                          2 // Level 2 for plan
                         )}
                       </div>
                     </div>
@@ -1104,20 +1105,23 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
             </div>
           </div>
 
-          <div className="border rounded-lg min-h-0">
-            {/* Fixed header - giữ nguyên cấu trúc */}
+          <div className="border rounded-lg overflow-hidden">
+            {/* Fixed header */}
             <div className="sticky top-0 z-10 bg-white">
               <div className="flex border-b border-gray-200 bg-gray-50">
                 {/* Fixed columns header (50% width) */}
                 <div className="w-1/2 flex">
-                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium">Mã số</div>
-                  <div className="flex-1 min-w-[200px] px-2 py-2 border-r border-gray-200 font-medium">Công việc</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-center">Tiến độ</div>
-                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center">Thời gian</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Bắt đầu</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Kết thúc</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Thao tác</div>
-                </div>
+  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Mã số</div>
+  <div className="min-w-[200px] flex-1 px-2 py-2 border-r border-gray-200 font-medium box-border">Công việc</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL thực hiện</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL kế hoạch</div>
+  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Đơn vị</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">Tiến độ</div>
+  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center flex-shrink-0 box-border">Thời gian</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Bắt đầu</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Kết thúc</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Thao tác</div>
+</div>
 
                 {/* Timeline header (50% width) */}
                 <div
@@ -1129,8 +1133,12 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
               </div>
             </div>
 
-            {/* Phần body - không có overflow */}
-            <div className="overflow-visible">
+            {/* Scrollable body */}
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: '600px' }}
+              ref={bodyRef}
+            >
               {([]).concat(
                 data?.duAnThanhPhan?.danhSachGoiThau || [],
                 data?.duAnTong?.danhSachGoiThauTrucTiep || [],
@@ -1406,10 +1414,6 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
             />
           </div>
         </div>
-      )}
-
-      {tooltip.visible && (
-        <Tooltip content={tooltip.content} position={tooltip.position} />
       )}
     </div>
   );

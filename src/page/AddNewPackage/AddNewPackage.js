@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -8,7 +9,6 @@ import { useParams } from 'react-router-dom';
 import { kml } from '@mapbox/togeojson';
 import { DOMParser } from 'xmldom';
 import vietnamGeoJson from '../../assets/data/vietnam.json'
-import * as turf from '@turf/turf';
 import './AddNewPackage.css'
 
 const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
@@ -174,6 +174,9 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       case 'Tạm dừng':
         routeColor = '#9333ea'; // purple-500
         break;
+      case 'Chậm tiến độ':
+        routeColor = '#dc2626'; // purple-500
+        break;
       default:
         routeColor = '#3388ff'; // màu mặc định
     }
@@ -203,7 +206,8 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
           { status: 'Đang chuẩn bị', color: '#3b82f6' },
           { status: 'Đang thi công', color: '#16a34a' },
           { status: 'Hoàn thành', color: '#eab308' },
-          { status: 'Tạm dừng', color: '#9333ea' }
+          { status: 'Tạm dừng', color: '#9333ea' },
+          { status: 'Chậm tiến độ', color: '#dc2626' }
         ];
         
         let html = '<h4>Trạng thái</h4>';
@@ -748,6 +752,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                   <option value="Đang thi công">Đang thi công</option>
                   <option value="Hoàn thành">Hoàn thành</option>
                   <option value="Tạm dừng">Tạm dừng</option>
+                  <option value="Chậm tiến độ">Chậm tiến độ</option>
                 </select>
               </div>
             </div>
