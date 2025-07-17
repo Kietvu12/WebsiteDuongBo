@@ -397,23 +397,23 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   };
   const renderPackageRow = (packageItem, packageIndex) => {
     // Tính toán chiều rộng cố định cho các cột
-    const columnWidths = {
-      id: 'w-20',          
-      name: 'min-w-[200px] flex-1', 
-      actual: 'w-24',   
-      plan: 'w-24',      
-      unit: 'w-16',   
-      progress: 'w-24',
-      duration: 'w-20',
-      start: 'w-24',
-      end: 'w-24', 
-      actions: 'w-24'
-    };
+const columnWidths = {
+  id: 'w-20 flex-shrink-0',          
+  name: 'min-w-[200px] flex-1', 
+  actual: 'w-24 flex-shrink-0',   
+  plan: 'w-24 flex-shrink-0',      
+  unit: 'w-16 flex-shrink-0',   
+  progress: 'w-24 flex-shrink-0',
+  duration: 'w-20 flex-shrink-0',
+  start: 'w-24 flex-shrink-0',
+  end: 'w-24 flex-shrink-0', 
+  actions: 'w-24 flex-shrink-0'
+};
   
     const renderDataCell = (content, width, align = 'left', extraClasses = '') => {
       const alignmentClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
       return (
-        <div className={`${width} p-2 border-r border-gray-200 flex items-center ${alignmentClass} ${extraClasses}`}>
+        <div className={`${width} p-2 border-r border-gray-200 flex items-center ${alignmentClass} ${extraClasses} box-border flex-shrink-0`}>
           {content}
         </div>
       );
@@ -1111,18 +1111,17 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
               <div className="flex border-b border-gray-200 bg-gray-50">
                 {/* Fixed columns header (50% width) */}
                 <div className="w-1/2 flex">
-
-                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium">Mã số</div>
-                  <div className="flex-1 min-w-[200px] px-2 py-2 border-r border-gray-200 font-medium">Công việc</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">KL thực hiện</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">KL kế hoạch</div>
-                  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium">Đơn vị</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right">Tiến độ</div>
-                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center">Thời gian</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Bắt đầu</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Kết thúc</div>
-                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium">Thao tác</div>
-                </div>
+  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Mã số</div>
+  <div className="min-w-[200px] flex-1 px-2 py-2 border-r border-gray-200 font-medium box-border">Công việc</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL thực hiện</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL kế hoạch</div>
+  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Đơn vị</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">Tiến độ</div>
+  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center flex-shrink-0 box-border">Thời gian</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Bắt đầu</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Kết thúc</div>
+  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Thao tác</div>
+</div>
 
                 {/* Timeline header (50% width) */}
                 <div

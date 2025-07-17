@@ -25,10 +25,10 @@ import ConstructorProgress from './page/ConstructorProgress/ConstructorProgress'
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
-    <div style={{ 
-      display: 'flex', 
-      height: '100vh', 
-      overflow: 'hidden' 
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      overflow: 'hidden'
     }}>
       {/* Sidebar cố định */}
       <div style={{
@@ -37,16 +37,16 @@ const LayoutWithSidebar = ({ children }) => {
         top: 0,
         overflowY: 'auto'
       }}
-      className='z-10'>
+        className='z-10'>
         <Sidebar />
       </div>
-      
+
       {/* Content scrollable */}
       <div style={{
         flex: 1,
         overflowY: 'auto'
       }}>
-        <div style={{ minHeight: '100%'}} className=''>
+        <div style={{ minHeight: '100%' }} className=''>
           {children}
           <div className="fixed bottom-6 right-6 z-40">
             <ChatbotButton />
@@ -79,13 +79,13 @@ function App() {
         console.error('Lỗi khi cập nhật:', error);
       }
     };
-  
+
     // Gọi ngay khi component mount
     capNhatTatCa();
-  
+
     // Gọi lại mỗi 1 tiếng (3600000 ms)
     const interval = setInterval(capNhatTatCa, 3600000);
-  
+
     // Clear interval khi component unmount
     return () => clearInterval(interval);
   }, []);
@@ -94,114 +94,116 @@ function App() {
   }, []);
 
   if (loading || !authChecked) return <div>Đang tải thông tin người dùng...</div>;
-  
+
 
   return (
     <ProjectProvider>
-    <Router>
-      <Routes>
-        <Route path='/' element={<Login />} />
+      <Router>
+        <Routes>
+          <Route path='/' element={<Login />} />
 
-        <Route path='/home' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <DashBoard />
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/map-views' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <MapBoard />
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/detail' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <Detail />
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/plan' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <Plan/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/side-project/:DuAnID' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <SideProject/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/project-report/:projectId' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <ProjectReport/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/work-items' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <WorkItem/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/project-progress' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <ProjectProgress/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/approvals' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <Approvals/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/add-new' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <AddNewProject/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/add-new/:projectId' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <AddNewSubProject/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/add-new-package/:projectId' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <AddNewPackage/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/add-new-contructor' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <AddNewContructors/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-        <Route path='/constructor-progress' element={
-          <ProtectedRoute>
-            <LayoutWithSidebar>
-              <ConstructorProgress/>
-            </LayoutWithSidebar>
-          </ProtectedRoute>
-        } />
-      </Routes>
-    </Router>
+          <Route path='/home' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <DashBoard />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/map-views' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <MapBoard />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/detail' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <Detail />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/plan' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <Plan />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/side-project/:DuAnID' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <SideProject />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/project-report/:projectId' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <ProjectReport />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/work-items' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <div style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '125%' }}>
+                  <WorkItem />
+                </div>
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/project-progress' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <ProjectProgress />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/approvals' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <Approvals />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/add-new' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <AddNewProject />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/add-new/:projectId' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <AddNewSubProject />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/add-new-package/:projectId' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <AddNewPackage />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/add-new-contructor' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <AddNewContructors />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/constructor-progress' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <ConstructorProgress />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
     </ProjectProvider>
   );
 }

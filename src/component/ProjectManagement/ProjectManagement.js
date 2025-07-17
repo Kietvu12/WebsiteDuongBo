@@ -471,7 +471,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
         <div className="text-center py-6 text-gray-400 text-sm">
           Chưa có báo cáo tiến độ nào cho kế hoạch này
         </div>
-      ) : viewMode === 'list' ? (
+      ) : viewMode === '' ? (
         // Chế độ xem danh sách
         <div className="space-y-2">
           {selectedPlan.tienDoThucHien.map((item, index) => (
