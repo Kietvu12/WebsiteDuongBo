@@ -677,7 +677,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
                   }`}
                   value={formData.TenGoiThau}
                   onChange={handleInputChange}
-                  required
                 />
                 {requiredFieldsError.TenGoiThau && (
                   <p className="mt-1 text-xs text-red-600">{requiredFieldsError.TenGoiThau}</p>

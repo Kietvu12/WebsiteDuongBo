@@ -497,7 +497,8 @@ const AddNewProject = () => {
             'NguonVon',
             'TongChieuDai',
             'KeHoachHoanThanh',
-            'LoaiHinh_ID'
+            'LoaiHinh_ID',
+            'MoTaChung'
         ];
 
         requiredFields.forEach(field => {
@@ -823,7 +824,6 @@ const AddNewProject = () => {
                                     ${requiredFieldsError.TenDuAn ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TenDuAn}
                                 onChange={handleInputChange}
-                                required
                             />
                         </div>
                         <div className="flex flex-col">
@@ -838,7 +838,6 @@ const AddNewProject = () => {
                                     ${requiredFieldsError.TongChieuDai ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TongChieuDai}
                                 onChange={handleInputChange}
-                                required
                             />
                         </div>
                         <div className="flex flex-col">
@@ -976,7 +975,8 @@ const AddNewProject = () => {
                         <textarea
                             name="MoTaChung"
                             rows={2}
-                            className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                            className={`w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                ${requiredFieldsError.MoTaChung ? 'border-red-500' : 'border-gray-300'}`}
                             value={formData.MoTaChung}
                             onChange={handleInputChange}
                         />
