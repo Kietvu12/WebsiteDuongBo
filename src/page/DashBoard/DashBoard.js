@@ -142,7 +142,7 @@ const Dashboard = () => {
       label: "Đang thi công",
       count: statusCounts["Đang thi công"],
       color: "text-red-600",
-      box: "bg-green-600",
+      box: "bg-[#33FF57]",
     },
     {
       label: "Hoàn thành",
