@@ -2243,141 +2243,114 @@ app.get('/:duAnId/hang-muc', async (req, res) => {
       duAnIds = duAnIds.concat(subDuAnRows.map(row => row.DuAnID));
     }
 
-    // 3. Query lấy dữ liệu hạng mục (nhóm theo HangMucID)
-    let query = `
+    // 3. Query lấy dữ liệu hạng mục
+    let hangMucQuery = `
       SELECT 
         h.HangMucID,
         h.TenHangMuc,
         h.LoaiHangMuc,
         gt.TenGoiThau,
         gt.DuAn_ID,
-        GROUP_CONCAT(DISTINCT nt.TenNhaThau SEPARATOR ', ') as NhaThau,
-        MIN(kh.NgayBatDau) as NgayBatDau,
-        MAX(kh.NgayKetThuc) as NgayKetThuc,
-        SUM(kh.KhoiLuongKeHoach) as TongKhoiLuongKeHoach,
-        SUM(IFNULL(td.KhoiLuongThucHien, 0)) as TongKhoiLuongThucHien,
-        MAX(kh.DonViTinh) as DonViTinh,
-        CASE 
-          WHEN SUM(kh.KhoiLuongKeHoach) <= 0 THEN 'KHONG_XAC_DINH'
-          WHEN SUM(IFNULL(td.KhoiLuongThucHien, 0)) >= SUM(kh.KhoiLuongKeHoach) THEN 'HOAN_THANH'
-          WHEN CURRENT_DATE > MAX(kh.NgayKetThuc) THEN 'CHAM_TIEN_DO'
-          ELSE 'DANG_THUC_HIEN'
-        END as TrangThai,
-        CASE
-          WHEN SUM(kh.KhoiLuongKeHoach) <= 0 THEN 0
-          ELSE (SUM(IFNULL(td.KhoiLuongThucHien, 0)) / SUM(kh.KhoiLuongKeHoach) * 100)
-        END as PhanTramHoanThanh,
-        MAX(td.NgayCapNhat) as NgayCapNhatGanNhat
+        GROUP_CONCAT(DISTINCT kh.KeHoachID SEPARATOR ',') as KeHoachIDs
       FROM hangmuc h
       JOIN goithau gt ON h.GoiThauID = gt.GoiThau_ID
       JOIN quanlykehoach kh ON h.HangMucID = kh.HangMucID
-      JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
-      LEFT JOIN tiendothuchien td ON kh.KeHoachID = td.KeHoachID
       WHERE gt.DuAn_ID IN (?)
-      GROUP BY h.HangMucID, h.TenHangMuc, h.LoaiHangMuc, gt.TenGoiThau, gt.DuAn_ID
+      GROUP BY h.HangMucID
     `;
 
-    // Thêm điều kiện lọc
-    if (trangThai) {
-      query += ` HAVING TrangThai = ?`;
-    } else {
-      query += ` HAVING TrangThai IN ('CHAM_TIEN_DO', 'HOAN_THANH', 'DANG_THUC_HIEN')`;
-    }
+    // Thực thi query hạng mục
+    const [hangMucRows] = await pool.query(hangMucQuery, [duAnIds]);
 
-    // 4. Thực thi query
-    const params = [duAnIds];
-    if (trangThai) params.push(trangThai);
+    // 4. Lấy tất cả KeHoachIDs để query kế hoạch và nhà thầu
+    const allKeHoachIDs = hangMucRows
+      .filter(row => row.KeHoachIDs)
+      .flatMap(row => row.KeHoachIDs.split(','))
+      .filter((value, index, self) => self.indexOf(value) === index);
 
-    const [hangMucRows] = await pool.query(query, params);
+    // 5. Query lấy dữ liệu kế hoạch và nhà thầu
+    let keHoachDetails = [];
+    if (allKeHoachIDs.length > 0) {
+      // Query kế hoạch kèm thông tin nhà thầu
+      const [keHoachRows] = await pool.query(`
+        SELECT 
+          kh.KeHoachID,
+          kh.HangMucID,
+          kh.TenCongTac,
+          kh.KhoiLuongKeHoach,
+          kh.DonViTinh,
+          kh.NgayBatDau,
+          kh.NgayKetThuc,
+          COALESCE(SUM(td.KhoiLuongThucHien), 0) as KhoiLuongThucHien,
+          MAX(td.NgayCapNhat) as NgayCapNhatGanNhat,
+          h.TenHangMuc,
+          gt.TenGoiThau,
+          nt.NhaThauID,
+          nt.TenNhaThau,
+          nt.Loai as LoaiNhaThau,
+          nt.MaSoThue,
+          nt.DiaChiTruSo,
+          CASE
+            WHEN kh.KhoiLuongKeHoach <= 0 THEN 'KHONG_XAC_DINH'
+            WHEN COALESCE(SUM(td.KhoiLuongThucHien), 0) >= kh.KhoiLuongKeHoach THEN 'HOAN_THANH'
+            WHEN CURRENT_DATE > kh.NgayKetThuc THEN 'CHAM_TIEN_DO'
+            ELSE 'DANG_THUC_HIEN'
+          END as TrangThai
+        FROM quanlykehoach kh
+        LEFT JOIN tiendothuchien td ON kh.KeHoachID = td.KeHoachID
+        JOIN hangmuc h ON kh.HangMucID = h.HangMucID
+        JOIN goithau gt ON h.GoiThauID = gt.GoiThau_ID
+        JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
+        WHERE kh.KeHoachID IN (?)
+        GROUP BY kh.KeHoachID
+      `, [allKeHoachIDs]);
 
-    // 5. Tính toán tổng hợp với kiểm tra dữ liệu hợp lệ
-    let tongKhoiLuongKeHoach = 0;
-    let tongKhoiLuongThucHien = 0;
-    let soHangMucHoanThanh = 0;
-    let soHangMucChamTienDo = 0;
-    let soHangMucDangThucHien = 0;
-    let soHangMucKhongXacDinh = 0;
-
-    const hangMucDetails = hangMucRows.map(row => {
-      // Kiểm tra và xử lý dữ liệu không hợp lệ
-      const khoiLuongKeHoach = parseFloat(row.TongKhoiLuongKeHoach) || 0;
-      const khoiLuongThucHien = parseFloat(row.TongKhoiLuongThucHien) || 0;
-      
-      // Giới hạn giá trị để tránh số quá lớn
-      const safeKhoiLuongKeHoach = Math.min(khoiLuongKeHoach, Number.MAX_SAFE_INTEGER);
-      const safeKhoiLuongThucHien = Math.min(khoiLuongThucHien, Number.MAX_SAFE_INTEGER);
-
-      // Tính toán phần trăm hoàn thành an toàn
-      let phanTramHoanThanh = 0;
-      if (safeKhoiLuongKeHoach > 0) {
-        phanTramHoanThanh = (safeKhoiLuongThucHien / safeKhoiLuongKeHoach) * 100;
-        // Giới hạn phần trăm trong khoảng 0-10000% để tránh hiển thị sai
-        phanTramHoanThanh = Math.max(0, Math.min(phanTramHoanThanh, 10000));
-      }
-
-      // Thống kê tổng hợp
-      if (safeKhoiLuongKeHoach > 0) {
-        tongKhoiLuongKeHoach += safeKhoiLuongKeHoach;
-        tongKhoiLuongThucHien += safeKhoiLuongThucHien;
-      }
-
-      if (row.TrangThai === 'HOAN_THANH') soHangMucHoanThanh++;
-      else if (row.TrangThai === 'CHAM_TIEN_DO') soHangMucChamTienDo++;
-      else if (row.TrangThai === 'KHONG_XAC_DINH') soHangMucKhongXacDinh++;
-      else soHangMucDangThucHien++;
-
-      return {
-        id: row.HangMucID,
+      keHoachDetails = keHoachRows.map(row => ({
+        id: row.KeHoachID,
+        hangMucId: row.HangMucID,
         tenHangMuc: row.TenHangMuc,
-        loaiHangMuc: row.LoaiHangMuc,
         tenGoiThau: row.TenGoiThau,
-        nhaThau: row.NhaThau,
+        tenCongTac: row.TenCongTac,
         batDau: row.NgayBatDau?.toISOString().split('T')[0],
         ketThuc: row.NgayKetThuc?.toISOString().split('T')[0],
-        phanTramTienDo: phanTramHoanThanh.toFixed(2),
-        khoiLuongThucHien: safeKhoiLuongThucHien,
-        khoiLuongKeHoach: safeKhoiLuongKeHoach,
+        khoiLuongKeHoach: row.KhoiLuongKeHoach,
+        khoiLuongThucHien: row.KhoiLuongThucHien,
         donViTinh: row.DonViTinh,
-        ngayCapNhatGanNhat: row.NgayCapNhatGanNhat?.toISOString().split('T')[0],
+        ngayCapNhat: row.NgayCapNhatGanNhat?.toISOString().split('T')[0],
         trangThai: row.TrangThai,
-        duAnId: row.DuAn_ID
-      };
-    });
-
-    // 6. Tính phần trăm hoàn thành tổng thể với kiểm tra an toàn
-    let phanTramHoanThanhTong = 0;
-    if (tongKhoiLuongKeHoach > 0) {
-      phanTramHoanThanhTong = (tongKhoiLuongThucHien / tongKhoiLuongKeHoach) * 100;
-      // Giới hạn phần trăm trong khoảng hợp lý
-      phanTramHoanThanhTong = Math.max(0, Math.min(phanTramHoanThanhTong, 10000));
+        phanTramHoanThanh: row.KhoiLuongKeHoach > 0 
+          ? Math.min((row.KhoiLuongThucHien / row.KhoiLuongKeHoach) * 100, 100).toFixed(2)
+          : '0',
+        nhaThau: {
+          id: row.NhaThauID,
+          tenNhaThau: row.TenNhaThau,
+          loai: row.LoaiNhaThau,
+          maSoThue: row.MaSoThue,
+          diaChi: row.DiaChiTruSo
+        }
+      }));
     }
 
-    // 7. Phân loại hạng mục theo yêu cầu
-    const hangMucChamTienDo = hangMucDetails.filter(h => h.trangThai === 'CHAM_TIEN_DO');
-    const hangMucHoanThanh = hangMucDetails.filter(h => h.trangThai === 'HOAN_THANH');
-    const hangMucDangThucHien = hangMucDetails.filter(h => h.trangThai === 'DANG_THUC_HIEN');
+    // 6. Phân loại kế hoạch theo trạng thái
+    const keHoachPhanLoai = {
+      hoanThanh: keHoachDetails.filter(k => k.trangThai === 'HOAN_THANH'),
+      chamTienDo: keHoachDetails.filter(k => k.trangThai === 'CHAM_TIEN_DO'),
+      dangThucHien: keHoachDetails.filter(k => k.trangThai === 'DANG_THUC_HIEN'),
+      khongXacDinh: keHoachDetails.filter(k => k.trangThai === 'KHONG_XAC_DINH')
+    };
 
-    // 8. Trả kết quả
+    // 7. Trả kết quả
     res.json({
       success: true,
       data: {
         duAn: {
           id: duAn.DuAnID,
           tenDuAn: duAn.TenDuAn,
-          loaiDuAn: duAn.ParentID ? 'DU_AN_THANH_PHAN' : 'DU_AN_CHA',
-          phanTramHoanThanh: phanTramHoanThanhTong.toFixed(2),
-          tongKhoiLuongKeHoach,
-          tongKhoiLuongThucHien
+          loaiDuAn: duAn.ParentID ? 'DU_AN_THANH_PHAN' : 'DU_AN_CHA'
         },
-        hangMucChamTienDo,
-        hangMucHoanThanh,
-        hangMucDangThucHien, // Thêm danh sách hạng mục đang thực hiện
-        thongKe: {
-          tongSoHangMuc: hangMucDetails.length,
-          soHangMucHoanThanh,
-          soHangMucChamTienDo,
-          soHangMucDangThucHien,
-          soHangMucKhongXacDinh
+        keHoach: {
+          tatCa: keHoachDetails,
+          phanLoai: keHoachPhanLoai
         }
       }
     });

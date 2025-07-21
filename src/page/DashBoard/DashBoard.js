@@ -37,7 +37,7 @@ const Dashboard = () => {
     const data = [
       { name: 'Hoàn thành', value: parseFloat(project?.thongKe?.phanTramHoanThanh || 0), color: '#16A34A' },
       { name: 'Chậm tiến độ', value: parseFloat(project?.thongKe?.phanTramChamTienDo || 0), color: '#CA8A04' },
-      { name: 'Kế hoạch', value: parseFloat(project?.thongKe?.phanTramKeHoach || 0), color: '#2563EB' },
+      { name: 'Đang làm', value: parseFloat(project?.thongKe?.phanTramKeHoach || 0), color: '#2563EB' },
     ];
 
     return (
@@ -110,10 +110,10 @@ const Dashboard = () => {
   const handleOpenPopup = (duAnId, status) => {
     setPopupData({ status, duAnId });
   };
-  
+
   const handleClosePopup = () => {
     setPopupData({ status: null, duAnId: null });
-  };  
+  };
 
   const debouncedSetPopupStatus = useCallback(
     debounce((status) => {
@@ -571,9 +571,11 @@ const Dashboard = () => {
   const handleExportReport = () => {
     navigate("/bao-cao-tong");
   };
+  console.log("Dữ liệu dự án heheh:", filteredProjects);
+
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base">
+    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base overflow-hidden">
       <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
         <div className="flex items-center space-x-4 pt-0 md:pt-1">
           <span className="text-gray-500">Thông báo</span>
@@ -844,19 +846,6 @@ const Dashboard = () => {
               <option value="80">>80%</option>
               <option value="100">100%</option>
             </select>
-
-            {/* Nút xuất báo cáo */}
-            <div className="w-full md:w-auto max-w-[1451px]:w-full flex justify-start">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-1.5 mr-2 md:px-3 md:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm md:text-xs lg:text-sm max-w-[1451px]:w-full"
-              >
-                XÓA LỌC
-              </button>
-              <button className="bg-green-700 text-white px-4 py-1.5 md:px-3 md:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm md:text-xs lg:text-sm w-full md:w-auto max-w-[1451px]:w-full">
-                XUẤT BÁO CÁO
-              </button>
-            </div>
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
@@ -985,19 +974,20 @@ const Dashboard = () => {
             {/* Desktop Table */}
             <div
               className="hidden md:flex flex-col"
-              style={{ height: "calc(100vh - 300px)" }}
+              style={{ height: "calc(100vh - 100px)" }}
             >
               <div className="overflow-y-auto">
                 <table className="w-full border border-gray-300">
-                  <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
+                  <thead className="bg-gray-100 text-gray-500 sticky top-0 z-10">
                     <tr className="text-center">
-                      <th className="border px-2 py-2 w-8">CHỌN</th>
-                      <th className="border px-2 py-2 w-20">THAO TÁC</th>
-                      <th className="border px-2 py-2 w-24">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-2 min-w-[100px]">TÊN DỰ ÁN</th>
-                      <th className="border px-2 py-2 w-24">DÀI TUYẾN</th>
-                      <th className="border px-2 py-2 w-28">TRẠNG THÁI</th>
-                      <th className="border px-2 py-2 w-80">TIẾN ĐỘ</th>
+                      <th className="border text-gray-500 px-2 py-2 w-8">Chọn</th>
+                      <th className="border text-gray-500 px-2 py-2 w-20">Thao tác</th>
+                      <th className="border text-gray-500 px-2 py-2 w-24">Mã dự án</th>
+                      <th className="border text-gray-500 px-2 py-2 min-w-[100px]">Tên dự án</th>
+                      <th className="border text-gray-500 px-2 py-2 w-24">Dài tuyến</th>
+                      <th className="border text-gray-500 px-2 py-2 min-w-[50px]">Trạng thái</th>
+                      <th className="border text-gray-500 px-2 py-2 w-28">Gói thầu</th>
+                      <th className="border text-gray-500 px-2 py-2 w-80">Tiến độ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1094,19 +1084,26 @@ const Dashboard = () => {
                                 Xem chi tiết
                               </div>
                             </td>
-                            <td className="border px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
+                            <td className="border font-bold px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
                               {project.TenDuAn}
                             </td>
                             <td className="border px-2 py-2 text-sm text-center">
-                              {project.TongChieuDai} Km
+                            <span className="font-bold">{project.TongChieuDai} </span>km
+                            </td>
+                            <td className="border px-2 py-2 text-center">
+                              <div className="flex justify-center">
+                                <span
+                                  className={`px-2 py-1 text-sm text-white rounded-full whitespace-nowrap ${getStatusColor(project.TrangThai)}`}
+                                >
+                                  {project.TrangThai}
+                                </span>
+                              </div>
                             </td>
                             <td className="border px-2 py-2 text-center">
                               <span
-                                className={`px-2 py-1 text-xs text-white rounded-full ${getStatusColor(
-                                  project.TrangThai
-                                )}`}
+                                className="px-2 py-1 text-xm text-gray-600 rounded-full"
                               >
-                                {project.TrangThai}
+                                <span className="font-bold">{project.soLuongGoiThau}</span> gói thầu
                               </span>
                             </td>
                             <td className="border px-2 py-2 text-sm">
@@ -1118,39 +1115,39 @@ const Dashboard = () => {
                                   <div className="flex items-center gap-2">
                                     <img src={planIcon} width="14" height="14" alt="Kế hoạch" className="flex-shrink-0" />
                                     <span
-  className="text-blue-600 cursor-pointer"
-  onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
->
-  Kế hoạch: <strong>{project?.thongKe?.phanTramKeHoach ?? '0'}%</strong>
-</span>
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
+                                    >
+                                      Đang làm: <strong className="text-blue-600">{project?.thongKe?.phanTramKeHoach ?? '0'}%</strong>
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <img src={actualIcon} width="14" height="14" alt="Hoàn thành" className="flex-shrink-0" />
                                     <span
-  className="text-green-600 cursor-pointer"
-  onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
->
-  Hoàn thành: <strong>{project?.thongKe?.phanTramHoanThanh ?? '0'}%</strong>
-</span>
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
+                                    >
+                                      Hoàn thành: <strong className="text-green-600">{project?.thongKe?.phanTramHoanThanh ?? '0'}%</strong>
+                                    </span>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <img src={delayIcon} width="14" height="14" alt="Chậm tiến độ" className="flex-shrink-0" />
                                     <span
-  className="text-yellow-600 cursor-pointer"
-  onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
->
-  Chậm tiến độ: <strong>{project?.thongKe?.phanTramChamTienDo ?? '0'}%</strong>
-</span>
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
+                                    >
+                                      Chậm tiến độ: <strong className="text-yellow-600">{project?.thongKe?.phanTramChamTienDo ?? '0'}%</strong>
+                                    </span>
                                   </div>
                                 </div>
                               </div>
                               {popupData.status && popupData.duAnId === project.DuAnID && (
-  <TienDoHangMucPopup
-    duAnId={popupData.duAnId}
-    status={popupData.status}
-    onClose={handleClosePopup}
-  />
-)}
+                                <TienDoHangMucPopup
+                                  duAnId={popupData.duAnId}
+                                  status={popupData.status}
+                                  onClose={handleClosePopup}
+                                />
+                              )}
 
                             </td>
                           </tr>
@@ -1170,6 +1167,7 @@ const Dashboard = () => {
 
                 {/* Phần phân trang */}
                 {filteredProjects.length > 0 && (
+                      <div className="sticky bottom-0 bg-white border-t border-gray-200 z-10">
                   <div className="flex justify-between items-center mt-4 px-4 py-2 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
                       Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} trong tổng số {filteredProjects.length} dự án
@@ -1201,6 +1199,7 @@ const Dashboard = () => {
                         Sau
                       </button>
                     </div>
+                  </div>
                   </div>
                 )}
               </div>

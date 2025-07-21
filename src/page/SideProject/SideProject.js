@@ -885,7 +885,7 @@ const SideProject = () => {
             {/* Desktop Table */}
             <div
               className="hidden md:flex flex-col"
-              style={{ height: "calc(100vh - 300px)" }}
+              style={{ height: "calc(100vh - 100px)" }}
             >
               <div className="overflow-y-auto">
                 <h1 className="text-l mt-6 md:mt-0 font-bold">DANH SÁCH DỰ ÁN THÀNH PHẦN</h1>

@@ -771,45 +771,11 @@ const Dashboard = () => {
               <option value="80">&gt;80%</option>
               <option value="100">100%</option>
             </select>
-            <button
-              onClick={resetFilters}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded text-xs font-medium md:col-start-4"
-            >
-              Xóa lọc
-            </button>
-          </div>
-          <div className="hidden md:flex gap-2 mb-2 mt-3">
-            <button className="bg-green-700 text-white pl-10 pr-10 px-4 py-1 rounded font-bold text-sm">
-              XUẤT BÁO CÁO
-            </button>
+            
           </div>
           {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
 
           {/* Status bar section - hidden on mobile */}
-          <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
-            <div className="flex shadow overflow-hidden bg-white w-full mt-1">
-              {statuses.map((status) => (
-                <div
-                  key={status.label}
-                  onClick={() => handleStatusClick(status.label)}
-                  className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${status.label !== "Tổng số dự án"
-                      ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
-                      : ""
-                    }
-                    ${activeStatus === status.label
-                      ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
-                      : "bg-gray-100 text-gray-600"
-                    }
-                  `}
-                >
-                  <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className="text-sm font-bold">{status.label}</div>
-                  <div className="text-sm text-gray-500">{status.count}</div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
 
@@ -910,7 +876,7 @@ const Dashboard = () => {
             {/* Desktop Table */}
             <div
               className="hidden md:flex flex-col"
-              style={{ height: "calc(100vh - 300px)" }}
+              style={{ height: "calc(100vh - 100px)" }}
             >
               <div className=" h-full overflow-y-auto">
                   <MapComponent projects={filteredProjects} />

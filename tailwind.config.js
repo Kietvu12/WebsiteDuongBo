@@ -9,7 +9,8 @@ module.exports = {
         '3xl': '1451px',
         '4xl': '1720px',
         '5xl': '1820px',
-        'ssm': '1050px'
+        'ssm': '1050px',
+        'mml':'1420px',
       },
     },
   },
