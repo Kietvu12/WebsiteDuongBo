@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import axios from 'axios';
 import { FaBuilding, FaPhone, FaEnvelope, FaIdCard, FaCalendarAlt, FaMapMarkerAlt, FaUserTie, FaFileAlt, FaTrash, FaSave } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useProject } from '../../contexts/ProjectContext';
+import { FaArrowLeft, FaRegBell } from 'react-icons/fa'
 
 const AddNewContructors = () => {
+    const navigate = useNavigate();
   const [formData, setFormData] = useState({
     TenNhaThau: '',
     Loai: '',
@@ -17,6 +21,9 @@ const AddNewContructors = () => {
     NoiCap: '',
     GhiChu: ''
   });
+    const menuRef = useRef(null);
+    const [showMenu, setShowMenu] = useState(false);
+    const { logout, user} = useProject();
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -85,14 +92,52 @@ const AddNewContructors = () => {
       <div className="max-w-5xl mx-auto">
         <div className="bg-white shadow-xl rounded-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-blue-600 py-5 px-6 sm:px-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white flex items-center">
-                <FaBuilding className="mr-3" />
-                Thêm Nhà Thầu Mới
-              </h2>
+          <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
+        {/* Top Nav */}
+             <div className="flex justify-between items-center gap-2">
+          {/* Nút back */}
+          <button 
+            onClick={() => navigate(-1)} 
+            className="p-1 hover:bg-gray-100 rounded text-gray-600"
+            aria-label="Quay lại"
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </button>
+        
+          {/* Nhóm icon bên phải */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">Thông báo</span>
+            <FaRegBell />
+            <span></span>
+            <div className="inline-block" ref={menuRef}>
+                <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                  onClick={() => setShowMenu(!showMenu)}
+                >
+                  R
+                </button>
+                {showMenu && (
+              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                <button
+                  className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                >
+                  Đăng xuất
+                  </button>
+              </div>
+            )}
             </div>
           </div>
+        </div>
+
+        <h1 className="flex-1 text-left font-bold text-gray-800 px-2 mt-3">
+          TẠO MỚI NHÀ THẦU
+        </h1>
+
+
+      </div>
 
           {/* Status Messages */}
           <div className="px-6 sm:px-8 pt-4">

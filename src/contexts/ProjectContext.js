@@ -46,10 +46,12 @@ export const ProjectProvider = ({ children }) => {
       });
 
       const fullUser = response.data.user;
-
+      console.log(fullUser);
+      
       const filteredUser = {
         NguoiDungID: fullUser.NguoiDungID,
-        role: fullUser.ChucVu 
+        role: fullUser.PhanQuyenID,
+        nhathau: fullUser.NhaThauID
       };
       
       localStorage.setItem('token', response.data.token);

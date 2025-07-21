@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 import React, { useEffect, useState, useRef } from 'react';
 import { FaListOl, FaHashtag, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
@@ -13,7 +14,10 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
   const [contextMenu, setContextMenu] = useState(null);
   const [showEditPopup, setShowEditPopup] = useState(false); // State để hiển thị pop-up chỉnh sửa
   const [selectedPackage, setSelectedPackage] = useState(null); // State lưu gói thầu đang chỉnh sửa
+  const [showDelete, setShowDelete] = useState(false);
   const contextMenuRef = useRef(null);
+
+  const actionButtonStyle = "absolute top-1 right-1 bg-black bg-opacity-70 text-white p-1 rounded hover:bg-opacity-100 transition-all text-xs flex items-center justify-center h-5 w-7";
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
@@ -37,6 +41,24 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
       console.error('Error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = (packageId) => {
+    setShowDelete(true);
+    setSelectedPackage(packages.find(p => p.GoiThau_ID === packageId));
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDelete(false);
+    setSelectedPackage(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedPackage) {
+      await handleDeletePackage(selectedPackage.GoiThau_ID);
+      setShowDelete(false);
+      setSelectedPackage(null);
     }
   };
 
@@ -150,6 +172,30 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
                 onClick={() => handlePackageClick(item.GoiThau_ID)}
                 onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
               >
+                <div className="absolute top-1 right-1 flex gap-1">
+                  <button 
+                    className={`${actionButtonStyle} relative bg-blue-700`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditPackage(item.GoiThau_ID);
+                    }}
+                    title="Sửa"
+                    style={{ right: '1rem' }} // Đẩy nút sửa sang trái
+                  >
+                    <FaEdit size={12}/>
+                  </button>
+                  <button 
+                    className={`${actionButtonStyle} relative bg-red-700`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleConfirmDelete(item.GoiThau_ID);;
+                    }}
+                    title="Xóa"
+                  >
+                    <FaTrash size={12} />
+                  </button>
+                </div>
+
                 <div className='flex flex-row min-w-[80px]'>
                   <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
                     <FaHashtag className="mr-2 text-xs md:text-sm" />
@@ -196,6 +242,31 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
               onClick={() => handlePackageClick(item.GoiThau_ID)}
               onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
             >
+
+              <div className="absolute top-1 right-1 flex gap-1">
+                <button 
+                  className={`${actionButtonStyle} relative bg-blue-700`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditPackage(item.GoiThau_ID);
+                  }}
+                  title="Sửa"
+                  style={{ right: '1rem' }} // Đẩy nút sửa sang trái
+                >
+                  <FaEdit size={12} />
+                </button>
+                <button 
+                  className={`${actionButtonStyle} relative bd-red-700`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleConfirmDelete(item.GoiThau_ID);;
+                  }}
+                  title="Xóa"
+                >
+                  <FaTrash size={12} />
+                </button>
+              </div>
+
               <div className="flex items-center text-[#006591] font-bold text-sm">
                 <FaHashtag className="mr-2" />
                 Gói thầu - {index + 1}
@@ -226,14 +297,12 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
       className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm flex items-center"
       onClick={() => handleEditPackage(contextMenu.packageId)}
     >
-      <FaEdit className="mr-2 text-blue-600" size={12} />
       <span>Sửa</span>
     </div>
     <div
       className="px-3 py-2 hover:bg-red-50 cursor-pointer text-sm flex items-center"
       onClick={() => handleDeletePackage(contextMenu.packageId)}
     >
-      <FaTrash className="mr-2 text-red-600" size={12} />
       <span>Xóa</span>
     </div>
   </div>
@@ -241,20 +310,46 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
 
       {/* Pop-up chỉnh sửa */}
       {showEditPopup && selectedPackage && (
-  <Portal>
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
-        <AddNewPackage
-          isEdit={true}
-          projectId={subProjectId}
-          goiThau={selectedPackage}
-          onClose={handleEditClose}
-          onSuccess={handleEditSuccess}
-        />
-      </div>
-    </div>
-  </Portal>
-)}
+        <Portal>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+              <AddNewPackage
+                isEdit={true}
+                projectId={subProjectId}
+                goiThau={selectedPackage}
+                onClose={handleEditClose}
+                onSuccess={handleEditSuccess}
+              />
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {showDelete && selectedPackage && (
+        <Portal>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-bold mb-4">Xác nhận xóa</h3>
+              <p className="mb-6">Bạn có chắc chắn muốn xóa gói thầu "{selectedPackage.TenGoiThau}"?</p>
+              
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   );
 };

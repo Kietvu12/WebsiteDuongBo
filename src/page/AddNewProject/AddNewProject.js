@@ -431,6 +431,8 @@ const AddNewProject = () => {
         };
     }, []);
 
+    const [requiredFieldsError, setRequiredFieldsError] = useState({});
+
     const [formData, setFormData] = useState({
         TenDuAn: '',
         TinhThanh: '',
@@ -460,6 +462,7 @@ const AddNewProject = () => {
             alert('Lỗi khi tải danh sách loại hình');
         }
     };
+
     useEffect(() => {
         const fetchContractors = async () => {
             try {
@@ -479,6 +482,36 @@ const AddNewProject = () => {
 
         fetchContractors();
     }, [API_BASE_URL]);
+
+    const validateForm = () => {
+        const errors = {};
+        let isValid = true;
+
+        // Kiểm tra các trường cơ bản
+        const requiredFields = [
+            'TenDuAn',
+            'TinhThanh',
+            'ChuDauTu',
+            'NgayKhoiCong',
+            'TrangThai',
+            'NguonVon',
+            'TongChieuDai',
+            'KeHoachHoanThanh',
+            'LoaiHinh_ID',
+            'MoTaChung'
+        ];
+
+        requiredFields.forEach(field => {
+        if (!formData[field]) {
+            errors[field] = ' ';
+            isValid = false;
+        }
+        });
+
+        setRequiredFieldsError(errors);
+        return isValid;
+    };
+
     const handleLoaiHinhChange = async (e) => {
         const value = e.target.value;
         const loaiHinh = loaiHinhList.find(lh => lh.LoaiHinh_ID == value);
@@ -567,6 +600,20 @@ const AddNewProject = () => {
     };
     const onFinish = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            const firstErrorField = Object.keys(requiredFieldsError)[0];
+            if (firstErrorField) {
+                const element = document.querySelector(`[name="${firstErrorField}"]`) || 
+                                document.querySelector(`[data-thuoctinh="${firstErrorField}"]`);
+                if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                element.focus();
+                }
+            }
+            return;
+        }
+
         setLoading(true);
     
         // Validate TenDuAn and LoaiHinh_ID
@@ -697,6 +744,7 @@ const AddNewProject = () => {
     };
 
     return (
+    <div className="bg-gray-50 min-h-screen">
         <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl text-base">
             {/* Header gọn */}
             <div className="flex justify-between items-center mb-2">
@@ -729,14 +777,15 @@ const AddNewProject = () => {
                 )}
             </div>
             <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
-                <div className="bg-white rounded p-2 border border-gray-200">
+                <div className="bg-white rounded p-2 border border-gray-200" style={{ boxShadow: '0 2px 4px rgba(240, 240, 240, 0.5)' }}>
                     <div className="flex items-center space-x-2">
                         <label className="text-base font-medium text-gray-700 flex items-center">
                             <FaRoad className="mr-1 text-gray-500 text-base" />
                             Loại dự án:
                         </label>
                         <select
-                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                            className={`flex-1 px-2 py-1 border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                ${requiredFieldsError.LoaiHinh_ID ? 'border-red-500' : 'border-gray-300'}`}
                             onChange={handleLoaiHinhChange}
                             value={formData.LoaiHinh_ID}
                         >
@@ -755,7 +804,7 @@ const AddNewProject = () => {
                         )}
                     </div>
                 </div>
-                <div className="bg-white rounded p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="bg-white rounded p-3 border border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-3" style={{ boxShadow: '0 2px 4px rgba(240, 240, 240, 0.5)' }}>
                     <div className="col-span-2">
                         <h2 className="text-base font-semibold text-gray-700 pb-1 border-b border-gray-200 flex items-center">
                             <FaInfoCircle className="mr-1.5 text-lg text-gray-500" />
@@ -771,10 +820,10 @@ const AddNewProject = () => {
                             <input
                                 type="text"
                                 name="TenDuAn"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TenDuAn ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TenDuAn}
                                 onChange={handleInputChange}
-                                required
                             />
                         </div>
                         <div className="flex flex-col">
@@ -785,10 +834,10 @@ const AddNewProject = () => {
                             <input
                                 type="text"
                                 name="TongChieuDai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TongChieuDai ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TongChieuDai}
                                 onChange={handleInputChange}
-                                required
                             />
                         </div>
                         <div className="flex flex-col">
@@ -799,7 +848,8 @@ const AddNewProject = () => {
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                        ${requiredFieldsError.NgayKhoiCong? 'border-red-500' : 'border-gray-300'}`}
                                     value={formData.NgayKhoiCong}
                                     onChange={(e) => handleDateChange('NgayKhoiCong', e.target.value)}
                                 />
@@ -813,7 +863,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="ChuDauTu"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.ChuDauTu ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.ChuDauTu}
                                 onChange={handleInputChange}
                             >
@@ -833,7 +884,8 @@ const AddNewProject = () => {
                                 Tỉnh thành
                             </label>
                             <div
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base bg-white cursor-pointer"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base bg-white cursor-pointer
+                                    ${requiredFieldsError.TinhThanh? 'border-red-500' : 'border-gray-300'}`}
                                 onClick={() => setShowDropdown(!showDropdown)}
                             >
                                 {selectedProvinces.length > 0
@@ -842,7 +894,7 @@ const AddNewProject = () => {
                             </div>
                             {showDropdown && (
                                 <div
-                                    className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg max-h-52 overflow-auto text-base transition-all duration-200 ease-out animate-slide-down z-50"
+                                    className="absolute left-0 top-full mt-1 w-full bg-white border  rounded shadow-lg max-h-52 overflow-auto text-base transition-all duration-200 ease-out animate-slide-down z-50"
                                 >
                                     {mergedProvinces.map((tinh, index) => (
                                         <div
@@ -869,7 +921,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="NguonVon"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.NguonVon ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.NguonVon}
                                 onChange={handleInputChange}
                             >
@@ -887,7 +940,8 @@ const AddNewProject = () => {
                             <div className="relative">
                                 <input
                                     type="date"
-                                    className="w-full pl-7 pr-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                    className={`w-full pl-7 pr-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                        ${requiredFieldsError.KeHoachHoanThanh ? 'border-red-500' : 'border-gray-300'}`}
                                     value={formData.KeHoachHoanThanh}
                                     onChange={(e) => handleDateChange('KeHoachHoanThanh', e.target.value)}
                                 />
@@ -901,7 +955,8 @@ const AddNewProject = () => {
                             </label>
                             <select
                                 name="TrangThai"
-                                className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                                className={`w-full px-1.5 py-[3px] border  rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                    ${requiredFieldsError.TrangThai ? 'border-red-500' : 'border-gray-300'}`}
                                 value={formData.TrangThai}
                                 onChange={handleInputChange}
                             >
@@ -920,14 +975,15 @@ const AddNewProject = () => {
                         <textarea
                             name="MoTaChung"
                             rows={2}
-                            className="w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500"
+                            className={`w-full px-1.5 py-[3px] border border-gray-300 rounded text-base focus:ring-blue-500 focus:border-blue-500
+                                ${requiredFieldsError.MoTaChung ? 'border-red-500' : 'border-gray-300'}`}
                             value={formData.MoTaChung}
                             onChange={handleInputChange}
                         />
                     </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    <div className="bg-white rounded p-2 border border-gray-200 lg:col-span-9 bg-white rounded-lg border border-gray-200 shadow-sm">
+                    <div className="bg-white rounded p-2 border border-gray-200 lg:col-span-9 bg-white rounded-lg border border-gray-200 shadow-sm" style={{ boxShadow: '0 2px 4px rgba(240, 240, 240, 0.5)' }}>
                         <div className="flex justify-between items-center mb-1">
                             <h2 className="text-base font-semibold text-gray-700 flex items-center">
                                 <FaCheckCircle className="mr-1 text-green-500 text-base" />
@@ -983,7 +1039,7 @@ const AddNewProject = () => {
                         </div>
 
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:col-span-3">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm lg:col-span-3" style={{ boxShadow: '0 2px 4px rgba(240, 240, 240, 0.5)' }}>
                         <div className="p-3 border-b border-gray-200">
                             <h2 className="text-base font-semibold text-gray-700 flex items-center">
                                 <FaInfoCircle className="mr-2 text-blue-500" />
@@ -1016,7 +1072,7 @@ const AddNewProject = () => {
                 <div className="flex justify-end space-x-2 mt-2">
                     <button
                         type="button"
-                        className="px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors flex items-center text-base"
+                        className="px-2 py-1 border border-gray-300 rounded text-white bg-red-500 hover:bg-red-700 transition-colors flex items-center text-base"
                         onClick={() => navigate('/home')}
                     >
                         <FaTimes className="mr-1 text-base" />
@@ -1071,6 +1127,7 @@ const AddNewProject = () => {
             )}
 
         </div>
+    </div>
     );
 };
 

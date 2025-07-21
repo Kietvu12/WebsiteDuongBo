@@ -31,6 +31,8 @@ const useClickOutside = (ref, callback) => {
 const WorkItem = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [fromDate, setFromDate] = useState('2023-02-26');
   const [toDate, setToDate] = useState('2023-09-26');
@@ -44,7 +46,7 @@ const WorkItem = () => {
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-  const { logout } = useProject();
+  const { logout, user} = useProject();
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef(null);
@@ -62,35 +64,36 @@ const WorkItem = () => {
     if (savedProjectId) setSelectedProjectId(savedProjectId);
   }, []);
   
-  useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoadingProjects(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/duAnList`);
-        const data = await response.json();
-        if (data.success) {
-          setProjects(data.data);
-          
-          // Nếu là lần đầu và không có dự án nào được lưu, chọn dự án đầu tiên
-          if (!localStorage.getItem('lastSelectedProjectId') && data.data.length > 0) {
-            const firstProject = data.data[0];
-            setSearchTerm(firstProject.TenDuAn);
-            setSelectedProjectId(firstProject.DuAnID);
-            
-            // Lưu vào localStorage
-            localStorage.setItem('lastSearchTerm', firstProject.TenDuAn);
-            localStorage.setItem('lastSelectedProjectId', firstProject.DuAnID);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      } finally {
-        setIsLoadingProjects(false);
+
+  const fetchProjects = async () => {
+    setIsLoading(true);
+    try {
+      let url = `${API_BASE_URL}/duAnList`;
+      
+      // Thêm params nếu là nhà thầu
+      if (user?.PhanQuyenID === 9) {
+        url += `?nhaThauID=${user.NhaThauID}`;
       }
-    };
   
-    fetchProjects();
-  }, []);
+      const response = await fetch(url);
+      const data = await response.json();
+  
+      if (data.success) {
+        setProjects(data.data);
+        if (data.data.length === 0 && user?.PhanQuyenID === 9) {
+          alert('Tài khoản nhà thầu chưa được giao dự án nào');
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi tải dự án:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user?.PhanQuyenID, user?.NhaThauID]);
   
   useEffect(() => {
     const fetchData = async () => {

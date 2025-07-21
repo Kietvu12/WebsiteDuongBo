@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #fff;
+    background-color: #fafafa;
     width: 100%;
     font-size: 16px;
     padding-top: 3rem; /* tương đương pt-12 */

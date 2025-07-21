@@ -275,7 +275,7 @@ const Approvals = () => {
         </div>
       </div>
       <div className='content'>
-        <div className='content'>
+   
           {selectedProjectId !== null ? (
             <ApprovalSubTable duAnThanhPhanId={selectedProjectId} />
           ) : (
@@ -284,7 +284,6 @@ const Approvals = () => {
               <p>Vui lòng chọn dự án từ trang Dashboard</p>
             </div>
           )}
-        </div>
       </div>
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>

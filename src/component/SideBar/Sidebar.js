@@ -16,8 +16,24 @@ import bg from '../../assets/img/background_sidebar.png'
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedProjectId } = useProject();
+  const { selectedProjectId, user} = useProject();
+console.log("Dữ liệu người dùng: ", user.PhanQuyenID);
+const isMenuItemDisabled = (menuKey) => {
+  // Nếu PhanQuyenID = 9 thì chỉ cho phép menu 'progress'
+  if (user?.PhanQuyenID === 9) {
+    return menuKey !== 'progress';
+  }
+  // Nếu không phải quyền 9 thì xử lý theo logic khác (nếu có)
+  return false;
+};
 
+// Hàm kiểm tra xem submenu item có bị disable không
+const isSubMenuItemDisabled = (menuKey) => {
+  if (user?.PhanQuyenID === 9) {
+    return menuKey !== 'progress';
+  }
+  return false;
+};
   // Menu mở rộng
   const [openMenus, setOpenMenus] = useState({
     project: true,
@@ -70,9 +86,6 @@ const Sidebar = () => {
     }));
   };
 
-  const isMenuItemDisabled = (menu) => {
-    return;
-  };
 
   return (
     <>
@@ -167,45 +180,65 @@ const Sidebar = () => {
       <div className="flex flex-col flex-grow overflow-auto mt-2 md:mt-0">
         {/* Project menu */}
         <div className="py-1">
-          <div
-            className="flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-lg hover:bg-gray-200 transition"
-            onClick={() => toggleMenu('project')}
-          >
-            <img src={projectIcon} width={20} alt="Project Icon" className="mr-2" />
-            <span>Quản lý dự án</span>
-            <img
-              src={downIcon}
-              width={16}
-              alt="Dropdown Icon"
-              className={`ml-auto transition-transform duration-300 ${
-                openMenus.project ? 'rotate-180' : ''
-              }`}
-            />
-          </div>
-          <div
-            className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
-            ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
-          >
-            <div
-              className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900"
-              onClick={handleDashboard}
-            >
-              Danh sách dự án
-            </div>
-            <div
-              className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900"
-              onClick={handleMapboard}
-            >
-              Dự án dạng bản đồ
-            </div>
-            <div onClick= {handleAddNew} className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
-              Thêm dự án mới
-            </div>
-            {/*<div className="pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900">
-              Phân loại dự án
-            </div>*/}
-          </div>
-        </div>
+  <div
+    className={`flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-lg hover:bg-gray-200 transition
+      ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+    onClick={() => {
+      if (user?.PhanQuyenID !== 9) toggleMenu('project');
+    }}
+  >
+    <img 
+      src={projectIcon} 
+      width={20} 
+      alt="Project Icon" 
+      className="mr-2"
+      style={user?.PhanQuyenID === 9 ? { opacity: 0.5 } : {}}
+    />
+    <span>Quản lý dự án</span>
+    {user?.PhanQuyenID !== 9 && (
+      <img
+        src={downIcon}
+        width={16}
+        alt="Dropdown Icon"
+        className={`ml-auto transition-transform duration-300 ${
+          openMenus.project ? 'rotate-180' : ''
+        }`}
+      />
+    )}
+  </div>
+  <div
+    className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
+      ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
+  >
+    <div
+      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+      onClick={() => {
+        if (user?.PhanQuyenID !== 9) handleDashboard();
+      }}
+    >
+      Danh sách dự án
+    </div>
+    <div
+      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+      onClick={() => {
+        if (user?.PhanQuyenID !== 9) handleMapboard();
+      }}
+    >
+      Dự án dạng bản đồ
+    </div>
+    <div
+      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+      onClick={() => {
+        if (user?.PhanQuyenID !== 9) handleAddNew();
+      }}
+    >
+      Thêm dự án mới
+    </div>
+  </div>
+</div>
 
         {/* Các menu khác */}
         {[
@@ -225,7 +258,7 @@ const Sidebar = () => {
             label: 'Nhà thầu thi công',
             submenu: [
               //{ label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
-              { label: 'Tiến độ các nhà thầu', onClick: () => handleSimpleNavigation('/constructor-progress') },
+              // { label: 'Tiến độ các nhà thầu', onClick: () => handleSimpleNavigation('/constructor-progress') },
               { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
             ],
           },
@@ -244,7 +277,7 @@ const Sidebar = () => {
             icon: settingIcon,
             label: 'Cài đặt',
             submenu: [
-              { label: 'Cài đặt tài khoản', onClick: () => handleNavigation('/account-settings') },
+              { label: 'Cài đặt tài khoản', onClick: () =>handleSimpleNavigation('/account-settings') },
               { label: 'Đổi mật khẩu', onClick: () => handleNavigation('/change-password') },
             ],
           },

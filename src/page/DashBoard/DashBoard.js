@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from "react-router-dom";
 import { FaRegCalendarAlt, FaRegBell, FaFilter } from "react-icons/fa";
 import pin from "../../assets/img/pin.png";
@@ -12,6 +13,9 @@ import edit from "../../assets/img/edit.png"
 import axios from "axios";
 import { useProject } from "../../contexts/ProjectContext";
 import AddNewSubProject from "../AddNewSubProject/AddNewSubProject";
+import TienDoHangMucPopup from "./TienDoHangMucPopup";
+import { debounce } from 'lodash';
+
 
 const useClickOutside = (ref, callback) => {
   useEffect(() => {
@@ -29,6 +33,36 @@ const useClickOutside = (ref, callback) => {
 };
 
 const Dashboard = () => {
+  const ProgressPieChart = ({ project }) => {
+    const data = [
+      { name: 'Hoàn thành', value: parseFloat(project?.thongKe?.phanTramHoanThanh || 0), color: '#16A34A' },
+      { name: 'Chậm tiến độ', value: parseFloat(project?.thongKe?.phanTramChamTienDo || 0), color: '#CA8A04' },
+      { name: 'Kế hoạch', value: parseFloat(project?.thongKe?.phanTramKeHoach || 0), color: '#2563EB' },
+    ];
+
+    return (
+      <div className="w-full h-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius={30}
+              outerRadius={45}
+              paddingAngle={2}
+              dataKey="value"
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
+  const [popupStatus, setPopupStatus] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("Tổng số dự án");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const { setSelectedProjectId } = useProject();
@@ -69,7 +103,24 @@ const Dashboard = () => {
   useClickOutside(menuRef, () => {
     setShowMenu(false);
   });
+  const [popupData, setPopupData] = useState({
+    status: null,  // 'danglam' | 'hoanthanh' | 'chamtienDo'
+    duAnId: null   // ID của dự án được chọn
+  });
+  const handleOpenPopup = (duAnId, status) => {
+    setPopupData({ status, duAnId });
+  };
+  
+  const handleClosePopup = () => {
+    setPopupData({ status: null, duAnId: null });
+  };  
 
+  const debouncedSetPopupStatus = useCallback(
+    debounce((status) => {
+      setPopupStatus(status);
+    }, 300),
+    []
+  );
   const mergedProvinces = [
     "Thành phố Hà Nội",
     "Thành phố Huế",
@@ -943,10 +994,10 @@ const Dashboard = () => {
                       <th className="border px-2 py-2 w-8">CHỌN</th>
                       <th className="border px-2 py-2 w-20">THAO TÁC</th>
                       <th className="border px-2 py-2 w-24">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-2 min-w-[180px]">TÊN DỰ ÁN</th>
+                      <th className="border px-2 py-2 min-w-[100px]">TÊN DỰ ÁN</th>
                       <th className="border px-2 py-2 w-24">DÀI TUYẾN</th>
                       <th className="border px-2 py-2 w-28">TRẠNG THÁI</th>
-                      <th className="border px-2 py-2 w-48">TIẾN ĐỘ</th>
+                      <th className="border px-2 py-2 w-80">TIẾN ĐỘ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1059,47 +1110,48 @@ const Dashboard = () => {
                               </span>
                             </td>
                             <td className="border px-2 py-2 text-sm">
-                              <div className="grid grid-rows-3 gap-1">
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={planIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Kế hoạch"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-blue-600">
-                                    Kế hoạch:{" "}
-                                    <strong>{project.phanTramKeHoach || "0"}%</strong>
-                                  </span>
+                              <div className="flex items-start gap-4">
+                                <div className="w-24 h-24 flex-shrink-0">
+                                  <ProgressPieChart project={project} />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={actualIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Hoàn thành"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-green-600">
-                                    Hoàn thành:{" "}
-                                    <strong>{project.phanTramHoanThanh || "0"}%</strong>
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={delayIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Chậm tiến độ"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-yellow-600">
-                                    Chậm tiến độ:{" "}
-                                    <strong>{project.phanTramChamTienDo || "0"}%</strong>
-                                  </span>
+                                <div className="grid grid-rows-3 gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <img src={planIcon} width="14" height="14" alt="Kế hoạch" className="flex-shrink-0" />
+                                    <span
+  className="text-blue-600 cursor-pointer"
+  onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
+>
+  Kế hoạch: <strong>{project?.thongKe?.phanTramKeHoach ?? '0'}%</strong>
+</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <img src={actualIcon} width="14" height="14" alt="Hoàn thành" className="flex-shrink-0" />
+                                    <span
+  className="text-green-600 cursor-pointer"
+  onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
+>
+  Hoàn thành: <strong>{project?.thongKe?.phanTramHoanThanh ?? '0'}%</strong>
+</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <img src={delayIcon} width="14" height="14" alt="Chậm tiến độ" className="flex-shrink-0" />
+                                    <span
+  className="text-yellow-600 cursor-pointer"
+  onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
+>
+  Chậm tiến độ: <strong>{project?.thongKe?.phanTramChamTienDo ?? '0'}%</strong>
+</span>
+                                  </div>
                                 </div>
                               </div>
+                              {popupData.status && popupData.duAnId === project.DuAnID && (
+  <TienDoHangMucPopup
+    duAnId={popupData.duAnId}
+    status={popupData.status}
+    onClose={handleClosePopup}
+  />
+)}
+
                             </td>
                           </tr>
                         ))

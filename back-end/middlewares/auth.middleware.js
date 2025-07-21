@@ -5,8 +5,8 @@ const authenticate = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    console.log('AUTH HEADER:', authHeader); // 👈 dòng này
-    console.log('TOKEN:', token); // 👈 dòng này
+    console.log('AUTH HEADER:', authHeader); 
+    console.log('TOKEN:', token); 
     
     if (!token) {
       return res.status(401).json({ error: 'Token không được cung cấp' });

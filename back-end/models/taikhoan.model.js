@@ -46,15 +46,25 @@ const taikhoan = sequelize.define('taikhoan', {
     type: DataTypes.INTEGER,
     allowNull: true,
     references: {
-        model: "phanquyen",
-        key: "PhanQuyenID"
+      model: 'phanquyen',
+      key: 'PhanQuyenID'
     },
-    onUpdate: "CASCADE",
-    onDelete: "CASCADE"
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE'
   },
   TrangThai: {
     type: DataTypes.BOOLEAN,
     allowNull: true
+  },
+  NhaThauID: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: 'nhathau',
+      key: 'NhaThauID'
+    },
+    onUpdate: 'CASCADE',
+    onDelete: 'SET NULL'
   }
 }, {
   tableName: 'taikhoan',
@@ -62,5 +72,11 @@ const taikhoan = sequelize.define('taikhoan', {
   createdAt: 'created_at',
   updatedAt: false
 });
+
+// Define associations
+taikhoan.associate = (models) => {
+  taikhoan.belongsTo(models.nhathau, { foreignKey: 'NhaThauID', as: 'NhaThau' });
+  taikhoan.belongsTo(models.phanquyen, { foreignKey: 'PhanQuyenID', as: 'PhanQuyen' });
+};
 
 module.exports = taikhoan;

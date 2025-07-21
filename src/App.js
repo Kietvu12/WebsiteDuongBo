@@ -1,6 +1,6 @@
 
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './page/Login/Login';
 import DashBoard from './page/DashBoard/DashBoard';
 import Sidebar from './component/SideBar/Sidebar';
@@ -21,7 +21,7 @@ import AddNewContructors from './page/AddNewContructors/AddNewContructors';
 import { useEffect } from 'react';
 import ConstructionProgress from './component/ConstructionProgress/ConstructionProgress';
 import ConstructorProgress from './page/ConstructorProgress/ConstructorProgress';
-
+import AccountSetting from './page/AccountSetting/AccountSetting';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -67,7 +67,7 @@ function AppWrapper() {
 
 function App() {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  const { fetchUserProfile, loading, authChecked } = useProject();
+  const { fetchUserProfile, loading, authChecked, user } = useProject();
   useEffect(() => {
     // Hàm gọi 2 API
     const capNhatTatCa = async () => {
@@ -95,17 +95,15 @@ function App() {
 
   if (loading || !authChecked) return <div>Đang tải thông tin người dùng...</div>;
 
-
   return (
     <ProjectProvider>
       <Router>
         <Routes>
           <Route path='/' element={<Login />} />
-
           <Route path='/home' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
-                <DashBoard />
+                {user?.PhanQuyenID === 9 ? <Navigate to="/work-items" replace /> : <DashBoard />}
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
@@ -120,6 +118,13 @@ function App() {
             <ProtectedRoute>
               <LayoutWithSidebar>
                 <Detail />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/account-settings' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <AccountSetting />
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
@@ -210,7 +215,15 @@ function App() {
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useProject();
-  return user ? children : <Navigate to="/" />;
+  const location = useLocation();
+
+  if (!user) {
+    return <Navigate to="/" />;
+  }
+
+  // Nếu là quyền 9 và đang truy cập trang khác work-item
+
+  return children;
 };
 
 export default AppWrapper;

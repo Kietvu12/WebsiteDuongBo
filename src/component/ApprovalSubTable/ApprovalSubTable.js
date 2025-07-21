@@ -1,478 +1,337 @@
+import React, { useState, useEffect } from "react";
+import { FaSearch, FaSpinner } from "react-icons/fa";
+import { FaEdit, FaTrash } from 'react-icons/fa';
+import axios from "axios";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { FaPlus, FaTrash, FaPencilAlt } from 'react-icons/fa';
-import AddNewCategories from '../AddNewCategories/AddNewCategories';
-import AddVuongMacPopup from '../AddNewApproval/AddNewApproval';
-
-const ApprovalSubTable = ({ duAnThanhPhanId }) => {
-  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
-  const [selectedPackageId, setSelectedPackageId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showAddVuongMac, setShowAddVuongMac] = useState(false);
-  const [selectedHangMucId, setSelectedHangMucId] = useState(null);
-  const [expandedItems, setExpandedItems] = useState({
-    goiThau: {},
-    loaiHangMuc: {},
-    hangMuc: {}
-  });
+export default function ApprovalSubTable({duAnThanhPhanId}) {
+  const [searchText, setSearchText] = useState("");
+  const [filterNhaThau, setFilterNhaThau] = useState("");
+  const [filterHangMuc, setFilterHangMuc] = useState("");
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/hangMuc/${duAnThanhPhanId}/vuongMac`);
-      setData(response.data.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setLoading(false);
-    }
-  }, [duAnThanhPhanId])
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const [editingItem, setEditingItem] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [formData, setFormData] = useState({
+    LoaiVuongMac: '',
+    MoTaChiTiet: '',
+    MucDo: '',
+    BienPhapXuLy: '',
+    TrangThaiXuLy: '',
+    NoiDungXuLy: ''
+  });
 
-  const toggleItem = (type, id) => {
-    setExpandedItems(prev => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [id]: !prev[type][id]
+  // Lấy dữ liệu từ API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`${API_BASE_URL}/duAn/${duAnThanhPhanId}/vuongMac`); // Thay 123 bằng ID dự án thực tế
+        const formattedData = formatData(response.data.data);
+        setData(formattedData);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    fetchData();
+  }, []);
+  // Mở modal chỉnh sửa
+  const handleEdit = (item) => {
+    setEditingItem(item);
+    setFormData({
+      MoTaChiTiet: item.noiDung || '',
+      BienPhapXuLy: item.bienPhapXuLy || '',
+      TrangThaiXuLy: item.trangThaiXuLy || 'ChuaXuLy',
+      NoiDungXuLy: item.noiDungXuLy || ''
+    });
+    setShowModal(true);
+  };
+
+  // Xử lý xóa (tạm thời chỉ hiển thị console log)
+  const handleDelete = (id) => {
+    console.log('Xóa vướng mắc có ID:', id);
+    // TODO: Thêm API xóa sau này
+    alert(`Chức năng xóa tạm thời chưa khả dụng. ID cần xóa: ${id}`);
+  };
+
+  // Xử lý thay đổi form
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
     }));
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN');
-  };
-  const handleAddCategoryClick = (goiThauId) => {
-    setSelectedPackageId(goiThauId);
-    setShowAddCategoryModal(true);
-  };
-  const handleDeleteHangMuc = async (hangMucId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
-      return;
-    }
-
+  // Gửi yêu cầu cập nhật
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      setDeletingId(hangMucId); // Để hiển thị loading cho item cụ thể
-
-      const response = await fetch(`${API_BASE_URL}/hangmuc/${hangMucId}`, {
-        method: 'DELETE'
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Xóa không thành công');
-      }
-
-      // Gọi lại fetchData để cập nhật danh sách
-      fetchData();
+      await axios.put(`${API_BASE_URL}/api/vuongmac/${editingItem.vuongMacID}`, formData);
+      setShowModal(false);
+      alert('Cập nhật vướng mắc thành công!');
     } catch (error) {
-      console.error('Delete error:', error);
-    } finally {
-      setDeletingId(null);
+      console.error('Lỗi khi cập nhật vướng mắc:', error);
+      alert('Có lỗi xảy ra khi cập nhật vướng mắc');
     }
   };
-  const handleDeleteKeHoach = async (kehoachId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa vướng mắc này?')) {
-      return;
-    }
-
-    try {
-      setDeletingId(kehoachId); // Để hiển thị loading cho item cụ thể
-
-      const response = await fetch(`${API_BASE_URL}/vuongmac/${kehoachId}`, {
-        method: 'DELETE'
+  // Format dữ liệu từ API sang cấu trúc phù hợp với giao diện
+  const formatData = (apiData) => {
+    return apiData.DanhSachGoiThau.flatMap(goiThau => {
+      return goiThau.ThongTinVuongMac.flatMap(hangMuc => {
+        return hangMuc.VuongMac.map(vuongMac => ({
+          goiThau: goiThau.TenGoiThau,
+          nhaThau: vuongMac.NguoiBaoCao?.HoTen || "Không xác định",
+          hangMuc: hangMuc.TenHangMuc,
+          noiDung: vuongMac.MoTaChiTiet,
+          noiDungXuLy: vuongMac.NoiDungXuLy || "Chưa có nội dung xử lý cụ thể nào",
+          deXuat: vuongMac.BienPhapXuLy || "Chưa có đề xuất",
+          trangThaiXuLy: getStatusText(vuongMac.TrangThaiXuLy),
+          ngayCapNhat: new Date(vuongMac.NgayCapNhat).toLocaleDateString(),
+          mucDo: vuongMac.MucDo,
+          loaiVuongMac: vuongMac.LoaiVuongMac,
+          vuongMacID: vuongMac.VuongMacID // Thêm dòng này
+        }));
       });
+    });
+  };
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Xóa không thành công');
-      }
-
-      // Gọi lại fetchData để cập nhật danh sách
-      fetchData();
-    } catch (error) {
-      console.error('Delete error:', error);
-    } finally {
-      setDeletingId(null);
+  // Chuyển đổi trạng thái từ ENUM sang tiếng Việt
+  const getStatusText = (status) => {
+    switch(status) {
+      case 'ChuaXuLy': return 'Chưa xử lý';
+      case 'DangXuLy': return 'Đang xử lý';
+      case 'DaXuLy': return 'Đã xử lý';
+      default: return status;
     }
   };
 
-  const handleCategoryAdded = (newCategory) => {
-    fetchData();
-    setShowAddCategoryModal(false);
-  };
+  // Lọc dữ liệu
+  const filteredData = data.filter(item => {
+    const matchSearch =
+      item.goiThau.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.nhaThau.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.hangMuc.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.noiDung.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.deXuat.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.trangThaiXuLy.toLowerCase().includes(searchText.toLowerCase());
 
-  const handleAdd = (parentId, type) => {
-    console.log(`Thêm mới vào ${type} với ID: ${parentId}`);
+    const matchNhaThau = !filterNhaThau || 
+      item.nhaThau.toLowerCase().includes(filterNhaThau.toLowerCase());
+    
+    const matchHangMuc = !filterHangMuc || 
+      item.hangMuc.toLowerCase().includes(filterHangMuc.toLowerCase());
+    
+    return matchSearch && matchNhaThau && matchHangMuc;
+  });
 
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <FaSpinner className="animate-spin text-2xl text-blue-500" />
+      </div>
+    );
+  }
 
-  const handleDelete = (vuongMacId) => {
-    console.log(`Xóa vướng mắc với ID: ${vuongMacId}`);
-  };
-  console.log("Đã chọn:", selectedPackageId);
-
-
-  if (loading) return <div className="p-4">Đang tải dữ liệu...</div>;
-  if (!data) return <div className="p-4">Không có dữ liệu</div>;
+  if (error) {
+    return (
+      <div className="p-4 bg-red-100 text-red-700 rounded">
+        Lỗi khi tải dữ liệu: {error}
+      </div>
+    );
+  }
+  console.log(filteredData);
+  
 
   return (
-    <div className="w-full p-2 sm:p-4">
-      {/* Desktop Table (hidden on mobile) */}
-      <div className="hidden sm:block">
-        <div className="max-h-[750px] overflow-y-auto border rounded-lg">
-          {/* Giữ nguyên bảng gốc cho desktop */}
-          <table className="w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0">
-              <tr>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[40px] sm:w-[60px]">STT</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px] sm:w-[120px]">Mã số</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[150px] sm:w-[220px]">Công việc</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[200px] sm:w-[300px]">Vướng mắc</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[150px] sm:w-[200px]">Biện pháp</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px] sm:w-[150px]">Ngày phát sinh</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[100px] sm:w-[150px]">Ngày kết thúc</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[80px] sm:w-[150px]">Trạng thái</th>
-                <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[70px] sm:w-[100px]">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {/* Level 1 - Dự án */}
-
-              {/* Level 2 - Gói thầu */}
-              {([]).concat(
-                data?.duAnThanhPhan?.danhSachGoiThau || [],
-                data?.duAnTong?.danhSachGoiThauTrucTiep || [],
-                data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-              ).map((goiThau, indexGT) => (
-                <React.Fragment key={`goithau-${goiThau.goiThauId}`}>
-                  <tr className="bg-yellow-50 hover:bg-yellow-100">
-                    <td className="px-2 sm:px-4 py-2">{indexGT + 1}</td>
-                    <td className="px-2 sm:px-4 py-2">GT-{goiThau.goiThauId}</td>
-                    <td className="px-2 sm:px-4 py-2 font-medium">
-                      <button
-                        onClick={() => toggleItem('goiThau', goiThau.goiThauId)}
-                        className="flex items-center focus:outline-none"
-                      >
-                        <span className={`text-xs sm:text-sm transform ${expandedItems.goiThau[goiThau.goiThauId] ? 'rotate-90' : ''}`}>▸</span>
-                        <span className="ml-1 text-sm sm:text-base">{goiThau.tenGoiThau}</span>
-                      </button>
-                    </td>
-                    <td colSpan="5" className="px-2 sm:px-4 py-2 text-sm">
-                      Vướng mắc: {goiThau.tongVuongMac} (Đã phê duyệt: {goiThau.tongDaPheDuyet} | Chưa phê duyệt: {goiThau.tongChuaPheDuyet})
-                    </td>
-                    <td className="px-2 sm:px-4 py-2">
-                      <div className="flex space-x-1">
-                        <button
-                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                          title="Thêm hạng mục"
-                          onClick={() => handleAddCategoryClick(goiThau.goiThauId)}
-                        >
-                          <FaPlus size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-
-                  {/* Level 3 - Hạng mục */}
-                  {expandedItems.goiThau[goiThau.goiThauId] && goiThau.danhSachHangMuc?.map((hangMuc, indexHM) => (
-                    <React.Fragment key={`hangmuc-${hangMuc.hangMucId}`}>
-                      <tr className="bg-white hover:bg-gray-50">
-                        <td className="px-2 sm:px-4 py-2 pl-6 sm:pl-8">{`${indexGT + 1}.${indexHM + 1}`}</td>
-                        <td className="px-2 sm:px-4 py-2">HM-{hangMuc.hangMucId}</td>
-                        <td className="px-2 sm:px-4 py-2 font-medium">
-                          <button
-                            onClick={() => toggleItem('hangMuc', hangMuc.hangMucId)}
-                            className="flex items-center focus:outline-none"
-                          >
-                            <span className={`text-xs sm:text-sm transform ${expandedItems.hangMuc[hangMuc.hangMucId] ? 'rotate-90' : ''}`}>▸</span>
-                            <span className="ml-1 text-sm sm:text-base">{hangMuc.tenHangMuc}</span>
-                          </button>
-                        </td>
-                        <td colSpan="5" className="px-2 sm:px-4 py-2 text-sm">
-                          Vướng mắc: {hangMuc.tongVuongMac} (Đã phê duyệt: {hangMuc.soVuongMacDaPheDuyet} | Chưa phê duyệt: {hangMuc.soVuongMacChuaPheDuyet})
-                        </td>
-                        <td className="px-2 sm:px-4 py-2">
-                          <div className="flex space-x-1">
-                            <button
-                              onClick={() => {
-                                setSelectedHangMucId(hangMuc.hangMucId);
-                                setShowAddVuongMac(true);
-                              }}
-                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                              title="Thêm vướng mắc"
-                            >
-                              <FaPlus size={12} className="sm:w-3.5 sm:h-3.5" />
-                            </button>
-                            <button
-                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                              title="Xóa hạng mục"
-                              onClick={() => handleDeleteHangMuc(hangMuc.hangMucId)}
-                            >
-                              <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Level 4 - Vướng mắc */}
-                      {expandedItems.hangMuc[hangMuc.hangMucId] && hangMuc.danhSachVuongMac?.map((vuongMac, indexVM) => {
-                        const isApproved = vuongMac.trangThai === 'Đã phê duyệt';
-                        return (
-                          <tr
-                            key={`vuongmac-${vuongMac.vuongMacId}`}
-                            className={`hover:bg-gray-100 ${isApproved ? 'bg-green-50' : 'bg-yellow-50'}`}
-                          >
-                            <td className="px-2 sm:px-4 py-2 pl-8 sm:pl-12 text-sm">{`${indexGT + 1}.${indexHM + 1}.${indexVM + 1}`}</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">VM-{vuongMac.vuongMacId}</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">{vuongMac.tenCongTac} (KH-{vuongMac.keHoachId})</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">{vuongMac.moTaChiTiet}</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">{vuongMac.bienPhapXuLy || 'Chưa có'}</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">{formatDate(vuongMac.ngayPhatSinh)}</td>
-                            <td className="px-2 sm:px-4 py-2 text-sm">{formatDate(vuongMac.ngayKetThuc)}</td>
-                            <td className="px-2 sm:px-4 py-2">
-                              <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs ${isApproved ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}`}>
-                                {vuongMac.trangThai}
-                              </span>
-                            </td>
-                            <td className="px-2 sm:px-4 py-2">
-                              <div className="flex space-x-1">
-                                <button
-                                onClick={() => handleDeleteKeHoach(vuongMac.vuongMacId)}
-                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                  title="Xóa"
-                                >
-                                  <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
-                                </button>
-                                {/* <button
-                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                  title="Chỉnh sửa"
-                                >
-                                  <FaPencilAlt size={12} className="sm:w-3.5 sm:h-3.5" />
-                                </button> */}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+    <div className="p-4 w-full bg-white rounded-lg shadow-md">
+      {/* Khối tìm kiếm */}
+      <div className="flex flex-wrap gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm chung..."
+            className="pl-8 pr-2 py-2 border rounded w-full"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+          />
+        </div>
+        <div className="relative flex-1 min-w-[150px]">
+          <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Lọc theo nhà thầu..."
+            className="pl-8 pr-2 py-2 border rounded w-full"
+            value={filterNhaThau}
+            onChange={(e) => setFilterNhaThau(e.target.value)}
+          />
+        </div>
+        <div className="relative flex-1 min-w-[150px]">
+          <FaSearch className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Lọc theo hạng mục..."
+            className="pl-8 pr-2 py-2 border rounded w-full"
+            value={filterHangMuc}
+            onChange={(e) => setFilterHangMuc(e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Mobile Cards (shown on mobile) */}
-      <div className="sm:hidden space-y-3">
-        {/* Level 1 - Dự án */}
-        <div className="bg-green-50 p-3 rounded-lg shadow-sm border border-gray-200">
-
-          <div className="mt-2 text-sm">
-            <div className="text-gray-700">Tổng số vướng mắc: {([]).concat(
-              data?.duAnThanhPhan?.tongVuongMac || [],
-              data?.duAnTong?.tongVuongMac || [],
-              data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongVuongMac) || []
-            )}</div>
-            <div className="text-gray-700">Đã phê duyệt: {([]).concat(
-              data?.duAnThanhPhan?.tongDaPheDuyet || [],
-              data?.duAnTong?.tongDaPheDuyet || [],
-              data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongDaPheDuyet) || []
-            )}</div>
-            <div className="text-gray-700">Chưa phê duyệt: {([]).concat(
-              data?.duAnThanhPhan?.tongChuaPheDuyet || [],
-              data?.duAnTong?.tongChuaPheDuyet || [],
-              data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.tongChuaPheDuyet) || []
-            )}</div>
-          </div>
-
-          {/* <div className="mt-2 flex justify-end">
-            <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-              <FaPlus size={14} />
-            </button>
-          </div> */}
-        </div>
-
-        {/* Level 2 - Gói thầu */}
-        {([]).concat(
-          data?.duAnThanhPhan?.danhSachGoiThau || [],
-          data?.duAnTong?.danhSachGoiThauTrucTiep || [],
-          data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
-        ).map((goiThau, indexGT) => (
-          <React.Fragment key={`mobile-goithau-${goiThau.goiThauId}`}>
-            <div className="bg-yellow-50 p-3 rounded-lg shadow-sm border border-gray-200 ml-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="font-medium text-gray-900">
-                    <button
-                      onClick={() => toggleItem('goiThau', goiThau.goiThauId)}
-                      className="flex items-center focus:outline-none"
-                    >
-                      <span className={`transform ${expandedItems.goiThau[goiThau.goiThauId] ? 'rotate-90' : ''}`}>▸</span>
-                      <span className="ml-1">GT-{goiThau.goiThauId}</span>
-                    </button>
-                  </div>
-                  <div className="text-sm text-gray-700 mt-1">{goiThau.tenGoiThau}</div>
-                </div>
-                <div className="text-sm font-medium">{indexGT + 1}</div>
-              </div>
-
-              <div className="mt-2 text-sm">
-                <div className="text-gray-700">Vướng mắc: {goiThau.tongVuongMac}</div>
-                <div className="text-gray-700">Đã phê duyệt: {goiThau.tongDaPheDuyet}</div>
-                <div className="text-gray-700">Chưa phê duyệt: {goiThau.tongChuaPheDuyet}</div>
-              </div>
-
-              <div className="mt-2 flex justify-end space-x-1">
-              <button
-                          className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                          title="Thêm hạng mục"
-                          onClick={() => handleAddCategoryClick(goiThau.goiThauId)}
-                        >
-                          <FaPlus size={14} />
-                        </button>
-              </div>
-            </div>
-
-            {/* Level 3 - Hạng mục (chỉ hiển thị khi mở rộng) */}
-            {expandedItems.goiThau[goiThau.goiThauId] && goiThau.danhSachHangMuc?.map((hangMuc, indexHM) => (
-              <React.Fragment key={`mobile-hangmuc-${hangMuc.hangMucId}`}>
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 ml-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        <button
-                          onClick={() => toggleItem('hangMuc', hangMuc.hangMucId)}
-                          className="flex items-center focus:outline-none"
-                        >
-                          <span className={`transform ${expandedItems.hangMuc[hangMuc.hangMucId] ? 'rotate-90' : ''}`}>▸</span>
-                          <span className="ml-1">HM-{hangMuc.hangMucId}</span>
-                        </button>
-                      </div>
-                      <div className="text-sm text-gray-700 mt-1">{hangMuc.tenHangMuc}</div>
-                    </div>
-                    <div className="text-sm font-medium">{indexGT + 1}.{indexHM + 1}</div>
-                  </div>
-
-                  <div className="mt-2 text-sm">
-                    <div className="text-gray-700">Vướng mắc: {hangMuc.tongVuongMac}</div>
-                    <div className="text-gray-700">Đã phê duyệt: {hangMuc.soVuongMacDaPheDuyet}</div>
-                    <div className="text-gray-700">Chưa phê duyệt: {hangMuc.soVuongMacChuaPheDuyet}</div>
-                  </div>
-
-                  <div className="mt-2 flex justify-end space-x-1">
+      {/* Bảng */}
+      <div className="overflow-x-auto">
+      <table className="table-auto w-full border-collapse text-sm">
+        <thead>
+          <tr className="bg-white shadow-sm">
+            <th className="px-3 py-2 border">Tên gói thầu</th>
+            <th className="px-3 py-2 border">Người báo cáo</th>
+            <th className="px-3 py-2 border">Hạng mục</th>
+            <th className="px-3 py-2 border">Nội dung</th>
+            <th className="px-3 py-2 border">Đề xuất xử lý</th>
+            <th className="px-3 py-2 border">Nội dung xử lý</th>
+            <th className="px-3 py-2 border">Trạng thái</th>
+            <th className="px-3 py-2 border">Ngày cập nhật</th>
+            <th className="px-3 py-2 border">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredData.map((item, idx) => (
+            <tr key={idx} className="hover:bg-gray-50 transition-colors">
+              <td className="border px-3 py-2">{item.goiThau}</td>
+              <td className="border px-3 py-2">{item.nhaThau}</td>
+              <td className="border px-3 py-2">{item.hangMuc}</td>
+              <td className="border px-3 py-2">{item.noiDung}</td>
+              <td className="border px-3 py-2">{item.deXuat}</td>
+              <td className="border px-3 py-2">{item.noiDungXuLy}</td>
+              <td className="border px-3 py-2">
+                {item.trangThaiXuLy === "Chưa xử lý" && (
+                  <span className="text-red-600 font-semibold">
+                    {item.trangThaiXuLy}
+                  </span>
+                )}
+                {item.trangThaiXuLy === "Đang xử lý" && (
+                  <span className="text-yellow-600 font-semibold">
+                    {item.trangThaiXuLy}
+                  </span>
+                )}
+                {item.trangThaiXuLy === "Đã xử lý" && (
+                  <span className="text-green-600 font-semibold">
+                    {item.trangThaiXuLy}
+                  </span>
+                )}
+              </td>
+              <td className="border px-3 py-2">{item.ngayCapNhat}</td>
+              <td className="border px-3 py-2">
+                <div className="flex justify-center space-x-2">
+                  <button 
+                    onClick={() => handleEdit(item)}
+                    className="text-blue-600 hover:text-blue-800 p-1"
+                    title="Sửa"
+                  >
+                    <FaEdit />
+                  </button>
                   <button
-                              onClick={() => {
-                                setSelectedHangMucId(hangMuc.hangMucId);
-                                setShowAddVuongMac(true);
-                              }}
-                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                              title="Thêm vướng mắc"
-                            >
-                              <FaPlus size={12} className="sm:w-3.5 sm:h-3.5" />
-                            </button>
-                            <button
-                              className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                              title="Xóa hạng mục"
-                              onClick={() => handleDeleteHangMuc(hangMuc.hangMucId)}
-                            >
-                              <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
-                            </button>
-                    {/* <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100">
-                      <FaPencilAlt size={14} />
-                    </button> */}
+                    onClick={() => handleDelete(item.vuongMacID)}
+                    className="text-red-600 hover:text-red-800 p-1"
+                    title="Xóa"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {filteredData.length === 0 && (
+            <tr>
+              <td colSpan={9} className="text-center p-4 text-gray-500">
+                {data.length === 0 ? "Không có dữ liệu" : "Không tìm thấy kết quả phù hợp"}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+        {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Cập nhật vướng mắc</h3>
+              
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">Mô tả chi tiết</label>
+                    <textarea
+                      name="MoTaChiTiet"
+                      value={formData.MoTaChiTiet}
+                      onChange={handleChange}
+                      rows={3}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1">Biện pháp xử lý</label>
+                    <textarea
+                      name="BienPhapXuLy"
+                      value={formData.BienPhapXuLy}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Trạng thái xử lý</label>
+                    <select
+                      name="TrangThaiXuLy"
+                      value={formData.TrangThaiXuLy}
+                      onChange={handleChange}
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="ChuaXuLy">Chưa xử lý</option>
+                      <option value="DangXuLy">Đang xử lý</option>
+                      <option value="DaXuLy">Đã xử lý</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nội dung xử lý</label>
+                    <textarea
+                      name="NoiDungXuLy"
+                      value={formData.NoiDungXuLy}
+                      onChange={handleChange}
+                      rows={2}
+                      className="w-full p-2 border rounded"
+                    />
                   </div>
                 </div>
-
-                {/* Level 4 - Vướng mắc (chỉ hiển thị khi mở rộng) */}
-                {expandedItems.hangMuc[hangMuc.hangMucId] && hangMuc.danhSachVuongMac?.map((vuongMac, indexVM) => {
-                  const isApproved = vuongMac.trangThai === 'Đã phê duyệt';
-                  return (
-                    <div
-                      key={`mobile-vuongmac-${vuongMac.vuongMacId}`}
-                      className={`${isApproved ? 'bg-green-50' : 'bg-yellow-50'} p-3 rounded-lg shadow-sm border border-gray-200 ml-9`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium text-gray-900">VM-{vuongMac.vuongMacId}</div>
-                          <div className="text-sm text-gray-700 mt-1">{vuongMac.tenCongTac} (KH-{vuongMac.keHoachId})</div>
-                        </div>
-                        <div className="text-sm font-medium">{indexGT + 1}.{indexHM + 1}.{indexVM + 1}</div>
-                      </div>
-
-                      <div className="mt-2 text-sm space-y-1">
-                        <div>
-                          <span className="text-gray-500">Vướng mắc:</span>
-                          <div className="text-gray-700">{vuongMac.moTaChiTiet}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Biện pháp:</span>
-                          <div className="text-gray-700">{vuongMac.bienPhapXuLy || 'Chưa có'}</div>
-                        </div>
-                        <div className="flex space-x-4">
-                          <div>
-                            <span className="text-gray-500">Ngày phát sinh:</span>
-                            <div className="text-gray-700">{formatDate(vuongMac.ngayPhatSinh)}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Ngày kết thúc:</span>
-                            <div className="text-gray-700">{formatDate(vuongMac.ngayKetThuc)}</div>
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Trạng thái:</span>
-                          <span className={`ml-1 px-2 py-1 rounded-full text-xs ${isApproved ? 'bg-green-200 text-green-800' : 'bg-yellow-200 text-yellow-800'}`}>
-                            {vuongMac.trangThai}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-2 flex justify-end space-x-1">
-                      <button
-                                onClick={() => handleDeleteKeHoach(vuongMac.vuongMacId)}
-                                  className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                  title="Xóa"
-                                >
-                                  <FaTrash size={12} className="sm:w-3.5 sm:h-3.5" />
-                                </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </React.Fragment>
-            ))}
-          </React.Fragment>
-        ))}
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Lưu thay đổi
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
-      {showAddCategoryModal && (
-        <AddNewCategories
-          goiThauId={selectedPackageId}
-          onClose={() => setShowAddCategoryModal(false)}
-          onSuccess={handleCategoryAdded}
-        />
-      )}
-      {showAddVuongMac && (
-        <AddVuongMacPopup
-          hangMucId={selectedHangMucId}
-          onClose={() => setShowAddVuongMac(false)}
-          onSuccess={(newVuongMac) => {
-            setShowAddVuongMac(false)
-            fetchData()
-          }}
-        />
-      )}
     </div>
   );
-};
-
-export default ApprovalSubTable;
+}

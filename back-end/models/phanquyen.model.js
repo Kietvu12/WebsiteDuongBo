@@ -22,4 +22,9 @@ const phanquyen = sequelize.define('phanquyen', {
   updatedAt: false
 });
 
-module.exports = User;
+// Define associations
+phanquyen.associate = (models) => {
+  phanquyen.hasMany(models.taikhoan, { foreignKey: 'PhanQuyenID', as: 'TaiKhoans' });
+};
+
+module.exports = phanquyen;

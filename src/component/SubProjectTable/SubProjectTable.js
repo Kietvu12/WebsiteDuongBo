@@ -21,7 +21,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [showIssuePopup, setShowIssuePopup] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-
+  const [hoveredBar, setHoveredBar] = useState(null);
   const handleOpenIssuePopup = (plan, projectId) => {
     setSelectedPlan(plan);
     setSelectedProjectId(projectId);
@@ -236,22 +236,24 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     const header = headerRef.current;
     const body = bodyRef.current;
 
-    if (!header || !body) return;
-
-    const handleScroll = (e) => {
-      if (e.target === header) {
+    const syncScroll = () => {
+      if (header && body) {
         body.scrollLeft = header.scrollLeft;
-      } else {
+      }
+    };
+
+    const syncBodyScroll = () => {
+      if (header && body) {
         header.scrollLeft = body.scrollLeft;
       }
     };
 
-    header.addEventListener('scroll', handleScroll);
-    body.addEventListener('scroll', handleScroll);
+    if (header) header.addEventListener('scroll', syncScroll);
+    if (body) body.addEventListener('scroll', syncBodyScroll);
 
     return () => {
-      header.removeEventListener('scroll', handleScroll);
-      body.removeEventListener('scroll', handleScroll);
+      if (header) header.removeEventListener('scroll', syncScroll);
+      if (body) body.removeEventListener('scroll', syncBodyScroll);
     };
   }, []);
 
@@ -266,26 +268,25 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       ganttArea.removeEventListener('wheel', handleGanttWheel);
     };
   }, [handleGanttWheel]);
-
-
+  const startYear = visibleRange.start ? new Date(visibleRange.start).getFullYear() : new Date().getFullYear();
+  const endYear = visibleRange.end ? new Date(visibleRange.end).getFullYear() : startYear;
+  const totalTimelineWidth = (endYear - startYear + 1) * 12 * 60;
   const renderTimelineHeader = () => {
-    if (!timeRange.min || !timeRange.max) return null;
+    if (!visibleRange.start || !visibleRange.end) return null;
 
-    if (timeZoom === 'year') {
-      const startYear = visibleRange.start.getFullYear();
-      const endYear = visibleRange.end.getFullYear();
-      const years = [];
+    const years = [];
+    for (let year = startYear; year <= endYear; year++) {
+      years.push(year);
+    }
 
-      for (let year = startYear; year <= endYear; year++) {
-        years.push(year);
-      }
-
-      return (
+    return (
+      <div className="flex flex-col">
         <div className="flex">
           {years.map(year => (
             <div
               key={year}
-              className="flex-1 min-w-[80px] text-center py-2 border-r border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100"
+              className="min-w-[720px] text-center py-2 border-r border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100"
+              style={{ width: `${12 * 60}px` }} // 12 months * 60px each
               onClick={() => {
                 setSelectedYear(year);
                 setTimeZoom('month');
@@ -296,93 +297,84 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
             </div>
           ))}
         </div>
-      );
-    }
-
-    if (timeZoom === 'month') {
-      const startDate = new Date(visibleRange.start);
-      const endDate = new Date(visibleRange.end);
-      const months = [];
-
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        months.push(new Date(currentDate));
-        currentDate.setMonth(currentDate.getMonth() + 1);
-      }
-
-      return (
         <div className="flex">
-          {months.map((month, index) => (
-            <div
-              key={index}
-              className="flex-1 min-w-[60px] text-center py-2 border-r border-gray-200 bg-gray-50 cursor-pointer hover:bg-gray-100"
-              onClick={() => {
-                setSelectedMonth(month.getMonth());
-                setTimeZoom('day');
-                setZoomLevel(1);
-              }}
-            >
-              {month.toLocaleString('default', { month: 'short' })}
-            </div>
-          ))}
+          {years.flatMap(year =>
+            Array.from({ length: 12 }, (_, month) => {
+              const date = new Date(year, month, 1);
+              const isOutsideRange = date < visibleRange.start || date > visibleRange.end;
+              return (
+                <div
+                  key={`${year}-${month}`}
+                  className={`min-w-[60px] text-center py-2 border-r border-gray-200 bg-gray-50 ${isOutsideRange ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-100'}`}
+                  onClick={() => {
+                    if (!isOutsideRange) {
+                      setSelectedYear(year);
+                      setSelectedMonth(month);
+                      setTimeZoom('day');
+                      setZoomLevel(1);
+                    }
+                  }}
+                >
+                  {date.toLocaleString('default', { month: 'short' })}
+                </div>
+              );
+            })
+          )}
         </div>
-      );
-    }
-
-    if (timeZoom === 'day') {
-      const startDate = new Date(visibleRange.start);
-      const endDate = new Date(visibleRange.end);
-      const days = [];
-
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        days.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      return (
-        <div className="flex">
-          {days.map((day, index) => (
-            <div
-              key={index}
-              className="flex-1 min-w-[30px] text-center py-2 border-r border-gray-200 bg-gray-50"
-            >
-              {day.getDate()}
-            </div>
-          ))}
-        </div>
-      );
-    }
+      </div>
+    );
   };
 
-  const calculateBarPosition = (startDate, endDate) => {
-    if (!visibleRange.start || !visibleRange.end) return { left: 0, width: 0 };
-
-    const totalDuration = visibleRange.end - visibleRange.start;
-    const barStart = Math.max(0, new Date(startDate) - visibleRange.start);
-    const barEnd = Math.min(totalDuration, new Date(endDate) - visibleRange.start);
-    const barDuration = barEnd - barStart;
-
-    const left = (barStart / totalDuration) * 100;
-    const width = (barDuration / totalDuration) * 100;
-
-    return { left, width };
+  const calculateBarPosition = (startDate, endDate, visibleRange, totalTimelineWidth) => {
+    if (!startDate || !endDate || !visibleRange.start || !visibleRange.end) {
+      return { left: 0, width: 0 };
+    }
+  
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const rangeStart = new Date(visibleRange.start);
+    const rangeEnd = new Date(visibleRange.end);
+  
+    // Tính số tháng từ rangeStart
+    const startYear = rangeStart.getFullYear();
+    const startMonth = rangeStart.getMonth();
+    const totalMonths = (rangeEnd.getFullYear() - startYear) * 12 + rangeEnd.getMonth() - startMonth + 1;
+  
+    // Mỗi tháng chiếm 60px
+    const pixelsPerMonth = 60;
+  
+    // Tính số tháng từ đầu timeline đến startDate và endDate
+    const startMonths = (start.getFullYear() - startYear) * 12 + start.getMonth() - startMonth;
+    const endMonths = (end.getFullYear() - startYear) * 12 + end.getMonth() - startMonth;
+  
+    const left = startMonths * pixelsPerMonth;
+    const width = (endMonths - startMonths + 1) * pixelsPerMonth;
+  
+    return {
+      left: Math.max(0, left),
+      width: Math.max(0, width)
+    };
   };
 
-  const renderGanttBar = (startDate, endDate, progress, level = 0) => {
-    if (!startDate || !endDate) return null;
+  const renderGanttBar = (startDate, endDate, progress, level = 0, itemData) => {
+    if (!startDate || !endDate || isNaN(new Date(startDate)) || isNaN(new Date(endDate))) {
+      console.warn('Invalid date inputs');
+      return null;
+    }
 
-    const { left, width } = calculateBarPosition(startDate, endDate);
+    const { left, width } = calculateBarPosition(startDate, endDate, visibleRange, totalTimelineWidth);
     const progressWidth = progress ? Math.min(100, progress) * width / 100 : 0;
 
     return (
       <div
         className="absolute h-4 top-1/2 transform -translate-y-1/2 rounded"
         style={{
-          left: `${left}%`,
-          width: `${width}%`,
+          left: `${left}px`,
+          width: `${width}px`,
           marginLeft: `${level * 8}px`
         }}
+        onMouseEnter={() => setHoveredBar(itemData)}
+        onMouseLeave={() => setHoveredBar(null)}
       >
         <div
           className="absolute h-full bg-blue-300 rounded"
@@ -390,26 +382,34 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         />
         <div
           className="absolute h-full bg-blue-600 rounded"
-          style={{ width: `${progressWidth}%` }}
+          style={{ width: `${progressWidth}px` }}
         />
+        {hoveredBar === itemData && (
+          <div className="absolute z-10 bg-white p-3 rounded shadow-lg border border-gray-200 -top-24 left-0 w-64">
+            <div className="text-sm font-medium mb-1">{itemData.name}</div>
+            <div className="text-xs text-gray-600">Bắt đầu: {formatDate(startDate)}</div>
+            <div className="text-xs text-gray-600">Kết thúc: {formatDate(endDate)}</div>
+            <div className="text-xs text-gray-600">Thời gian: {calculateDays(startDate, endDate)} ngày</div>
+            <div className="text-xs text-gray-600">Tiến độ: {progress ? progress.toFixed(0) : 0}%</div>
+            {itemData.actual && <div className="text-xs text-gray-600">KL thực hiện: {itemData.actual.toLocaleString()}</div>}
+            {itemData.plan && <div className="text-xs text-gray-600">KL kế hoạch: {itemData.plan.toLocaleString()}</div>}
+            {itemData.unit && <div className="text-xs text-gray-600">Đơn vị: {itemData.unit}</div>}
+          </div>
+        )}
       </div>
     );
   };
+
   const renderPackageRow = (packageItem, packageIndex) => {
-    // Tính toán chiều rộng cố định cho các cột
-const columnWidths = {
-  id: 'w-20 flex-shrink-0',          
-  name: 'min-w-[200px] flex-1', 
-  actual: 'w-24 flex-shrink-0',   
-  plan: 'w-24 flex-shrink-0',      
-  unit: 'w-16 flex-shrink-0',   
-  progress: 'w-24 flex-shrink-0',
-  duration: 'w-20 flex-shrink-0',
-  start: 'w-24 flex-shrink-0',
-  end: 'w-24 flex-shrink-0', 
-  actions: 'w-24 flex-shrink-0'
-};
-  
+    const columnWidths = {
+      id: 'w-20 flex-shrink-0',
+      name: 'min-w-[200px] flex-1',
+      actual: 'w-24 flex-shrink-0',
+      plan: 'w-24 flex-shrink-0',
+      unit: 'w-16 flex-shrink-0',
+      actions: 'w-24 flex-shrink-0'
+    };
+
     const renderDataCell = (content, width, align = 'left', extraClasses = '') => {
       const alignmentClass = align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start';
       return (
@@ -418,23 +418,22 @@ const columnWidths = {
         </div>
       );
     };
-  
+
     return (
       <React.Fragment key={`package-${packageItem.goiThauId}`}>
-        {/* Package Row */}
         <div className="flex items-stretch border-b border-gray-200 hover:bg-blue-50 min-h-8">
-          {/* Data columns (50% width) */}
           <div className="w-1/2 flex">
             {renderDataCell(
               `GT-${packageItem.goiThauId}`,
               columnWidths.id
             )}
-            
             {renderDataCell(
               <>
                 <button
                   onClick={() => toggleItem('packages', packageItem.goiThauId)}
                   className="flex items-center focus:outline-none mr-1"
+                  aria-label={`Toggle package ${packageItem.goiThauId}`}
+                  aria-expanded={expandedItems.packages[packageItem.goiThauId]}
                 >
                   {expandedItems.packages[packageItem.goiThauId] ? (
                     <FaChevronDown size={12} />
@@ -446,48 +445,23 @@ const columnWidths = {
               </>,
               columnWidths.name
             )}
-  
             {renderDataCell(
               packageItem.tongKhoiLuongThucHien?.toLocaleString(),
               columnWidths.actual,
               'right'
             )}
-  
+
             {renderDataCell(
               packageItem.tongKhoiLuongKeHoach?.toLocaleString(),
               columnWidths.plan,
               'right'
             )}
-  
+
             {renderDataCell(
               '',
               columnWidths.unit
             )}
-  
-            {renderDataCell(
-              packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
-                ? `${Math.round((packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100)}%`
-                : '',
-              columnWidths.progress,
-              'right'
-            )}
-  
-            {renderDataCell(
-              calculateDays(packageItem.ngayKhoiCong, packageItem.ngayHoanThanh),
-              columnWidths.duration,
-              'center'
-            )}
-  
-            {renderDataCell(
-              formatDate(packageItem.ngayKhoiCong),
-              columnWidths.start
-            )}
-  
-            {renderDataCell(
-              formatDate(packageItem.ngayHoanThanh),
-  columnWidths.end
-            )}
-  
+
             {renderDataCell(
               <button
                 className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
@@ -501,30 +475,31 @@ const columnWidths = {
               'flex space-x-2'
             )}
           </div>
-  
-          {/* Gantt chart area (50% width) */}
           <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
-            <div className="absolute inset-y-0 left-0 right-1 flex items-center">
-              {renderGanttBar(
-                packageItem.ngayKhoiCong, 
-                packageItem.ngayHoanThanh,
-                packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
-                  ? (packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100
-                  : 0,
-                0 // Level 0 for package
-              )}
-            </div>
+            {renderGanttBar(
+              packageItem.ngayKhoiCong,
+              packageItem.ngayHoanThanh,
+              packageItem.tongKhoiLuongKeHoach && packageItem.tongKhoiLuongThucHien
+                ? (packageItem.tongKhoiLuongThucHien / packageItem.tongKhoiLuongKeHoach) * 100
+                : 0,
+              0,
+              {
+                name: packageItem.tenGoiThau,
+                type: 'package',
+                actual: packageItem.tongKhoiLuongThucHien,
+                plan: packageItem.tongKhoiLuongKeHoach,
+                unit: ''
+              }
+            )}
           </div>
         </div>
-  
-        {/* Expanded items */}
+
         {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
           const progress = item.tongKhoiLuongKeHoach
             ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
             : 0;
-  
           const bgColor = progress >= 100 ? 'bg-green-50' : progress >= 40 ? 'bg-yellow-50' : 'bg-red-50';
-  
+
           return (
             <React.Fragment key={`item-${item.hangMucId}`}>
               <div className={`flex items-stretch border-b border-gray-200 ${bgColor} hover:${bgColor.replace('50', '100')} min-h-8`}>
@@ -533,12 +508,13 @@ const columnWidths = {
                     `HM-${item.hangMucId}`,
                     columnWidths.id
                   )}
-                  
                   {renderDataCell(
                     <>
                       <button
                         onClick={() => toggleItem('items', item.hangMucId)}
                         className="flex items-center focus:outline-none mr-1"
+                        aria-label={`Toggle item ${item.hangMucId}`}
+                        aria-expanded={expandedItems.items[item.hangMucId]}
                       >
                         {expandedItems.items[item.hangMucId] ? (
                           <FaChevronDown size={12} />
@@ -550,50 +526,22 @@ const columnWidths = {
                     </>,
                     columnWidths.name
                   )}
-  
                   {renderDataCell(
                     item.tongKhoiLuongThucHien?.toLocaleString(),
                     columnWidths.actual,
                     'right'
                   )}
-  
+
                   {renderDataCell(
                     item.tongKhoiLuongKeHoach?.toLocaleString(),
                     columnWidths.plan,
                     'right'
                   )}
-  
+
                   {renderDataCell(
-  item.danhSachKeHoach?.[0]?.donViTinh || '',
+                    item.danhSachKeHoach?.[0]?.donViTinh || '',
                     columnWidths.unit
                   )}
-  
-                  {renderDataCell(
-                    `${progress.toFixed(0)}%`,
-                    columnWidths.progress,
-                    'right',
-                    'font-medium'
-                  )}
-  
-                  {renderDataCell(
-                    item.danhSachKeHoach?.[0] ? calculateDays(
-                      item.danhSachKeHoach[0].ngayBatDau,
-                      item.danhSachKeHoach[0].ngayKetThuc
-                    ) : '',
-                    columnWidths.duration,
-                    'center'
-                  )}
-  
-                  {renderDataCell(
-                    item.danhSachKeHoach?.[0]?.ngayBatDau && formatDate(item.danhSachKeHoach[0].ngayBatDau),
-                    columnWidths.start
-                  )}
-  
-                  {renderDataCell(
-                    item.danhSachKeHoach?.[0]?.ngayKetThuc && formatDate(item.danhSachKeHoach[0].ngayKetThuc),
-                    columnWidths.end
-                  )}
-  
                   {renderDataCell(
                     <>
                       <button
@@ -616,78 +564,55 @@ const columnWidths = {
                     'flex space-x-2'
                   )}
                 </div>
-  
-                {/* Gantt chart area */}
                 <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
-                  <div className="absolute inset-y-0 left-0 right-1 flex items-center">
-                    {item.danhSachKeHoach?.[0] && renderGanttBar(
-                      item.danhSachKeHoach[0].ngayBatDau,
-                      item.danhSachKeHoach[0].ngayKetThuc,
-                      progress,
-                      1 // Level 1 for item
-                    )}
-                  </div>
+                  {item.danhSachKeHoach?.[0] && renderGanttBar(
+                    item.danhSachKeHoach[0].ngayBatDau,
+                    item.danhSachKeHoach[0].ngayKetThuc,
+                    progress,
+                    1,
+                    {
+                      name: item.tenHangMuc,
+                      type: 'item',
+                      actual: item.tongKhoiLuongThucHien,
+                      plan: item.tongKhoiLuongKeHoach,
+                      unit: item.danhSachKeHoach?.[0]?.donViTinh || ''
+                    }
+                  )}
                 </div>
               </div>
-  
-              {/* Plans */}
+
               {expandedItems.items[item.hangMucId] && item.danhSachKeHoach?.map((plan, planIndex) => {
                 const planProgress = plan.khoiLuongKeHoach
                   ? Math.min((plan.tongKhoiLuongThucHien / plan.khoiLuongKeHoach) * 100, 100)
                   : 0;
-  
+
                 return (
                   <div key={`plan-${plan.keHoachId}`} className="flex items-stretch border-b border-gray-200 hover:bg-gray-50 min-h-8">
                     <div className="w-1/2 flex">
-  {renderDataCell(
+                      {renderDataCell(
                         `KH-${plan.keHoachId}`,
                         columnWidths.id
                       )}
-                      
                       {renderDataCell(
                         plan.tenCongTac,
                         columnWidths.name
                       )}
-  
                       {renderDataCell(
                         plan.tongKhoiLuongThucHien?.toLocaleString(),
                         columnWidths.actual,
                         'right'
                       )}
-  
+
                       {renderDataCell(
                         plan.khoiLuongKeHoach?.toLocaleString(),
                         columnWidths.plan,
                         'right'
                       )}
-  
+
                       {renderDataCell(
                         plan.donViTinh,
                         columnWidths.unit
                       )}
-  
-                      {renderDataCell(
-                        `${planProgress.toFixed(0)}%`,
-                        columnWidths.progress,
-                        'right'
-                      )}
-  
-                      {renderDataCell(
-                        calculateDays(plan.ngayBatDau, plan.ngayKetThuc),
-                        columnWidths.duration,
-                        'center'
-                      )}
-  
-                      {renderDataCell(
-                        formatDate(plan.ngayBatDau),
-                        columnWidths.start
-                      )}
-  
-                      {renderDataCell(
-                        formatDate(plan.ngayKetThuc),
-                        columnWidths.end
-                      )}
-  
                       {renderDataCell(
                         <button
                           className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
@@ -700,17 +625,20 @@ const columnWidths = {
                         'left'
                       )}
                     </div>
-  
-                    {/* Gantt chart area */}
                     <div className="w-1/2 relative flex items-center min-h-8 border-l border-gray-200 overflow-hidden">
-                      <div className="absolute inset-y-0 left-0 right-1 flex items-center">
-                        {renderGanttBar(
-                          plan.ngayBatDau,
-                          plan.ngayKetThuc,
-                          planProgress,
-                          2 // Level 2 for plan
-                        )}
-                      </div>
+                      {renderGanttBar(
+                        plan.ngayBatDau,
+                        plan.ngayKetThuc,
+                        planProgress,
+                        2,
+                        {
+                          name: plan.tenCongTac,
+                          type: 'plan',
+                          actual: plan.tongKhoiLuongThucHien,
+                          plan: plan.khoiLuongKeHoach,
+                          unit: plan.donViTinh
+                        }
+                      )}
                     </div>
                   </div>
                 );
@@ -1040,7 +968,7 @@ const columnWidths = {
   if (!data) return <div className="p-4">No data available</div>;
 
   return (
-    <div className="w-full overflow-x-auto p-2">
+    <div className="w-full h-full flex-1 bg-[#FAFAFA] overflow-x-auto p-2">
       <div className="hidden md:block">
         {/* Phần tìm kiếm và lọc ngày */}
         <div className="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-md shadow-sm">
@@ -1095,7 +1023,7 @@ const columnWidths = {
             </button>
           </div>
         </div>
-        <div className="w-full overflow-hidden">
+        <div className="w-full bg-white p-4 overflow-hidden">
           <div className="mb-4 flex items-center">
             <div className="text-sm font-medium">
               Current view: {timeZoom} {selectedYear && `- ${selectedYear}`} {selectedMonth !== null && `- ${new Date(selectedYear, selectedMonth, 1).toLocaleString('default', { month: 'long' })}`}
@@ -1106,24 +1034,16 @@ const columnWidths = {
           </div>
 
           <div className="border rounded-lg overflow-hidden">
-            {/* Fixed header */}
             <div className="sticky top-0 z-10 bg-white">
               <div className="flex border-b border-gray-200 bg-gray-50">
-                {/* Fixed columns header (50% width) */}
                 <div className="w-1/2 flex">
-  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Mã số</div>
-  <div className="min-w-[200px] flex-1 px-2 py-2 border-r border-gray-200 font-medium box-border">Công việc</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL thực hiện</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL kế hoạch</div>
-  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Đơn vị</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">Tiến độ</div>
-  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium text-center flex-shrink-0 box-border">Thời gian</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Bắt đầu</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Kết thúc</div>
-  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Thao tác</div>
-</div>
-
-                {/* Timeline header (50% width) */}
+                  <div className="w-20 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Mã số</div>
+                  <div className="min-w-[200px] flex-1 px-2 py-2 border-r border-gray-200 font-medium box-border">Công việc</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL thực hiện</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium text-right flex-shrink-0 box-border">KL kế hoạch</div>
+                  <div className="w-16 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Đơn vị</div>
+                  <div className="w-24 px-2 py-2 border-r border-gray-200 font-medium flex-shrink-0 box-border">Thao tác</div>
+                </div>
                 <div
                   className="w-1/2 overflow-x-auto border-l border-gray-200"
                   ref={headerRef}
@@ -1133,11 +1053,9 @@ const columnWidths = {
               </div>
             </div>
 
-            {/* Scrollable body */}
             <div
               className="overflow-y-auto"
               style={{ maxHeight: '600px' }}
-              ref={bodyRef}
             >
               {([]).concat(
                 data?.duAnThanhPhan?.danhSachGoiThau || [],

@@ -5,6 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import axios from 'axios';
 import './MapComponent.css';
 import { useNavigate } from 'react-router-dom';
+import vietnamGeoJson from '../../assets/data/vietnam.json'
 
 const createCustomIcon = (color) => {
   return L.divIcon({
@@ -18,6 +19,7 @@ const MapController = ({ allRoutes }) => {
   const map = useMap();
 
   useEffect(() => {
+    // Xử lý fit bounds nếu có routes
     if (allRoutes?.length > 0) {
       try {
         const bounds = L.latLngBounds(allRoutes.flat());
@@ -26,6 +28,59 @@ const MapController = ({ allRoutes }) => {
         console.error('Error setting map bounds:', error);
       }
     }
+
+    // Tạo mask layer cho Việt Nam
+    const createVietnamMask = () => {
+      // Xóa layer cũ nếu tồn tại
+      if (map._maskLayer) {
+        map.removeLayer(map._maskLayer);
+      }
+
+      // Tạo polygon bao phủ toàn thế giới
+      const worldBounds = [
+        [90, -180],
+        [90, 180],
+        [-90, 180],
+        [-90, -180]
+      ];
+
+      // Tạo các "lỗ" từ GeoJSON Việt Nam
+      const vietnamHoles = vietnamGeoJson.features.flatMap(feature => {
+        const coords = feature.geometry.coordinates;
+        if (feature.geometry.type === 'Polygon') {
+          return coords.map(ring => 
+            ring.map(([lng, lat]) => [lat, lng]))
+        } else { // MultiPolygon
+          return coords.flatMap(poly => 
+            poly.map(ring => 
+              ring.map(([lng, lat]) => [lat, lng])
+            ))
+        }
+      });
+
+      // Tạo mask layer
+      const maskLayer = L.polygon(
+        [worldBounds, ...vietnamHoles],
+        {
+          fillColor: '#000',
+          fillOpacity: 0.5,
+          weight: 0,
+          interactive: false
+        }
+      ).addTo(map);
+
+      map._maskLayer = maskLayer;
+    };
+
+    // Gọi hàm tạo mask
+    createVietnamMask();
+
+    // Cleanup khi unmount
+    return () => {
+      if (map._maskLayer) {
+        map.removeLayer(map._maskLayer);
+      }
+    };
   }, [allRoutes, map]);
 
   return null;
@@ -56,6 +111,7 @@ const getStatusColor = (status) => {
       return '#795548';
   }
 };
+
 
 const MapComponent = ({ projects = [] }) => {
   const navigate = useNavigate();
@@ -296,6 +352,30 @@ const MapComponent = ({ projects = [] }) => {
               </ul>
             </div>
           )}
+
+          <div className="absolute top-4 right-4 bg-white min-w-[160px] min-h-[100px] z-[1000] rounded-xl border-2 border-blue-700 p-2">
+            <div className="font-semibold">GHI CHÚ</div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-blue-600"></span>
+              <span>Đang chuẩn bị</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-[#33FF57]"></span>
+              <span>Đang thi công</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-yellow-500"></span>
+              <span>Hoàn thành</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-purple-500"></span>
+              <span>Tạm dừng</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="inline-block h-[3px] w-8 bg-red-600"></span>
+              <span>Chậm tiến độ</span>
+            </div>
+          </div>
 
           <MapContainer
             center={mapCenter}
