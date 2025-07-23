@@ -6,7 +6,7 @@ import { useProject } from '../../contexts/ProjectContext';
 import { FaArrowLeft, FaRegBell } from 'react-icons/fa'
 
 const AddNewContructors = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     TenNhaThau: '',
     Loai: '',
@@ -21,9 +21,9 @@ const AddNewContructors = () => {
     NoiCap: '',
     GhiChu: ''
   });
-    const menuRef = useRef(null);
-    const [showMenu, setShowMenu] = useState(false);
-    const { logout, user} = useProject();
+  const menuRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const { logout, user } = useProject();
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,7 @@ const AddNewContructors = () => {
     if (!formData.MaSoThue) newErrors.MaSoThue = 'Mã số thuế là bắt buộc';
     return newErrors;
   };
-  
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   const handleSubmit = async (e) => {
@@ -88,46 +88,43 @@ const AddNewContructors = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-white shadow-xl rounded-lg overflow-hidden">
-          {/* Header */}
-          <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
+    <div className="min-h-screen bg-gray-50">
+      <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
         {/* Top Nav */}
-             <div className="flex justify-between items-center gap-2">
+        <div className="flex justify-between items-center gap-2">
           {/* Nút back */}
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="p-1 hover:bg-gray-100 rounded text-gray-600"
             aria-label="Quay lại"
           >
             <FaArrowLeft className="w-4 h-4" />
           </button>
-        
+
           {/* Nhóm icon bên phải */}
           <div className="flex items-center gap-2">
             <span className="text-gray-500">Thông báo</span>
             <FaRegBell />
             <span></span>
             <div className="inline-block" ref={menuRef}>
-                <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
-                  onClick={() => setShowMenu(!showMenu)}
-                >
-                  R
-                </button>
-                {showMenu && (
-              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
-                <button
-                  className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                >
-                  Đăng xuất
+              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                onClick={() => setShowMenu(!showMenu)}
+              >
+                R
+              </button>
+              {showMenu && (
+                <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                  <button
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                    onClick={() => {
+                      logout();
+                      navigate('/login');
+                    }}
+                  >
+                    Đăng xuất
                   </button>
-              </div>
-            )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -138,8 +135,8 @@ const AddNewContructors = () => {
 
 
       </div>
-
-          {/* Status Messages */}
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white mt-6 w-full shadow-xl rounded-lg overflow-hidden">
           <div className="px-6 sm:px-8 pt-4">
             {success && (
               <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded">
@@ -155,7 +152,7 @@ const AddNewContructors = () => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="px-6 sm:px-8 py-6">
+          <form onSubmit={handleSubmit} className="w-full px-6 sm:px-8 py-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Cột 1 */}
               <div className="space-y-5">

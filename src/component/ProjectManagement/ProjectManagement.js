@@ -9,7 +9,8 @@ import {
   FaTasks,
   FaCalendarAlt,
   FaChevronDown,
-  FaChevronRight, FaChevronUp
+  FaChevronRight, FaChevronUp,
+  FaPlus
 } from 'react-icons/fa';
 import { Line } from 'react-chartjs-2';
 import {
@@ -35,6 +36,7 @@ ChartJS.register(
 );
 const ProjectManagement = ({ tenDuAn, projectId }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [showProgressForm, setShowProgressForm] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [projectContext, setProjectContext] = useState({
     tenDuAn: '',
@@ -309,25 +311,35 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
               </div>
 
               {/* Dòng 3: Thẻ trạng thái */}
-              <div className="flex flex-wrap gap-2 mt-2 text-sm font-semibold">
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded">
-                  {remainingDays > 0 ? `${remainingDays} ngày` : 'Hết hạn'}
-                </span>
-                <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded">
-                  {formatDate(selectedPlan.ngayBatDau)}
-                </span>
-                <span className="bg-red-100 text-red-700 px-3 py-1 rounded">
-                  {formatDate(selectedPlan.ngayKetThuc)}
-                </span>
-
-                <span className="border border-green-600 text-green-600 px-3 py-1 rounded">
-                  Tiến độ hoàn thành: {selectedPlan.phanTramHoanThanh}%
-                </span>
-              </div>
+              <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-wrap gap-2 text-sm font-semibold">
+          <span className="bg-green-100 text-green-700 px-3 py-1 rounded">
+            {remainingDays > 0 ? `${remainingDays} ngày` : 'Hết hạn'}
+          </span>
+          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded">
+            {formatDate(selectedPlan.ngayBatDau)}
+          </span>
+          <span className="bg-red-100 text-red-700 px-3 py-1 rounded">
+            {formatDate(selectedPlan.ngayKetThuc)}
+          </span>
+          <span className="border border-green-600 text-green-600 px-3 py-1 rounded">
+            Tiến độ hoàn thành: {selectedPlan.phanTramHoanThanh}%
+          </span>
+        </div>
+        
+        <button
+          onClick={() => setShowProgressForm(!showProgressForm)}
+          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+        >
+          <FaPlus size={12} />
+          Thêm tiến độ
+        </button>
+      </div>
             </div>
 
 
             {/* Progress Form */}
+            {showProgressForm && (
             <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-100 mb-8">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Báo cáo tiến độ</h2>
 
@@ -452,6 +464,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
                 </button>
               </form>
             </div>
+            )}
             <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
       <div className="flex justify-between items-center mb-3">
         <h2 className="text-lg font-semibold text-gray-800">

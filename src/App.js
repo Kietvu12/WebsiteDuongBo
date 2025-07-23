@@ -152,9 +152,7 @@ function App() {
           <Route path='/work-items' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
-                <div style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '125%' }}>
                   <WorkItem />
-                </div>
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />

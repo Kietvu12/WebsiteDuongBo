@@ -91,6 +91,8 @@ const MapView = ({ selectedProject, isExpanded }) => {
           zoom={13}
           scrollWheelZoom={true}
           className="w-full h-full min-h-52"
+          wheelPanes="mapPane"
+          wheelDebounceTime={100}
         >
         <TileLayer
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

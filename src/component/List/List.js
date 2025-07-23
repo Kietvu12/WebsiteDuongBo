@@ -160,56 +160,56 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
             <FaListOl className="mr-3 text-sm md:text-lg" />
             DANH SÁCH GÓI THẦU
           </div>
-          <div className="p-2.5 overflow-y-auto flex-grow">
-            {packages.map((item, index) => (
-              <div 
-                key={item.GoiThau_ID}
-                className={`relative flex flex-col items-left gap-2 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-blue-50 ${
-                  selectedProject?.GoiThau_ID === item.GoiThau_ID 
-                    ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
-                    : ''
-                }`}
-                onClick={() => handlePackageClick(item.GoiThau_ID)}
-                onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
-              >
-                <div className="absolute top-1 right-1 flex gap-1">
-                  <button 
-                    className={`${actionButtonStyle} relative bg-blue-700`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditPackage(item.GoiThau_ID);
-                    }}
-                    title="Sửa"
-                    style={{ right: '1rem' }} // Đẩy nút sửa sang trái
-                  >
-                    <FaEdit size={12}/>
-                  </button>
-                  <button 
-                    className={`${actionButtonStyle} relative bg-red-700`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleConfirmDelete(item.GoiThau_ID);;
-                    }}
-                    title="Xóa"
-                  >
-                    <FaTrash size={12} />
-                  </button>
-                </div>
+<div className="p-2.5 overflow-y-auto flex-grow">
+  {packages.map((item, index) => (
+    <div 
+      key={item.GoiThau_ID}
+      className={`relative flex flex-col items-left gap-2 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-blue-50 ${
+        selectedProject?.GoiThau_ID === item.GoiThau_ID 
+          ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
+          : ''
+      }`}
+      onClick={() => handlePackageClick(item.GoiThau_ID)}
+      onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
+    >
+      <div className="absolute top-1 right-1 flex gap-1">
+        <button 
+          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEditPackage(item.GoiThau_ID);
+          }}
+          title="Sửa"
+          style={{ right: '1rem' }}
+        >
+          <span className='w-6 h-6'><FaEdit size={12}/></span>
+        </button>
+        <button 
+          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleConfirmDelete(item.GoiThau_ID);
+          }}
+          title="Xóa"
+        >
+          <FaTrash size={12} />
+        </button>
+      </div>
 
-                <div className='flex flex-row min-w-[80px]'>
-                  <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
-                    <FaHashtag className="mr-2 text-xs md:text-sm" />
-                  </div>
-                  <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
-                    GT - {index + 1}
-                  </div>
-                </div>
-                <div className="font-bold text-gray-600 text-xs md:text-sm flex-1">
-                  {item.TenGoiThau}
-                </div>
-              </div>
-            ))}
-          </div>
+      <div className='flex flex-row min-w-[80px]'>
+        <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
+          <FaHashtag className="mr-2 text-xs md:text-sm" />
+        </div>
+        <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
+          GT - {index + 1}
+        </div>
+      </div>
+      <div className="font-bold text-gray-600 text-xs md:text-sm flex-1">
+        {item.TenGoiThau}
+      </div>
+    </div>
+  ))}
+</div>
         </div>
       </div>
 

@@ -411,7 +411,7 @@ const MapComponent = ({ projects = [] }) => {
                     }}
                   />
 
-                  <Marker position={route.start} icon={customIcon}>
+                  <Marker position={route.start}>
                     <Popup>
                       <div className="marker-popup">
                         <h3>{route.name}</h3>
@@ -435,7 +435,7 @@ const MapComponent = ({ projects = [] }) => {
                     </Popup>
                   </Marker>
 
-                  <Marker position={route.end} icon={customIcon}>
+                  <Marker position={route.end}>
                     <Popup>
                       <div className="marker-popup">
                         <h3>{route.name}</h3>

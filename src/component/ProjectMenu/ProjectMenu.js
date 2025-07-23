@@ -185,36 +185,9 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
             </div>
 
             {/* Project Header */}
-            <div
-              className={`flex justify-between items-center px-4 py-3 border-b cursor-pointer transition hover:bg-gray-100 ${selectedItem?.type === 'project' ? 'bg-blue-50 border-l-4 border-blue-600' : ''
-                }`}
-              onClick={() => handleItemSelect(projectData, 'project')}
-            >
-              <div className="flex gap-2 items-center text-sm text-gray-700">
-                <FaProjectDiagram className="text-blue-600" />
-                <span className="font-semibold">DA-{projectData.duAnId || projectData.duAnTong?.duAnId}</span>
-              </div>
-              <div className="flex-1 ml-4">
-                <div className="text-gray-800 font-medium">
-                  {projectData.tenDuAn || projectData.duAnTong?.tenDuAn}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {projectData.phanTramHoanThanh || projectData.duAnTong?.phanTramHoanThanh}% hoàn thành
-                </div>
-              </div>
-              <div
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setExpandedItems(prev => ({ ...prev, project: !prev.project }));
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                {expandedItems.project ? <FaChevronDown /> : <FaChevronRight />}
-              </div>
-            </div>
 
             {/* Gói thầu */}
-            {expandedItems.project && combinedPackages.length > 0 && (
+            { combinedPackages.length > 0 && (
               <div className="ml-4 border-l border-gray-200">
                 <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                   <h3 className="text-xs font-bold text-gray-600">Danh sách gói thầu</h3>
@@ -228,8 +201,8 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                 {combinedPackages.map((pkg) => (
                   <div key={pkg.goiThauId}>
                     <div
-                      className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'package' && selectedItem?.goiThauId === pkg.goiThauId
-                        ? 'bg-blue-50 border-l-4 border-blue-600'
+                      className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b bg-[#E3EDF8] hover:bg-[#73A9DD] ${selectedItem?.type === 'package' && selectedItem?.goiThauId === pkg.goiThauId
+                        ? 'border-l-4 border-blue-600'
                         : ''
                         }`}
                       onClick={() => {
@@ -270,7 +243,7 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                         {pkg.danhSachHangMuc.map((workItem) => (
                           <div key={workItem.hangMucId}>
                             <div
-                              className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b hover:bg-gray-50 ${selectedItem?.type === 'work' && selectedItem?.hangMucId === workItem.hangMucId
+                              className={`flex justify-between items-center px-4 py-2 cursor-pointer border-b bg-[#FAF3EC] hover:bg-[#DBA975] ${selectedItem?.type === 'work' && selectedItem?.hangMucId === workItem.hangMucId
                                 ? 'bg-blue-50 border-l-4 border-blue-600'
                                 : ''
                                 }`}

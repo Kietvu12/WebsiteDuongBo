@@ -1,7 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaSearch, FaEdit, FaSave, FaTimes, FaUserShield } from 'react-icons/fa';
 import axios from 'axios';
 import Select from 'react-select';
+import { FaBuilding, FaPhone, FaEnvelope, FaIdCard, FaCalendarAlt, FaMapMarkerAlt, FaUserTie, FaFileAlt, FaTrash} from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useProject } from '../../contexts/ProjectContext';
+import { FaArrowLeft, FaRegBell } from 'react-icons/fa'
 
 const AccountSetting = () => {
   const [accounts, setAccounts] = useState([]);
@@ -14,6 +18,83 @@ const AccountSetting = () => {
     PhanQuyenID: '',
     TrangThai: true
   });
+    const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    TenNhaThau: '',
+    Loai: '',
+    MaSoThue: '',
+    DiaChiTruSo: '',
+    SoDienThoai: '',
+    Email: '',
+    NguoiDaiDien: '',
+    ChucVuNguoiDaiDien: '',
+    GiayPhepKinhDoanh: '',
+    NgayCap: '',
+    NoiCap: '',
+    GhiChu: ''
+  });
+  const menuRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const { logout, user } = useProject();
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.TenNhaThau) newErrors.TenNhaThau = 'Tên nhà thầu là bắt buộc';
+    if (!formData.MaSoThue) newErrors.MaSoThue = 'Mã số thuế là bắt buộc';
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/nhathau`, formData);
+      setSuccess(true);
+      resetForm();
+      setErrors({});
+    } catch (error) {
+      if (error.response && error.response.data.error) {
+        setErrors({ apiError: error.response.data.error });
+      } else {
+        setErrors({ apiError: 'Lỗi server khi thêm nhà thầu' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      TenNhaThau: '',
+      Loai: '',
+      MaSoThue: '',
+      DiaChiTruSo: '',
+      SoDienThoai: '',
+      Email: '',
+      NguoiDaiDien: '',
+      ChucVuNguoiDaiDien: '',
+      GiayPhepKinhDoanh: '',
+      NgayCap: '',
+      NoiCap: '',
+      GhiChu: ''
+    });
+  };
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   // Lấy danh sách tài khoản và quyền
   useEffect(() => {
@@ -112,14 +193,57 @@ const fetchData = async () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6 flex items-center">
-        <FaUserShield className="mr-2" /> QUẢN LÝ TÀI KHOẢN
-      </h1>
+      <div className="w-full bg-white  px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
+        {/* Top Nav */}
+        <div className="flex justify-between items-center gap-2">
+          {/* Nút back */}
+          <button
+            onClick={() => navigate(-1)}
+            className="p-1 hover:bg-gray-100 rounded text-gray-600"
+            aria-label="Quay lại"
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </button>
+
+          {/* Nhóm icon bên phải */}
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">Thông báo</span>
+            <FaRegBell />
+            <span></span>
+            <div className="inline-block" ref={menuRef}>
+              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+                onClick={() => setShowMenu(!showMenu)}
+              >
+                R
+              </button>
+              {showMenu && (
+                <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                  <button
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                    onClick={() => {
+                      logout();
+                      navigate('/login');
+                    }}
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <h1 className="flex-1 text-left font-bold text-gray-800 px-2 mt-3">
+          QUẢN LÝ TÀI KHOẢN
+        </h1>
+
+
+      </div>
 
       {/* Thanh tìm kiếm */}
-      <div className="relative mb-6">
+      <div className="mt-6 relative mb-6">
         <div className="flex items-center bg-white rounded-lg shadow-sm border overflow-hidden">
-          <div className="px-3 py-2 bg-gray-100">
+          <div className="px-3 py-2">
             <FaSearch className="text-gray-500" />
           </div>
           <input
