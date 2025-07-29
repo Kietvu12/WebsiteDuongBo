@@ -1,18 +1,54 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
-import './MapComponent.css';
-import { useNavigate } from 'react-router-dom';
-import vietnamGeoJson from '../../assets/data/vietnam.json'
+import React, { useEffect, useState } from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Polyline,
+  Marker,
+  Popup,
+  useMap,
+} from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import axios from "axios";
+import "./MapComponent.css";
+import { useNavigate } from "react-router-dom";
+import vietnamGeoJson from "../../assets/data/vietnam.json";
 
-const createCustomIcon = (color) => {
+import KmlLayer from "../KmlLayer";
+
+const createCustomIcon = (color, zoomLevel = 10) => {
+  const size = Math.max(8, zoomLevel * 1); // Kích thước tăng theo zoom
   return L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="background-color:${color}; border:2px solid white; border-radius:50%; width:16px; height:16px;"></div>`,
-    iconSize: [0, 0]
+    className: "custom-marker",
+    html: `<div style="
+      background-color:${color};
+      border:2px solid white;
+      border-radius:50%;
+      width:${size}px;
+      height:${size}px;
+    "></div>`,
+    iconSize: [size, size],
   });
+};
+
+const ZoomAwareMarker = ({ position, color, children }) => {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
+
+  useEffect(() => {
+    const handleZoom = () => setZoom(map.getZoom());
+    map.on("zoomend", handleZoom);
+    return () => map.off("zoomend", handleZoom);
+  }, [map]);
+
+  const icon = createCustomIcon(color, zoom);
+  //const icon = new L.Icon.Default();
+
+  return (
+    <Marker position={position} icon={icon}>
+      {children}
+    </Marker>
+  );
 };
 
 const MapController = ({ allRoutes }) => {
@@ -22,10 +58,16 @@ const MapController = ({ allRoutes }) => {
     // Xử lý fit bounds nếu có routes
     if (allRoutes?.length > 0) {
       try {
-        const bounds = L.latLngBounds(allRoutes.flat());
-        map.fitBounds(bounds, { padding: [50, 50] });
+        const validCoords = allRoutes
+          .flat()
+          .filter((coord) => Array.isArray(coord) && coord.length === 2);
+
+        if (validCoords.length > 0) {
+          const bounds = L.latLngBounds(validCoords);
+          map.fitBounds(bounds, { padding: [50, 50] });
+        }
       } catch (error) {
-        console.error('Error setting map bounds:', error);
+        console.error("Error setting map bounds:", error);
       }
     }
 
@@ -41,33 +83,29 @@ const MapController = ({ allRoutes }) => {
         [90, -180],
         [90, 180],
         [-90, 180],
-        [-90, -180]
+        [-90, -180],
       ];
 
       // Tạo các "lỗ" từ GeoJSON Việt Nam
-      const vietnamHoles = vietnamGeoJson.features.flatMap(feature => {
+      const vietnamHoles = vietnamGeoJson.features.flatMap((feature) => {
         const coords = feature.geometry.coordinates;
-        if (feature.geometry.type === 'Polygon') {
-          return coords.map(ring => 
-            ring.map(([lng, lat]) => [lat, lng]))
-        } else { // MultiPolygon
-          return coords.flatMap(poly => 
-            poly.map(ring => 
-              ring.map(([lng, lat]) => [lat, lng])
-            ))
+        if (feature.geometry.type === "Polygon") {
+          return coords.map((ring) => ring.map(([lng, lat]) => [lat, lng]));
+        } else {
+          // MultiPolygon
+          return coords.flatMap((poly) =>
+            poly.map((ring) => ring.map(([lng, lat]) => [lat, lng]))
+          );
         }
       });
 
       // Tạo mask layer
-      const maskLayer = L.polygon(
-        [worldBounds, ...vietnamHoles],
-        {
-          fillColor: '#000',
-          fillOpacity: 0.5,
-          weight: 0,
-          interactive: false
-        }
-      ).addTo(map);
+      const maskLayer = L.polygon([worldBounds, ...vietnamHoles], {
+        fillColor: "#000",
+        fillOpacity: 0.5,
+        weight: 0,
+        interactive: false,
+      }).addTo(map);
 
       map._maskLayer = maskLayer;
     };
@@ -87,31 +125,30 @@ const MapController = ({ allRoutes }) => {
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'Chưa có thông tin';
+  if (!dateString) return "Chưa có thông tin";
   const date = new Date(dateString);
-  return date.toLocaleDateString('vi-VN');
+  return date.toLocaleDateString("vi-VN");
 };
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Đã hoàn thành':
-      return '#4CAF50';
-    case 'Đang triển khai':
-      return '#2196F3';
-    case 'Đã phê duyệt – chờ khởi công':
-      return '#FFC107';
-    case 'Dự kiến khởi công':
-      return '#9C27B0';
-    case 'Chậm tiến độ':
-    case 'Đã phê duyệt – chậm tiến độ':
-      return '#F44336';
-    case 'Đang hoàn thiện hồ sơ đầu tư':
-      return '#607D8B';
+    case "Đang thi công":
+      return "#4CAF50";
+    case "Đang thi công":
+      return "#2196F3";
+    case "Hoàn thành":
+      return "#FFC107";
+    case "Tạm dừng":
+      return "#9C27B0";
+    case "Chậm tiến độ":
+    case "Chậm tiến độ":
+      return "#F44336";
+    case "Đang hoàn thiện hồ sơ đầu tư":
+      return "#607D8B";
     default:
-      return '#795548';
+      return "#795548";
   }
 };
-
 
 const MapComponent = ({ projects = [] }) => {
   const navigate = useNavigate();
@@ -124,41 +161,67 @@ const MapComponent = ({ projects = [] }) => {
   const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [routeErrors, setRouteErrors] = useState([]);
   const [activeRoute, setActiveRoute] = useState(null);
-  const [mapType, setMapType] = useState('standard');
+  const [mapType, setMapType] = useState("standard");
   const [showSidePanel, setShowSidePanel] = useState(false);
-  const [selectedProjectType, setSelectedProjectType] = useState('all');
+  const [selectedProjectType, setSelectedProjectType] = useState("all");
+
+  const [viewMode, setViewMode] = useState("parent"); // all | parent | sub
+  const [displayedLayers, setDisplayedLayers] = useState([]);
 
   const mapTypes = {
-    standard: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    terrain: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+    standard: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    satellite:
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    terrain: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
   };
 
   const projectTypes = [
-    { value: 'all', label: 'Tất cả dự án' },
-    { value: 'completed', label: 'Đã hoàn thành' },
-    { value: 'in-progress', label: 'Đang triển khai' },
-    { value: 'planned', label: 'Dự kiến/Chờ khởi công' },
-    { value: 'delayed', label: 'Chậm tiến độ' }
+    { value: "all", label: "Tất cả dự án" },
+    { value: "completed", label: "Đã hoàn thành" },
+    { value: "in-progress", label: "Đang triển khai" },
+    { value: "planned", label: "Dự kiến/Chờ khởi công" },
+    { value: "delayed", label: "Chậm tiến độ" },
   ];
 
   const generateColorForProject = (parentId) => {
     const colors = [
-      '#FF5733', '#33FF57', '#3357FF', '#F333FF', '#FF33A8',
-      '#33FFF5', '#8F33FF', '#FF8F33', '#33FF8F', '#FF338F'
+      "#FF5733",
+      "#33FF57",
+      "#3357FF",
+      "#F333FF",
+      "#FF33A8",
+      "#33FFF5",
+      "#8F33FF",
+      "#FF8F33",
+      "#33FF8F",
+      "#FF338F",
     ];
-    const hash = parentId ? parentId.toString().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+    const hash = parentId
+      ? parentId
+          .toString()
+          .split("")
+          .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+      : 0;
     return colors[hash % colors.length];
   };
 
   const parseCoordinate = (coord) => {
     if (coord === null || coord === undefined) return null;
-    const num = typeof coord === 'string' ? parseFloat(coord) : coord;
+    const num = typeof coord === "string" ? parseFloat(coord) : coord;
     return isNaN(num) ? null : num;
   };
 
   useEffect(() => {
+    const checkKmlExists = async (kmlUrl) => {
+      try {
+        const response = await fetch(kmlUrl, { method: "HEAD" });
+        return response.ok;
+      } catch (error) {
+        return false;
+      }
+    };
+
     const fetchRoutes = async () => {
       setLoadingRoutes(true);
       setRouteErrors([]);
@@ -167,31 +230,63 @@ const MapComponent = ({ projects = [] }) => {
 
       for (const project of projects) {
         try {
-          const parentColor = generateColorForProject(project.DuAnID);
+          const statusColor = getStatusColor(project.TrangThai);
 
+          // Kiểm tra KML cho dự án chính
+          const projectKmlUrl = `${window.location.origin}/kml/haTinh-HCM.kml`;
+          const hasProjectKml = await checkKmlExists(projectKmlUrl);
+
+          // Xử lý dự án thành phần
           if (project.duAnThanhPhan?.length > 0) {
             for (const subProject of project.duAnThanhPhan) {
-              if (subProject?.coordinates?.start && subProject?.coordinates?.end) {
-                const startLat = parseCoordinate(subProject.coordinates.start.lat);
-                const startLng = parseCoordinate(subProject.coordinates.start.lng);
+              if (
+                subProject?.coordinates?.start &&
+                subProject?.coordinates?.end
+              ) {
+                const startLat = parseCoordinate(
+                  subProject.coordinates.start.lat
+                );
+                const startLng = parseCoordinate(
+                  subProject.coordinates.start.lng
+                );
                 const endLat = parseCoordinate(subProject.coordinates.end.lat);
                 const endLng = parseCoordinate(subProject.coordinates.end.lng);
 
-                if ([startLat, startLng, endLat, endLng].every(c => c !== null)) {
+                if (
+                  [startLat, startLng, endLat, endLng].every((c) => c !== null)
+                ) {
                   const startPos = [startLat, startLng];
                   const endPos = [endLat, endLng];
                   let path = [startPos, endPos];
 
-                  try {
-                    const response = await axios.get(
-                      `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
-                      { params: { overview: 'full', geometries: 'geojson' }, timeout: 5000 }
-                    );
-                    if (response.data?.routes?.[0]?.geometry?.coordinates) {
-                      path = response.data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                  // Kiểm tra KML cho dự án thành phần
+                  const subProjectKmlUrl = `${window.location.origin}/kml/yenBai-thanhHoa.kml`;
+                  const hasSubProjectKml = await checkKmlExists(
+                    subProjectKmlUrl
+                  );
+
+                  // Chỉ lấy path từ OSRM nếu không có KML
+                  if (!hasSubProjectKml) {
+                    try {
+                      const response = await axios.get(
+                        `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
+                        {
+                          params: { overview: "full", geometries: "geojson" },
+                          timeout: 10000,
+                        }
+                      );
+
+                      if (response.data?.routes?.[0]?.geometry?.coordinates) {
+                        path = response.data.routes[0].geometry.coordinates.map(
+                          (coord) => [coord[1], coord[0]]
+                        );
+                      }
+                    } catch (error) {
+                      console.warn(
+                        `Không thể lấy tuyến đường chi tiết cho dự án thành phần ${subProject.TenDuAn}:`,
+                        error.message
+                      );
                     }
-                  } catch (error) {
-                    console.warn(`Không thể lấy tuyến đường chi tiết cho dự án thành phần ${subProject.TenDuAn}:`, error.message);
                   }
 
                   const routeId = `subproject-${subProject.DuAnID}`;
@@ -201,38 +296,53 @@ const MapComponent = ({ projects = [] }) => {
                     name: subProject.TenDuAn,
                     start: startPos,
                     end: endPos,
-                    path,
+                    path: hasSubProjectKml ? null : path,
                     projectData: subProject,
                     parentProject: project,
-                    color: parentColor,
+                    color: statusColor,
                     parentProjectName: project.TenDuAn,
-                    status: subProject.TrangThai || project.TrangThai
+                    status: subProject.TrangThai || project.TrangThai,
+                    kmlFile: hasSubProjectKml ? subProjectKmlUrl : null,
                   });
                 }
               }
             }
           }
+
+          // Xử lý dự án chính
           if (project.coordinates?.start && project.coordinates?.end) {
             const startLat = parseCoordinate(project.coordinates.start.lat);
             const startLng = parseCoordinate(project.coordinates.start.lng);
             const endLat = parseCoordinate(project.coordinates.end.lat);
             const endLng = parseCoordinate(project.coordinates.end.lng);
 
-            if ([startLat, startLng, endLat, endLng].every(c => c !== null)) {
+            if ([startLat, startLng, endLat, endLng].every((c) => c !== null)) {
               const startPos = [startLat, startLng];
               const endPos = [endLat, endLng];
               let path = [startPos, endPos];
 
-              try {
-                const response = await axios.get(
-                  `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
-                  { params: { overview: 'full', geometries: 'geojson' }, timeout: 5000 }
-                );
-                if (response.data?.routes?.[0]?.geometry?.coordinates) {
-                  path = response.data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+              // Chỉ lấy path từ OSRM nếu không có KML
+              if (!hasProjectKml) {
+                try {
+                  const response = await axios.get(
+                    `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
+                    {
+                      params: { overview: "full", geometries: "geojson" },
+                      timeout: 10000,
+                    }
+                  );
+
+                  if (response.data?.routes?.[0]?.geometry?.coordinates) {
+                    path = response.data.routes[0].geometry.coordinates.map(
+                      (coord) => [coord[1], coord[0]]
+                    );
+                  }
+                } catch (error) {
+                  console.warn(
+                    `Không thể lấy tuyến đường chi tiết cho dự án ${project.TenDuAn}:`,
+                    error.message
+                  );
                 }
-              } catch (error) {
-                console.warn(`Không thể lấy tuyến đường chi tiết cho dự án ${project.TenDuAn}:`, error.message);
               }
 
               const routeId = `project-${project.DuAnID}`;
@@ -242,12 +352,13 @@ const MapComponent = ({ projects = [] }) => {
                 name: project.TenDuAn,
                 start: startPos,
                 end: endPos,
-                path,
+                path: hasProjectKml ? null : path,
                 projectData: project,
                 parentProject: project,
-                color: parentColor,
+                color: statusColor,
                 parentProjectName: project.TenDuAn,
-                status: project.TrangThai
+                status: project.TrangThai,
+                kmlFile: hasProjectKml ? projectKmlUrl : null,
               });
             }
           }
@@ -270,9 +381,9 @@ const MapComponent = ({ projects = [] }) => {
   }, [projects]);
 
   const formatCoordinate = (coord) => {
-    if (coord === null || coord === undefined) return 'N/A';
-    const num = typeof coord === 'number' ? coord : parseFloat(coord);
-    return isNaN(num) ? 'N/A' : num.toFixed(6);
+    if (coord === null || coord === undefined) return "N/A";
+    const num = typeof coord === "number" ? coord : parseFloat(coord);
+    return isNaN(num) ? "N/A" : num.toFixed(6);
   };
 
   const handlePolylineClick = (route) => {
@@ -294,14 +405,14 @@ const MapComponent = ({ projects = [] }) => {
 
   const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3; // Earth radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
@@ -312,35 +423,89 @@ const MapComponent = ({ projects = [] }) => {
     setActiveRoute(null);
   };
 
-  const filteredRoutes = routes.filter(route => {
-    if (selectedProjectType === 'all') return true;
-    if (selectedProjectType === 'completed') return route.status === 'Đã hoàn thành';
-    if (selectedProjectType === 'in-progress') return route.status === 'Đang triển khai';
-    if (selectedProjectType === 'planned') return route.status.includes('Dự kiến') || route.status.includes('chờ khởi công');
-    if (selectedProjectType === 'delayed') return route.status.includes('chậm tiến độ') || route.status === 'Chậm tiến độ';
-    return true;
+  const filteredRoutes = routes.filter((route) => {
+    // Bộ lọc trạng thái dự án
+    const statusMatch =
+      selectedProjectType === "all"
+        ? true
+        : selectedProjectType === "completed"
+        ? route.status === "Đã hoàn thành"
+        : selectedProjectType === "in-progress"
+        ? route.status === "Đang triển khai"
+        : selectedProjectType === "planned"
+        ? route.status.includes("Dự kiến") ||
+          route.status.includes("chờ khởi công")
+        : selectedProjectType === "delayed"
+        ? route.status.includes("chậm tiến độ") ||
+          route.status === "Chậm tiến độ"
+        : true;
+
+    // Bộ lọc theo cha/con
+    const viewModeMatch =
+      viewMode === "all"
+        ? true
+        : viewMode === "parent"
+        ? route.id?.includes("project-") && !route.id?.includes("subproject-")
+        : viewMode === "sub"
+        ? route.id?.includes("subproject-")
+        : true;
+
+    return statusMatch && viewModeMatch;
   });
 
   return (
     <div className="map-app-container">
       <div className="map-controls">
         <div className="map-type-selector">
-          <label className='text-white' htmlFor="map-type">Loại Bản đồ:</label>
+          <label className="text-white" htmlFor="map-type">
+            Loại Bản đồ:
+          </label>
           <select
             id="map-type"
             value={mapType}
             onChange={(e) => setMapType(e.target.value)}
           >
-            <option className='text-black' value="standard" >Tiêu chuẩn</option>
-            <option className='text-black' value="satellite">Vệ tinh</option>
-            <option className='text-black' value="terrain">Địa hình</option>
-            <option className='text-black' value="dark">Tối</option>
+            <option className="text-black" value="standard">
+              Tiêu chuẩn
+            </option>
+            <option className="text-black" value="satellite">
+              Vệ tinh
+            </option>
+            <option className="text-black" value="terrain">
+              Địa hình
+            </option>
+            <option className="text-black" value="dark">
+              Tối
+            </option>
+          </select>
+        </div>
+
+        <div className="map-type-selector">
+          <label className="text-white" htmlFor="route-view-mode">
+            Hiển thị tuyến:
+          </label>
+          <select
+            id="route-view-mode"
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value)}
+          >
+            <option className="text-black" value="all">
+              Tất cả
+            </option>
+            <option className="text-black" value="parent">
+              Dự án cha
+            </option>
+            <option className="text-black" value="sub">
+              Dự án thành phần
+            </option>
           </select>
         </div>
       </div>
 
       <div className="map-content">
-        <div className={`map-container ${showSidePanel ? 'with-side-panel' : ''}`}>
+        <div
+          className={`map-container ${showSidePanel ? "with-side-panel" : ""}`}
+        >
           {routeErrors.length > 0 && (
             <div className="route-errors">
               <h4>Cảnh báo:</h4>
@@ -348,7 +513,9 @@ const MapComponent = ({ projects = [] }) => {
                 {routeErrors.slice(0, 3).map((err, i) => (
                   <li key={i}>{err}</li>
                 ))}
-                {routeErrors.length > 3 && <li>...và {routeErrors.length - 3} cảnh báo khác</li>}
+                {routeErrors.length > 3 && (
+                  <li>...và {routeErrors.length - 3} cảnh báo khác</li>
+                )}
               </ul>
             </div>
           )}
@@ -395,23 +562,37 @@ const MapComponent = ({ projects = [] }) => {
               </div>
             )}
 
-            <MapController allRoutes={filteredRoutes.map(route => route.path)} />
+            <MapController
+              allRoutes={filteredRoutes.map((route) => route.path)}
+            />
 
-            {filteredRoutes.map(route => {
+            {filteredRoutes.map((route) => {
               const customIcon = createCustomIcon(route.color);
 
               return (
-                <React.Fragment key={route.id}>
-                  <Polyline
-                    positions={route.path}
-                    color={route.color}
-                    weight={4}
-                    eventHandlers={{
-                      click: () => handlePolylineClick(route)
-                    }}
-                  />
+                <React.Fragment key={`${route.id}-${viewMode}`}>
 
-                  <Marker position={route.start}>
+                  {route.kmlFile ? (
+                    <KmlLayer
+                      key={`${route.id}-${viewMode}-${Date.now()}`}
+                      layerKey={`${route.id}-${viewMode}`}
+                      url={route.kmlFile}
+                      color={route.color}
+                      onClick={() => handlePolylineClick(route)}
+                    />
+                  ) : (
+                    <Polyline
+                      key={`${route.id}-${viewMode}`}
+                      positions={route.path}
+                      color={route.color}
+                      weight={4}
+                      eventHandlers={{
+                        click: () => handlePolylineClick(route),
+                      }}
+                    />
+                  )}
+
+                  <ZoomAwareMarker position={route.start} color={route.color}>
                     <Popup>
                       <div className="marker-popup">
                         <h3>{route.name}</h3>
@@ -429,13 +610,16 @@ const MapComponent = ({ projects = [] }) => {
                         )}
                         <div className="popup-section">
                           <strong>Điểm bắt đầu:</strong>
-                          <p>{formatCoordinate(route.start[0])}, {formatCoordinate(route.start[1])}</p>
+                          <p>
+                            {formatCoordinate(route.start[0])},{" "}
+                            {formatCoordinate(route.start[1])}
+                          </p>
                         </div>
                       </div>
                     </Popup>
-                  </Marker>
+                  </ZoomAwareMarker>
 
-                  <Marker position={route.end}>
+                  <ZoomAwareMarker position={route.end} color={route.color}>
                     <Popup>
                       <div className="marker-popup">
                         <h3>{route.name}</h3>
@@ -453,11 +637,14 @@ const MapComponent = ({ projects = [] }) => {
                         )}
                         <div className="popup-section">
                           <strong>Điểm kết thúc:</strong>
-                          <p>{formatCoordinate(route.end[0])}, {formatCoordinate(route.end[1])}</p>
+                          <p>
+                            {formatCoordinate(route.end[0])},{" "}
+                            {formatCoordinate(route.end[1])}
+                          </p>
                         </div>
                       </div>
                     </Popup>
-                  </Marker>
+                  </ZoomAwareMarker>
                 </React.Fragment>
               );
             })}
@@ -476,45 +663,65 @@ const MapComponent = ({ projects = [] }) => {
               <div className="info-grid">
                 <div className="info-item">
                   <div className="info-label">Trạng thái:</div>
-                  <div className="info-value" style={{ color: getStatusColor(activeRoute.status) }}>
+                  <div
+                    className="info-value"
+                    style={{ color: getStatusColor(activeRoute.status) }}
+                  >
                     {activeRoute.status}
                   </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Tỉnh/Thành:</div>
-                  <div className="info-value">{activeRoute.projectData.TinhThanh || 'N/A'}</div>
+                  <div className="info-value">
+                    {activeRoute.projectData.TinhThanh || "N/A"}
+                  </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Chủ đầu tư:</div>
-                  <div className="info-value">{activeRoute.projectData.ChuDauTu || 'N/A'}</div>
+                  <div className="info-value">
+                    {activeRoute.projectData.ChuDauTu || "N/A"}
+                  </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Ngày khởi công:</div>
-                  <div className="info-value">{formatDate(activeRoute.projectData.NgayKhoiCong)}</div>
+                  <div className="info-value">
+                    {formatDate(activeRoute.projectData.NgayKhoiCong)}
+                  </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Kế hoạch hoàn thành:</div>
-                  <div className="info-value">{formatDate(activeRoute.projectData.KeHoachHoanThanh)}</div>
+                  <div className="info-value">
+                    {formatDate(activeRoute.projectData.KeHoachHoanThanh)}
+                  </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Nguồn vốn:</div>
-                  <div className="info-value">{activeRoute.projectData.NguonVon || 'N/A'}</div>
+                  <div className="info-value">
+                    {activeRoute.projectData.NguonVon || "N/A"}
+                  </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Tổng chiều dài:</div>
                   <div className="info-value">
-                    {activeRoute.projectData.TongChieuDai ? `${activeRoute.projectData.TongChieuDai} km` : 'N/A'}
+                    {activeRoute.projectData.TongChieuDai
+                      ? `${activeRoute.projectData.TongChieuDai} km`
+                      : "N/A"}
                   </div>
                 </div>
                 <div className="info-item">
                   <div className="info-label">Chiều dài tuyến:</div>
-                  <div className="info-value">{calculateDistance(activeRoute.path)} km</div>
+                  <div className="info-value">
+                    {calculateDistance(activeRoute.path)} km
+                  </div>
                 </div>
-
               </div>
               <button
                 className="view-detail-btn"
-                onClick={() => handleViewDetail(activeRoute.parentId || activeRoute.projectData.DuAnID)}
+                onClick={() =>
+                  handleViewDetail(
+                    activeRoute.parentId || activeRoute.projectData.DuAnID
+                  )
+                }
               >
                 Xem chi tiết dự án
               </button>
@@ -524,87 +731,138 @@ const MapComponent = ({ projects = [] }) => {
               <div className="panel-section">
                 <h3>Mô tả dự án</h3>
                 <div className="info-item full-width">
-                  <div className="info-value description-text">{activeRoute.projectData.MoTaChung}</div>
+                  <div className="info-value description-text">
+                    {activeRoute.projectData.MoTaChung}
+                  </div>
                 </div>
               </div>
             )}
 
-            {activeRoute.parentProject && activeRoute.id.includes('subproject') && (
-              <div className="panel-section">
-                <h3>Thông tin dự án tổng</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <div className="info-label">Tên dự án:</div>
-                    <div className="info-value">{activeRoute.parentProject.TenDuAn}</div>
-                  </div>
-                  <div className="info-item">
-                    <div className="info-label">Trạng thái:</div>
-                    <div className="info-value" style={{ color: getStatusColor(activeRoute.parentProject.TrangThai) }}>
-                      {activeRoute.parentProject.TrangThai}
+            {activeRoute.parentProject &&
+              activeRoute.id.includes("subproject") && (
+                <div className="panel-section">
+                  <h3>Thông tin dự án tổng</h3>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <div className="info-label">Tên dự án:</div>
+                      <div className="info-value">
+                        {activeRoute.parentProject.TenDuAn}
+                      </div>
+                    </div>
+                    <div className="info-item">
+                      <div className="info-label">Trạng thái:</div>
+                      <div
+                        className="info-value"
+                        style={{
+                          color: getStatusColor(
+                            activeRoute.parentProject.TrangThai
+                          ),
+                        }}
+                      >
+                        {activeRoute.parentProject.TrangThai}
+                      </div>
+                    </div>
+                    <div className="info-item">
+                      <div className="info-label">Chủ đầu tư:</div>
+                      <div className="info-value">
+                        {activeRoute.parentProject.ChuDauTu || "N/A"}
+                      </div>
+                    </div>
+                    <div className="info-item">
+                      <div className="info-label">Ngày khởi công:</div>
+                      <div className="info-value">
+                        {formatDate(activeRoute.parentProject.NgayKhoiCong)}
+                      </div>
+                    </div>
+                    <div className="info-item">
+                      <div className="info-label">Tổng chiều dài:</div>
+                      <div className="info-value">
+                        {activeRoute.parentProject.TongChieuDai
+                          ? `${activeRoute.parentProject.TongChieuDai} km`
+                          : "N/A"}
+                      </div>
                     </div>
                   </div>
-                  <div className="info-item">
-                    <div className="info-label">Chủ đầu tư:</div>
-                    <div className="info-value">{activeRoute.parentProject.ChuDauTu || 'N/A'}</div>
-                  </div>
-                  <div className="info-item">
-                    <div className="info-label">Ngày khởi công:</div>
-                    <div className="info-value">{formatDate(activeRoute.parentProject.NgayKhoiCong)}</div>
-                  </div>
-                  <div className="info-item">
-                    <div className="info-label">Tổng chiều dài:</div>
-                    <div className="info-value">
-                      {activeRoute.parentProject.TongChieuDai ? `${activeRoute.parentProject.TongChieuDai} km` : 'N/A'}
+                  {activeRoute.parentProject.MoTaChung && (
+                    <div className="info-item full-width">
+                      <div className="info-label">Mô tả:</div>
+                      <div className="info-value description-text">
+                        {activeRoute.parentProject.MoTaChung}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-                {activeRoute.parentProject.MoTaChung && (
-                  <div className="info-item full-width">
-                    <div className="info-label">Mô tả:</div>
-                    <div className="info-value description-text">{activeRoute.parentProject.MoTaChung}</div>
-                  </div>
-                )}
-              </div>
-            )}
-            {activeRoute.projectData?.duAnThanhPhan?.flatMap(duAnTP =>
-              duAnTP.goiThau?.flatMap(goiThau =>
+              )}
+            {activeRoute.projectData?.duAnThanhPhan?.flatMap((duAnTP) =>
+              duAnTP.goiThau?.flatMap((goiThau) =>
                 goiThau.hangMuc?.map((hangMuc, idx) => (
-                  <div key={`${hangMuc.HangMucID}-${idx}`} className="info-item full-width">
-                    <div className="info-label" style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
+                  <div
+                    key={`${hangMuc.HangMucID}-${idx}`}
+                    className="info-item full-width"
+                  >
+                    <div
+                      className="info-label"
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
                       {hangMuc.TenHangMuc}
                     </div>
-                    <div className="info-value" style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px'
-                    }}>
-                      <span style={{
-                        fontWeight: 'bold',
-                        minWidth: '40px',
-                        color: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
-                          parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? '#2196F3' : '#9E9E9E'
-                      }}>
+                    <div
+                      className="info-value"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight: "bold",
+                          minWidth: "40px",
+                          color:
+                            parseFloat(
+                              hangMuc.tienDo?.phanTramHoanThanh || 0
+                            ) >= 100
+                              ? "#4CAF50"
+                              : parseFloat(
+                                  hangMuc.tienDo?.phanTramHoanThanh || 0
+                                ) > 0
+                              ? "#2196F3"
+                              : "#9E9E9E",
+                        }}
+                      >
                         {hangMuc.tienDo?.phanTramHoanThanh || 0}%
                       </span>
-                      <div style={{
-                        flexGrow: 1,
-                        height: '8px',
-                        backgroundColor: '#f5f5f5',
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{
-                          width: `${hangMuc.tienDo?.phanTramHoanThanh || 0}%`,
-                          height: '100%',
-                          backgroundColor: parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) >= 100 ? '#4CAF50' :
-                            parseFloat(hangMuc.tienDo?.phanTramHoanThanh || 0) > 0 ? '#2196F3' : '#9E9E9E',
-                          borderRadius: '4px',
-                          transition: 'width 0.3s ease'
-                        }}></div>
+                      <div
+                        style={{
+                          flexGrow: 1,
+                          height: "8px",
+                          backgroundColor: "#f5f5f5",
+                          borderRadius: "4px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${hangMuc.tienDo?.phanTramHoanThanh || 0}%`,
+                            height: "100%",
+                            backgroundColor:
+                              parseFloat(
+                                hangMuc.tienDo?.phanTramHoanThanh || 0
+                              ) >= 100
+                                ? "#4CAF50"
+                                : parseFloat(
+                                    hangMuc.tienDo?.phanTramHoanThanh || 0
+                                  ) > 0
+                                ? "#2196F3"
+                                : "#9E9E9E",
+                            borderRadius: "4px",
+                            transition: "width 0.3s ease",
+                          }}
+                        ></div>
                       </div>
                     </div>
                   </div>
