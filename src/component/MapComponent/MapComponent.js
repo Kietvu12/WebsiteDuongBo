@@ -48,11 +48,11 @@ const MapController = ({ allRoutes }) => {
       const vietnamHoles = vietnamGeoJson.features.flatMap(feature => {
         const coords = feature.geometry.coordinates;
         if (feature.geometry.type === 'Polygon') {
-          return coords.map(ring => 
+          return coords.map(ring =>
             ring.map(([lng, lat]) => [lat, lng]))
         } else { // MultiPolygon
-          return coords.flatMap(poly => 
-            poly.map(ring => 
+          return coords.flatMap(poly =>
+            poly.map(ring =>
               ring.map(([lng, lat]) => [lat, lng])
             ))
         }
@@ -411,7 +411,13 @@ const MapComponent = ({ projects = [] }) => {
                     }}
                   />
 
-                  <Marker position={route.start}>
+// Chỉ giữ lại phần vẽ đường line, bỏ hết các Marker
+                  <Polyline
+                    positions={[route.start, route.end]}
+                    color={getStatusColor(route.status)}
+                    weight={3}
+                    opacity={0.7}
+                  >
                     <Popup>
                       <div className="marker-popup">
                         <h3>{route.name}</h3>
@@ -431,33 +437,13 @@ const MapComponent = ({ projects = [] }) => {
                           <strong>Điểm bắt đầu:</strong>
                           <p>{formatCoordinate(route.start[0])}, {formatCoordinate(route.start[1])}</p>
                         </div>
-                      </div>
-                    </Popup>
-                  </Marker>
-
-                  <Marker position={route.end}>
-                    <Popup>
-                      <div className="marker-popup">
-                        <h3>{route.name}</h3>
-                        <div className="popup-section">
-                          <strong>Trạng thái:</strong>
-                          <span style={{ color: getStatusColor(route.status) }}>
-                            {route.status}
-                          </span>
-                        </div>
-                        {route.parentProjectName && (
-                          <div className="popup-section">
-                            <strong>Thuộc dự án:</strong>
-                            <p>{route.parentProjectName}</p>
-                          </div>
-                        )}
                         <div className="popup-section">
                           <strong>Điểm kết thúc:</strong>
                           <p>{formatCoordinate(route.end[0])}, {formatCoordinate(route.end[1])}</p>
                         </div>
                       </div>
                     </Popup>
-                  </Marker>
+                  </Polyline>
                 </React.Fragment>
               );
             })}

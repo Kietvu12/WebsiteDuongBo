@@ -50,6 +50,7 @@ const WorkItem = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
@@ -66,7 +67,7 @@ const WorkItem = () => {
   
 
   const fetchProjects = async () => {
-    setIsLoading(true);
+    setIsLoadingProjects(true);
     try {
       let url = `${API_BASE_URL}/duAnList`;
       
@@ -87,7 +88,7 @@ const WorkItem = () => {
     } catch (error) {
       console.error('Lỗi tải dự án:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingProjects(false);
     }
   };
   
@@ -120,16 +121,22 @@ const WorkItem = () => {
   }, [selectedProjectId, navigate]);
   
   useEffect(() => {
-    if (searchTerm.trim() === '') {
+    // Nếu đang hiển thị gợi ý và có searchTerm, lọc danh sách
+    if (showSuggestions) {
+      if (searchTerm.trim() === '') {
+        // Nếu ô tìm kiếm trống, hiển thị tất cả dự án
+        setFilteredProjects(projects);
+      } else {
+        // Nếu có từ khóa tìm kiếm, lọc theo từ khóa
+        const filtered = projects.filter(project =>
+          project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredProjects(filtered);
+      }
+    } else {
       setFilteredProjects([]);
-      return;
     }
-  
-    const filtered = projects.filter(project =>
-      project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProjects(filtered);
-  }, [searchTerm, projects]);
+  }, [searchTerm, projects, showSuggestions]);
   
   // Event handlers
   const handleSearchChange = (e) => {
@@ -152,6 +159,12 @@ const WorkItem = () => {
     if (filteredProjects.length > 0) {
       handleProjectSelect(filteredProjects[0]);
     }
+  };
+  
+  const handleInputFocus = () => {
+    setShowSuggestions(true);
+    // Hiển thị tất cả dự án khi focus vào ô tìm kiếm
+    setFilteredProjects(projects);
   };
   
   const renderTitle = () => {
@@ -203,7 +216,7 @@ const WorkItem = () => {
           </div>
         </div>
 
-        <h1 className="flex-1 text-left font-bold text-gray-800 px-2 mt-3">
+        <h1 className="flex-1 text-left font-bold text-gray-800 text-sm md:text-base px-2 mt-3">
           {renderTitle()}
         </h1>
 
@@ -213,12 +226,13 @@ const WorkItem = () => {
               <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
                 <div className="relative flex-grow">
                   <input
+                    ref={searchInputRef}
                     type="text"
                     placeholder="Tìm kiếm dự án..."
-                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 "
+                    className="border border-gray-300 rounded px-2 py-1 md:py-2 md:px-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    onFocus={() => setShowSuggestions(true)}
+                    onFocus={handleInputFocus}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   />
                   {showSuggestions && filteredProjects.length > 0 && (
@@ -226,7 +240,7 @@ const WorkItem = () => {
                       {filteredProjects.map(project => (
                         <li
                           key={project.DuAnID}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer "
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => handleProjectSelect(project)}
                         >
                           {project.TenDuAn}
@@ -237,7 +251,7 @@ const WorkItem = () => {
                 </div>
                 <button
                   type="submit"
-                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300  whitespace-nowrap"
+                  className="bg-gray-200 px-4 py-1 rounded hover:bg-gray-300 whitespace-nowrap"
                   disabled={isLoadingProjects}
                 >
                   {isLoadingProjects ? (
@@ -252,7 +266,7 @@ const WorkItem = () => {
                 </button>
               </form>
               {isLoadingProjects && (
-                <p className=" text-gray-500 mt-1">Đang tải danh sách dự án...</p>
+                <p className="text-gray-500 mt-1">Đang tải danh sách dự án...</p>
               )}
             </div>
 

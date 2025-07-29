@@ -192,7 +192,7 @@ const Detail = () => {
   <div className={`${isExpanded ? 'w-full z-30' : 'z-20 flex-1 3xl:w-[50%]'} flex flex-col min-w-0 5xl:overflow-hidden 3xl:overflow-auto`}>
     {!isExpanded && packageData?.thongTinChung && (
       <>
-        <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[250px]">
+        <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[290px]">
           <ContractorInfo data={packageData.thongTinChung} />
         </div>
         <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[248px]">

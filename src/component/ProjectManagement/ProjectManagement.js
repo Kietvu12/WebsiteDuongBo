@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import ProjectMenu from '../ProjectMenu/ProjectMenu';
+import './ProjectManagement.css'; // Đảm bảo import CSS
 
 import {
   FaListOl,
@@ -23,6 +24,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import ContractorInfo from '../ContractorInfo/ContractorInfo';
 
 // Đăng ký các thành phần cần thiết từ ChartJS
 ChartJS.register(
@@ -34,9 +36,29 @@ ChartJS.register(
   Tooltip,
   Legend
 );
+
+// Thêm style cho responsive
+const responsiveStyles = {
+  smallScreen: {
+    transform: 'scale(0.9)',
+    transformOrigin: 'top left',
+    width: '111%', // 100% / 0.9 ≈ 111%
+  },
+  xsScreen: {
+    transform: 'scale(0.85)',
+    transformOrigin: 'top left',
+    width: '117.5%', // 100% / 0.85 ≈ 117.5%
+  },
+  xxsScreen: {
+    transform: 'scale(0.8)',
+    transformOrigin: 'top left',
+    width: '125%', // 100% / 0.8 = 125%
+  }
+};
+
 const ProjectManagement = ({ tenDuAn, projectId }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [showProgressForm, setShowProgressForm] = useState(false);
+  const [showProgressForm, setShowProgressForm] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [projectContext, setProjectContext] = useState({
     tenDuAn: '',
@@ -52,6 +74,42 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  // Thêm state theo dõi kích thước màn hình
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // Theo dõi sự thay đổi kích thước màn hình
+  React.useEffect(() => {
+    function handleResize() {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    }
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Xác định kiểu màn hình
+  const getScreenType = () => {
+    if (windowSize.width < 480) return 'xxs';
+    if (windowSize.width < 640) return 'xs';
+    if (windowSize.width < 1024) return 'sm';
+    return 'md';
+  };
+
+  // Lấy style theo kích thước màn hình
+  const getResponsiveStyle = () => {
+    const screenType = getScreenType();
+    if (screenType === 'xxs') return responsiveStyles.xxsScreen;
+    if (screenType === 'xs') return responsiveStyles.xsScreen;
+    if (screenType === 'sm') return responsiveStyles.smallScreen;
+    return {};
+  };
+
   const handleFileChange = (e) => {
     // Lưu tất cả file được chọn vào state
     setFiles([...e.target.files]);
@@ -68,7 +126,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
   const handlePlanSelect = (plan, context) => {
     if (plan.type === 'plan') {
       setSelectedPlan(plan);
-      setProjectContext(context); 
+      setProjectContext(context);
       setFormData({
         khoiLuongThucHien: '',
         donViTinh: plan.DonViTinh || '',
@@ -88,7 +146,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
       [name]: value
     }));
   };
-  console.log(selectedPlan);
+  console.log("Dữ liệu được chọn:", selectedPlan);
 
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const handleSubmitProgress = async (e) => {
@@ -157,7 +215,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
   // Lấy danh sách năm có dữ liệu
   const availableYears = Array.from(
     new Set(
-      selectedPlan?.tienDoThucHien?.map(item => 
+      selectedPlan?.tienDoThucHien?.map(item =>
         new Date(item.NgayCapNhat).getFullYear()
       ) || []
     )
@@ -167,20 +225,20 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
   const prepareMonthlyProductionData = () => {
     // Khởi tạo mảng 12 tháng
     const monthlyProduction = Array(12).fill(0);
-    
+
     // Tính tổng sản lượng từng tháng
     (selectedPlan?.tienDoThucHien || []).forEach(item => {
       const itemYear = new Date(item.NgayCapNhat).getFullYear();
       const itemMonth = new Date(item.NgayCapNhat).getMonth();
-      
+
       if (itemYear === selectedYear) {
         monthlyProduction[itemMonth] += item.KhoiLuongThucHien || 0;
       }
     });
 
     return {
-      labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 
-               'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+      labels: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+        'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
       datasets: [
         {
           label: `Sản lượng thi công năm ${selectedYear}`,
@@ -246,44 +304,26 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
     }
   };
   console.log("Tiến độ:", selectedPlan);
-  
+
 
   return (
-    <div className="flex flex-col md:flex-row min-w-[600px] h-screen bg-gray-50">
+    <div className="flex flex-col md:flex-row min-w-[600px] h-screen bg-gray-50" style={getResponsiveStyle()}>
       {/* Mobile Sidebar Toggle */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-gray-200">
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="flex items-center gap-2 text-blue-700 font-semibold text-sm"
-        >
-          <FaListOl className="text-blue-600" />
-          <span>DANH SÁCH DỰ ÁN</span>
-          {mobileMenuOpen ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
-        </button>
-        {selectedPlan && (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${selectedPlan.phanTramHoanThanh >= 100
-            ? 'bg-green-100 text-green-800'
-            : 'bg-blue-100 text-blue-800'
-            }`}>
-            {selectedPlan.phanTramHoanThanh}%
-          </span>
-        )}
-      </div>
-
+      
       {/* Sidebar - Project Menu */}
-      <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block w-full md:w-96 border-r border-gray-200 bg-white overflow-y-auto`}>
+      <div className="md:block w-full md:w-96 border-r border-gray-200 bg-white overflow-y-auto hide-scrollbar min-w-0">
         <ProjectMenu
           projectId={projectId}
           onItemSelect={handlePlanSelect}
           onPlanSelect={(plan, context) => {
-            handlePlanSelect(plan); 
-            setProjectContext(context); 
+            handlePlanSelect(plan);
+            setProjectContext(context);
           }}
         />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto">
+      <div className="flex-1 p-4 md:p-6 overflow-y-auto hide-scrollbar">
         {selectedPlan ? (
           <div className="max-w-4xl mx-auto">
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 space-y-3">
@@ -311,117 +351,119 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
               </div>
 
               {/* Dòng 3: Thẻ trạng thái */}
-              <div className="flex justify-between items-center mb-4">
-        <div className="flex flex-wrap gap-2 text-sm font-semibold">
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded">
-            {remainingDays > 0 ? `${remainingDays} ngày` : 'Hết hạn'}
-          </span>
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded">
-            {formatDate(selectedPlan.ngayBatDau)}
-          </span>
-          <span className="bg-red-100 text-red-700 px-3 py-1 rounded">
-            {formatDate(selectedPlan.ngayKetThuc)}
-          </span>
-          <span className="border border-green-600 text-green-600 px-3 py-1 rounded">
-            Tiến độ hoàn thành: {selectedPlan.phanTramHoanThanh}%
-          </span>
-        </div>
-        
-        <button
-          onClick={() => setShowProgressForm(!showProgressForm)}
-          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-        >
-          <FaPlus size={12} />
-          Thêm tiến độ
-        </button>
-      </div>
-            </div>
+              <div className="flex flex-wrap justify-between items-center mb-4">
+                <div className="flex flex-wrap gap-2 text-sm font-semibold">
+                  <span className="bg-green-100 text-green-700 px-3 py-1 rounded">
+                    {remainingDays > 0 ? `${remainingDays} ngày` : 'Hết hạn'}
+                  </span>
+                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded">
+                    {formatDate(selectedPlan.ngayBatDau)}
+                  </span>
+                  <span className="bg-red-100 text-red-700 px-3 py-1 rounded">
+                    {formatDate(selectedPlan.ngayKetThuc)}
+                  </span>
+                  <span className="border border-green-600 text-green-600 px-3 py-1 rounded">
+                    Tiến độ hoàn thành: {selectedPlan.phanTramHoanThanh}%
+                  </span>
+                </div>
 
+                <button
+                  onClick={() => setShowProgressForm(!showProgressForm)}
+                  className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                >
+                  <FaPlus size={12} />
+                  Thêm tiến độ
+                </button>
+              </div>
+            </div>
+            <div className="bg-white p-2 mb-2.5 h-[30%] min-h-[290px]">
+              <ContractorInfo data={selectedPlan.nhaThau} ps={selectedPlan.ngayBatDau} pe={selectedPlan.ngayKetThuc}/>
+            </div>
 
             {/* Progress Form */}
             {showProgressForm && (
-            <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-100 mb-8">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Báo cáo tiến độ</h2>
+              <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-100 mb-8">
+                <h2 className="text-lg font-semibold text-gray-800 mb-4">Báo cáo tiến độ</h2>
 
-              <form onSubmit={handleSubmitProgress}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Khối lượng hoàn thành *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="khoiLuongThucHien"
-                        value={formData.khoiLuongThucHien}
+                <form onSubmit={handleSubmitProgress}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Khối lượng hoàn thành *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          name="khoiLuongThucHien"
+                          value={formData.khoiLuongThucHien}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Nhập khối lượng"
+                          required
+                        />
+                        <span className="absolute right-3 top-2 text-sm text-gray-500">
+                          {selectedPlan.DonViTinh}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Loại vướng mắc
+                      </label>
+                      <select
+                        name="loaiVuongMac"
+                        value={formData.loaiVuongMac}
                         onChange={handleInputChange}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Nhập khối lượng"
-                        required
-                      />
-                      <span className="absolute right-3 top-2 text-sm text-gray-500">
-                        {selectedPlan.DonViTinh}
-                      </span>
+                      >
+                        <option value="">-- Không có --</option>
+                        {issueTypes.map(type => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Loại vướng mắc
-                    </label>
-                    <select
-                      name="loaiVuongMac"
-                      value={formData.loaiVuongMac}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">-- Không có --</option>
-                      {issueTypes.map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                  {formData.loaiVuongMac && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Mô tả vướng mắc
+                      </label>
+                      <textarea
+                        name="moTaVuongMac"
+                        value={formData.moTaVuongMac}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Mô tả chi tiết vướng mắc"
+                        rows="2"
+                      />
+                    </div>
+                  )}
 
-                {formData.loaiVuongMac && (
-                  <div className="mb-4">
+                  <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Mô tả vướng mắc
+                      Ghi chú
                     </label>
                     <textarea
-                      name="moTaVuongMac"
-                      value={formData.moTaVuongMac}
+                      name="ghiChu"
+                      value={formData.ghiChu}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Mô tả chi tiết vướng mắc"
+                      placeholder="Ghi chú bổ sung"
                       rows="2"
                     />
                   </div>
-                )}
 
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ghi chú
-                  </label>
-                  <textarea
-                    name="ghiChu"
-                    value={formData.ghiChu}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ghi chú bổ sung"
-                    rows="2"
-                  />
-                </div>
-
-                {successMessage && (
-                  <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
-                    {successMessage}
-                  </div>
-                )}
-                <div className="mb-4">
-                  {/* <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {successMessage && (
+                    <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+                      {successMessage}
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    {/* <label className="block text-sm font-medium text-gray-700 mb-1">
                     Tài liệu đính kèm (có thể chọn nhiều file)
                   </label>
                   <input
@@ -441,126 +483,132 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
                       </ul>
                     </div>
                   )} */}
-                </div>
+                  </div>
 
 
-                <button
-                  type="submit"
-                  className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
-                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang gửi...
-                    </>
-                  ) : (
-                    'Báo cáo tiến độ'
-                  )}
-                </button>
-              </form>
-            </div>
+                  <button
+                    type="submit"
+                    className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                      } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang gửi...
+                      </>
+                    ) : (
+                      'Báo cáo tiến độ'
+                    )}
+                  </button>
+                </form>
+              </div>
             )}
             <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="text-lg font-semibold text-gray-800">
-          Tiến độ: {selectedPlan.tenCongTac}
-        </h2>
-        {selectedPlan.tienDoThucHien?.length > 0 && (
-          <button
-            onClick={() => setViewMode(viewMode === 'list' ? 'chart' : 'list')}
-            className="px-3 py-1 bg-blue-100 text-blue-600 rounded text-sm hover:bg-blue-200 transition"
-          >
-            {viewMode === 'list' ? 'Xem dạng biểu đồ' : 'Xem dạng danh sách'}
-          </button>
-        )}
-      </div>
-
-      {selectedPlan.tienDoThucHien?.length === 0 ? (
-        <div className="text-center py-6 text-gray-400 text-sm">
-          Chưa có báo cáo tiến độ nào cho kế hoạch này
-        </div>
-      ) : viewMode === '' ? (
-        // Chế độ xem danh sách
-        <div className="space-y-2">
-          {selectedPlan.tienDoThucHien.map((item, index) => (
-            <div
-              key={index}
-              className={`p-3 border rounded-lg ${
-                item.MoTaVuongMac
-                  ? 'border-orange-200 bg-orange-50'
-                  : 'border-gray-200'
-              }`}
-            >
-              <div className="flex justify-between items-baseline">
-                <span className="font-bold text-gray-700 text-sm truncate max-w-[70%]">
-                  {item.GhiChu || 'Không có ghi chú'}
-                </span>
-                <span className="text-xs text-gray-500 whitespace-nowrap">
-                  {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
-                </span>
+              <div className="flex justify-between items-center mb-3">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Tiến độ: {selectedPlan.tenCongTac}
+                </h2>
+                
+                {/* Thêm toggle giữa danh sách và biểu đồ */}
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-2 py-1 text-xs rounded-md ${viewMode === 'list' ? 'bg-blue-800 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Danh sách
+                  </button>
+                  <button
+                    onClick={() => setViewMode('chart')}
+                    className={`px-2 py-1 text-xs rounded-md ${viewMode === 'chart' ? 'bg-blue-800 text-white' : 'bg-gray-200 text-gray-700'}`}
+                  >
+                    Biểu đồ
+                  </button>
+                </div>
               </div>
 
-              <div className="flex justify-between my-1.5">
-                <span className="text-sm text-gray-600">Khối lượng:</span>
-                <span className="font-bold text-blue-600">
-                  +{item.KhoiLuongThucHien.toLocaleString()} {selectedPlan.donViTinh}
-                </span>
-              </div>
+              {selectedPlan.tienDoThucHien?.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 text-sm">
+                  Chưa có báo cáo tiến độ nào cho kế hoạch này
+                </div>
+              ) : viewMode === 'list' ? (
+                // Chế độ xem danh sách
+                <div className="space-y-2 max-h-[400px] overflow-y-auto hide-scrollbar">
+                  {selectedPlan.tienDoThucHien.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 border rounded-lg ${item.MoTaVuongMac
+                          ? 'border-orange-200 bg-orange-50'
+                          : 'border-gray-200'
+                        }`}
+                    >
+                      <div className="flex justify-between items-baseline">
+                        <span className="font-bold text-gray-700 text-sm truncate max-w-[70%]">
+                          {item.GhiChu || 'Không có ghi chú'}
+                        </span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                          {new Date(item.NgayCapNhat).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
 
-              {item.MoTaCongViec && (
-                <p className="text-sm text-gray-800 mb-1 line-clamp-2">
-                  {item.MoTaCongViec}
-                </p>
-              )}
+                      <div className="flex justify-between my-1.5">
+                        <span className="text-sm text-gray-600">Khối lượng:</span>
+                        <span className="font-bold text-blue-600">
+                          +{item.KhoiLuongThucHien.toLocaleString()} {selectedPlan.donViTinh}
+                        </span>
+                      </div>
 
-              {item.MoTaVuongMac && (
-                <div className="mt-1.5 pt-1.5 border-t border-orange-100">
-                  <div className="text-xs font-semibold text-orange-600">
-                    Vướng mắc: {issueTypes?.find(t => t.value === item.LoaiVuongMac)?.label || 'Khác'}
+                      {item.MoTaCongViec && (
+                        <p className="text-sm text-gray-800 mb-1 line-clamp-2">
+                          {item.MoTaCongViec}
+                        </p>
+                      )}
+
+                      {item.MoTaVuongMac && (
+                        <div className="mt-1.5 pt-1.5 border-t border-orange-100">
+                          <div className="text-xs font-semibold text-orange-600">
+                            Vướng mắc: {issueTypes?.find(t => t.value === item.LoaiVuongMac)?.label || 'Khác'}
+                          </div>
+                          <p className="text-xs text-gray-700 mt-0.5">
+                            {item.MoTaVuongMac}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // Chế độ xem biểu đồ
+                <div className="bg-white rounded-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-sm md:text-base font-semibold">Sản lượng thi công: {selectedPlan?.tenCongTac}</h3>
+                    {availableYears.length > 0 && (
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="px-3 py-1 border rounded text-xs md:text-sm"
+                      >
+                        {availableYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-700 mt-0.5">
-                    {item.MoTaVuongMac}
-                  </p>
+
+                  <div className="h-80">
+                    <Line data={prepareMonthlyProductionData()} options={chartOptions} />
+                  </div>
+
+                  <div className="mt-4 text-xs md:text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <p>Tổng kế hoạch: {selectedPlan?.khoiLuongKeHoach?.toLocaleString()} {selectedPlan?.donViTinh}</p>
+                    <p>Đường biểu đồ thể hiện sản lượng thi công từng tháng</p>
+                  </div>
                 </div>
               )}
             </div>
-          ))}
-        </div>
-      ) : (
-        // Chế độ xem biểu đồ
-<div className="bg-white p-4 rounded-lg shadow border border-gray-100">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Sản lượng thi công: {selectedPlan?.tenCongTac}</h3>
-        {availableYears.length > 0 && (
-          <select 
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="px-3 py-1 border rounded text-sm"
-          >
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      <div className="h-80">
-        <Line data={prepareMonthlyProductionData()} options={chartOptions} />
-      </div>
-
-      <div className="mt-4 text-sm text-gray-600 grid grid-cols-1 md:grid-cols-2 gap-2">
-        <p>Tổng kế hoạch: {selectedPlan?.khoiLuongKeHoach?.toLocaleString()} {selectedPlan?.donViTinh}</p>
-        <p>Đường biểu đồ thể hiện sản lượng thi công từng tháng</p>
-      </div>
-    </div>
-
-      )}
-    </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">

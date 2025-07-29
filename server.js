@@ -12,7 +12,6 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const sequelize = require('./config/db');
 const authRoutes = require('./routes/auth.route');
-const nhathauRoutes = require('./routes/nhathau.route');
 const bcrypt = require('bcrypt');
 const { combine, timestamp, printf } = winston.format;
 
@@ -93,7 +92,6 @@ async function initializeDatabase() {
 
 // 5. Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/nhathau', nhathauRoutes);
 
 // 6. Route kiểm tra sức khỏe
 app.get('/api/health', (req, res) => {
@@ -534,304 +532,6 @@ app.get('/duAnTongList', async (req, res) => {
     });
   }
 });
-app.get('/nhaThauFullList', async (req, res) => {
-  try {
-    // 1. Lấy danh sách tất cả nhà thầu
-    const [nhaThauList] = await pool.query(
-      'SELECT * FROM nhathau ORDER BY TenNhaThau ASC'
-    );
-
-    if (nhaThauList.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Không tìm thấy nhà thầu nào'
-      });
-    }
-
-    // 2. Lấy thông tin gói thầu, hạng mục và kế hoạch cho từng nhà thầu
-    const result = await Promise.all(nhaThauList.map(async (nhaThau) => {
-      const nhaThauId = nhaThau.NhaThauID;
-
-      // 2.1. Lấy danh sách gói thầu tham gia
-      const [goiThauList] = await pool.query(`
-        SELECT 
-          g.*,
-          gn.VaiTro,
-          d.TenDuAn
-        FROM goithau g
-        JOIN goithau_nhathau gn ON g.GoiThau_ID = gn.GoiThau_ID
-        JOIN duan d ON g.DuAn_ID = d.DuAnID
-        WHERE gn.NhaThauID = ?
-      `, [nhaThauId]);
-
-      // 2.2. Lấy danh sách hạng mục tham gia
-      const [hangMucList] = await pool.query(`
-        SELECT 
-          hm.*,
-          g.TenGoiThau,
-          d.TenDuAn
-        FROM hangmuc hm
-        JOIN goithau g ON hm.GoiThauID = g.GoiThau_ID
-        JOIN duan d ON g.DuAn_ID = d.DuAnID
-        WHERE hm.GoiThauID IN (
-          SELECT GoiThau_ID FROM goithau_nhathau WHERE NhaThauID = ?
-        )
-      `, [nhaThauId]);
-
-      // 2.3. Lấy danh sách kế hoạch tham gia
-      const [keHoachList] = await pool.query(`
-        SELECT 
-          kh.*,
-          hm.TenHangMuc,
-          g.TenGoiThau,
-          d.TenDuAn
-        FROM quanlykehoach kh
-        JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
-        JOIN goithau g ON hm.GoiThauID = g.GoiThau_ID
-        JOIN duan d ON g.DuAn_ID = d.DuAnID
-        WHERE kh.NhaThauID = ?
-      `, [nhaThauId]);
-
-      // 2.4. Thống kê tổng quan
-      const [thongKe] = await pool.query(`
-        SELECT 
-          COUNT(DISTINCT g.GoiThau_ID) AS tongGoiThau,
-          COUNT(DISTINCT hm.HangMucID) AS tongHangMuc,
-          COUNT(DISTINCT kh.KeHoachID) AS tongKeHoach
-        FROM goithau_nhathau gn
-        LEFT JOIN goithau g ON gn.GoiThau_ID = g.GoiThau_ID
-        LEFT JOIN hangmuc hm ON g.GoiThau_ID = hm.GoiThauID
-        LEFT JOIN quanlykehoach kh ON (hm.HangMucID = kh.HangMucID AND kh.NhaThauID = ?)
-        WHERE gn.NhaThauID = ?
-      `, [nhaThauId, nhaThauId]);
-
-      return {
-        ...nhaThau,
-        thongKe: thongKe[0],
-        danhSachGoiThau: goiThauList,
-        danhSachHangMuc: hangMucList,
-        danhSachKeHoach: keHoachList
-      };
-    }));
-
-    res.json({
-      success: true,
-      data: result
-    });
-
-  } catch (error) {
-    console.error('Database error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi hệ thống khi truy vấn dữ liệu',
-      error: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack,
-        sql: error.sql
-      } : undefined
-    });
-  }
-});
-app.put('/nhaThau/:id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const nhaThauId = req.params.id;
-    const {
-      TenNhaThau,
-      Loai,
-      MaSoThue,
-      DiaChiTruSo,
-      SoDienThoai,
-      Email,
-      NguoiDaiDien,
-      ChucVuNguoiDaiDien,
-      GiayPhepKinhDoanh,
-      NgayCap,
-      NoiCap,
-      GhiChu
-    } = req.body;
-
-    await connection.beginTransaction();
-
-    // 1. Kiểm tra nhà thầu tồn tại
-    const [existing] = await connection.query(
-      'SELECT * FROM nhathau WHERE NhaThauID = ?',
-      [nhaThauId]
-    );
-
-    if (existing.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Nhà thầu không tồn tại'
-      });
-    }
-
-    // 2. Validate dữ liệu
-    if (!TenNhaThau || !MaSoThue) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tên nhà thầu và mã số thuế là bắt buộc'
-      });
-    }
-
-    // 3. Cập nhật thông tin nhà thầu
-    const [result] = await connection.query(
-      `UPDATE nhathau SET 
-        TenNhaThau = ?,
-        Loai = ?,
-        MaSoThue = ?,
-        DiaChiTruSo = ?,
-        SoDienThoai = ?,
-        Email = ?,
-        NguoiDaiDien = ?,
-        ChucVuNguoiDaiDien = ?,
-        GiayPhepKinhDoanh = ?,
-        NgayCap = ?,
-        NoiCap = ?,
-        GhiChu = ?
-      WHERE NhaThauID = ?`,
-      [
-        TenNhaThau,
-        Loai,
-        MaSoThue,
-        DiaChiTruSo,
-        SoDienThoai,
-        Email,
-        NguoiDaiDien,
-        ChucVuNguoiDaiDien,
-        GiayPhepKinhDoanh,
-        NgayCap,
-        NoiCap,
-        GhiChu,
-        nhaThauId
-      ]
-    );
-
-    await connection.commit();
-
-    res.json({
-      success: true,
-      message: 'Cập nhật thông tin nhà thầu thành công',
-      data: {
-        NhaThauID: nhaThauId,
-        TenNhaThau,
-        Loai,
-        MaSoThue,
-        DiaChiTruSo,
-        SoDienThoai,
-        Email,
-        NguoiDaiDien,
-        ChucVuNguoiDaiDien,
-        GiayPhepKinhDoanh,
-        NgayCap,
-        NoiCap,
-        GhiChu
-      }
-    });
-
-  } catch (error) {
-    await connection.rollback();
-    console.error('Database error:', error);
-    
-    // Xử lý lỗi trùng mã số thuế
-    if (error.code === 'ER_DUP_ENTRY' && error.message.includes('MaSoThue')) {
-      return res.status(400).json({
-        success: false,
-        message: 'Mã số thuế đã tồn tại trong hệ thống'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi hệ thống khi cập nhật nhà thầu',
-      error: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack,
-        sql: error.sql
-      } : undefined
-    });
-  } finally {
-    connection.release();
-  }
-});
-app.delete('/nhaThau/:id', async (req, res) => {
-  const connection = await pool.getConnection();
-  try {
-    const nhaThauId = req.params.id;
-    
-    await connection.beginTransaction();
-
-    // 1. Kiểm tra nhà thầu tồn tại
-    const [existing] = await connection.query(
-      'SELECT * FROM nhathau WHERE NhaThauID = ?',
-      [nhaThauId]
-    );
-
-    if (existing.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Nhà thầu không tồn tại'
-      });
-    }
-
-    // 2. Kiểm tra ràng buộc trước khi xóa
-
-    // 2.1. Kiểm tra nhà thầu có tham gia gói thầu nào không
-    const [goiThauCount] = await connection.query(
-      'SELECT COUNT(*) as count FROM goithau_nhathau WHERE NhaThauID = ?',
-      [nhaThauId]
-    );
-
-    if (goiThauCount[0].count > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể xóa nhà thầu đang tham gia gói thầu'
-      });
-    }
-
-    // 2.2. Kiểm tra nhà thầu có kế hoạch nào không
-    const [keHoachCount] = await connection.query(
-      'SELECT COUNT(*) as count FROM quanlykehoach WHERE NhaThauID = ?',
-      [nhaThauId]
-    );
-
-    if (keHoachCount[0].count > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể xóa nhà thầu đang có kế hoạch thi công'
-      });
-    }
-
-    // 3. Xóa nhà thầu
-    const [result] = await connection.query(
-      'DELETE FROM nhathau WHERE NhaThauID = ?',
-      [nhaThauId]
-    );
-
-    await connection.commit();
-
-    res.json({
-      success: true,
-      message: 'Xóa nhà thầu thành công',
-      affectedRows: result.affectedRows
-    });
-
-  } catch (error) {
-    await connection.rollback();
-    console.error('Database error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Lỗi hệ thống khi xóa nhà thầu',
-      error: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        stack: error.stack,
-        sql: error.sql
-      } : undefined
-    });
-  } finally {
-    connection.release();
-  }
-});
 app.get('/duAnTong', async (req, res) => {
   try {
     const [duAnTongList] = await pool.query(
@@ -1032,7 +732,7 @@ const authenticate = (req, res, next) => {
 };
 app.get('/duAnList', async (req, res) => {
   try {
-    const { nhaThauID } = req.query; 
+    const { nhaThauID } = req.query; // Nhận từ URL params
     
     let query = 'SELECT DuAnID, TenDuAn FROM duan';
     let params = [];
@@ -1048,14 +748,12 @@ app.get('/duAnList', async (req, res) => {
       `;
       params = [nhaThauID];
     }
-    console.log(params);
-    
+
     const [duAnList] = await pool.query(query, params);
     res.json({ success: true, data: duAnList });
   } catch (error) {
     console.error('Lỗi database:', error);
     res.status(500).json({ success: false, message: 'Lỗi server' });
-
   }
 });
 app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
@@ -1128,9 +826,6 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
            ORDER BY gt.GoiThau_ID ASC`,
           [duAnTP.DuAnID]
         );
-
-        // Đếm số lượng gói thầu
-        const soLuongGoiThau = goiThauTP.length;
 
         // Tính toán khối lượng kế hoạch và thực hiện cho từng dự án thành phần
         let khoiLuongKeHoachTP = 0;
@@ -1217,7 +912,6 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
             end: toaDoCuoiTP ? { lat: toaDoCuoiTP.y, lng: toaDoCuoiTP.x } : null
           },
           soLuongHangMuc: countHangMuc,
-          soLuongGoiThau: soLuongGoiThau, // Thêm trường số lượng gói thầu
           khoiLuongKeHoach: khoiLuongKeHoachTP,
           khoiLuongThucHien: khoiLuongThucHienTP,
           phanTramKeHoach: phanTramKeHoach.toFixed(2),
@@ -1245,9 +939,7 @@ app.get('/duAnThanhPhan/:duAnId', async (req, res) => {
           tongKhoiLuongThucHien: tongKhoiLuongThucHien,
           phanTramHoanThanhTong: tongKhoiLuongKeHoach > 0 
             ? ((tongKhoiLuongThucHien / tongKhoiLuongKeHoach) * 100).toFixed(2)
-            : "0.00",
-          // Thêm tổng số gói thầu cho dự án tổng
-          tongSoGoiThau: allGoiThau.length
+            : "0.00"
         },
         duAnThanhPhan: duAnThanhPhanWithDetails
       }
@@ -2254,8 +1946,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
     const getGoiThauDetails = async (duAnId) => {
       // Lấy các gói thầu thuộc dự án
       const [goiThauList] = await pool.query(
-        `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue, nt.DiaChiTruSo, nt.SoDienThoai, nt.Email,
-         nt.NguoiDaiDien, nt.ChucVuNguoiDaiDien, nt.GiayPhepKinhDoanh
+        `SELECT gt.*, nt.TenNhaThau, nt.MaSoThue 
          FROM goithau gt
          LEFT JOIN nhathau nt ON gt.NhaThauID = nt.NhaThauID
          WHERE gt.DuAn_ID = ?
@@ -2277,11 +1968,9 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
           // Lấy thông tin kế hoạch và khối lượng thực thi cho từng hạng mục (đã cập nhật)
           const hangMucWithKeHoach = await Promise.all(
             hangMucList.map(async (hangMuc) => {
-              // Lấy danh sách kế hoạch với thông tin đầy đủ về nhà thầu
+              // Lấy danh sách kế hoạch với nhà thầu và tiến độ thực hiện
               const [keHoachList] = await pool.query(
-                `SELECT kh.*, 
-                 nt.TenNhaThau, nt.MaSoThue, nt.DiaChiTruSo, nt.SoDienThoai, nt.Email,
-                 nt.NguoiDaiDien, nt.ChucVuNguoiDaiDien, nt.GiayPhepKinhDoanh
+                `SELECT kh.*, nt.TenNhaThau 
                  FROM quanlykehoach kh
                  JOIN nhathau nt ON kh.NhaThauID = nt.NhaThauID
                  WHERE kh.HangMucID = ?
@@ -2302,19 +1991,6 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
                   // Tính tổng khối lượng đã thực hiện
                   const tongThucHien = tienDoList.reduce((sum, item) => sum + item.KhoiLuongThucHien, 0);
 
-                  // Thông tin chi tiết nhà thầu
-                  const nhaThauInfo = {
-                    nhaThauId: keHoach.NhaThauID,
-                    tenNhaThau: keHoach.TenNhaThau,
-                    maSoThue: keHoach.MaSoThue,
-                    diaChiTruSo: keHoach.DiaChiTruSo,
-                    soDienThoai: keHoach.SoDienThoai,
-                    email: keHoach.Email,
-                    nguoiDaiDien: keHoach.NguoiDaiDien,
-                    chucVuNguoiDaiDien: keHoach.ChucVuNguoiDaiDien,
-                    giayPhepKinhDoanh: keHoach.GiayPhepKinhDoanh
-                  };
-
                   return {
                     keHoachId: keHoach.KeHoachID,
                     tenCongTac: keHoach.TenCongTac,
@@ -2323,7 +1999,7 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
                     ngayBatDau: keHoach.NgayBatDau,
                     ngayKetThuc: keHoach.NgayKetThuc,
                     ghiChu: keHoach.GhiChu,
-                    nhaThau: nhaThauInfo,
+                    tenNhaThau: keHoach.TenNhaThau,
                     tienDoThucHien: tienDoList,
                     tongKhoiLuongThucHien: tongThucHien,
                     ngayCapNhatGanNhat: tienDoList[0]?.NgayCapNhat || null,
@@ -2369,19 +2045,6 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
             (sum, hm) => sum + (hm.tongKhoiLuongThucHien || 0), 0
           );
 
-          // Thông tin nhà thầu chính của gói thầu
-          const nhaThauChinh = goiThau.NhaThauID ? {
-            nhaThauId: goiThau.NhaThauID,
-            tenNhaThau: goiThau.TenNhaThau,
-            maSoThue: goiThau.MaSoThue,
-            diaChiTruSo: goiThau.DiaChiTruSo,
-            soDienThoai: goiThau.SoDienThoai,
-            email: goiThau.Email,
-            nguoiDaiDien: goiThau.NguoiDaiDien,
-            chucVuNguoiDaiDien: goiThau.ChucVuNguoiDaiDien,
-            giayPhepKinhDoanh: goiThau.GiayPhepKinhDoanh
-          } : null;
-
           return {
             goiThauId: goiThau.GoiThau_ID,
             tenGoiThau: goiThau.TenGoiThau,
@@ -2393,7 +2056,11 @@ app.get('/hangMuc/:duAnId/detail', async (req, res) => {
             ngayKhoiCong: goiThau.NgayKhoiCong,
             ngayHoanThanh: goiThau.NgayHoanThanh,
             trangThai: goiThau.TrangThai,
-            nhaThau: nhaThauChinh,
+            nhaThau: goiThau.NhaThauID ? {
+              nhaThauId: goiThau.NhaThauID,
+              tenNhaThau: goiThau.TenNhaThau,
+              maSoThue: goiThau.MaSoThue
+            } : null,
             danhSachHangMuc: hangMucWithKeHoach,
             tongKhoiLuongKeHoach: tongKhoiLuongKeHoachGoiThau,
             tongKhoiLuongThucHien: tongKhoiLuongThucHienGoiThau,
@@ -2701,6 +2368,7 @@ app.get('/:duAnId/hang-muc', async (req, res) => {
     });
   }
 });
+
 app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), async (req, res) => {
   try {
     const keHoachId = req.params.keHoachId;

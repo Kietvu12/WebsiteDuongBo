@@ -192,7 +192,7 @@ const UpdateProgress = ({ keHoachId, DonViTinh }) => {
                         ))}
                       </ul>
                     </div>
-                  )} */}
+                  )} 
                 </div>
                 <button
                   type="submit"

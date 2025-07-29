@@ -118,6 +118,9 @@ export const ProjectProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('lastSearchTerm');
+    localStorage.removeItem('lastSelectedProjectId');
+    localStorage.removeItem('lastSelectedPlan');
     setUser(null);
     setAuthChecked(true);
   };

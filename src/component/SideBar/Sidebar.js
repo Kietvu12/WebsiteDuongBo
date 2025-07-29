@@ -13,28 +13,28 @@ import { useProject } from '../../contexts/ProjectContext';
 import { useParams } from 'react-router-dom';
 import avatarIcon from '../../assets/img/user-icon.png'
 import bg from '../../assets/img/background_sidebar.png'
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedProjectId, user} = useProject();
-console.log("Dữ liệu người dùng: ", user.PhanQuyenID);
-const isMenuItemDisabled = (menuKey) => {
-  // Nếu PhanQuyenID = 9 thì chỉ cho phép menu 'progress'
-  if (user?.PhanQuyenID === 9) {
-    return menuKey !== 'progress';
-  }
-  // Nếu không phải quyền 9 thì xử lý theo logic khác (nếu có)
-  return false;
-};
+  const { selectedProjectId, user } = useProject();
+  
+  console.log("Dữ liệu người dùng: ", user.PhanQuyenID);
+  
+  const isMenuItemDisabled = (menuKey) => {
+    if (user?.PhanQuyenID === 9) {
+      return menuKey !== 'progress';
+    }
+    return false;
+  };
 
-// Hàm kiểm tra xem submenu item có bị disable không
-const isSubMenuItemDisabled = (menuKey) => {
-  if (user?.PhanQuyenID === 9) {
-    return menuKey !== 'progress';
-  }
-  return false;
-};
-  // Menu mở rộng
+  const isSubMenuItemDisabled = (menuKey) => {
+    if (user?.PhanQuyenID === 9) {
+      return menuKey !== 'progress';
+    }
+    return false;
+  };
+
   const [openMenus, setOpenMenus] = useState({
     project: true,
     progress: true,
@@ -43,10 +43,20 @@ const isSubMenuItemDisabled = (menuKey) => {
     setting: true
   });
 
-  // trạng thái sidebar mở (mobile)
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Thay đổi từ < 768 thành < 1024 để bao gồm cả tablet
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
 
   const isDashboard = ['/home', '/'].includes(location.pathname);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 1024);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleNavigation = (path) => {
     if (path === '/home') {
@@ -58,10 +68,11 @@ const isSubMenuItemDisabled = (menuKey) => {
     navigate(finalPath);
     setSidebarOpen(false);
   };
+  
   const handleSimpleNavigation = (path) => {
     navigate(path);
+    setSidebarOpen(false);
   };
-  
 
   const handleDashboard = () => {
     navigate('/home');
@@ -86,244 +97,251 @@ const isSubMenuItemDisabled = (menuKey) => {
     }));
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   return (
     <>
-    {/* Header mobile */}
-    <header className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 h-[56px] shadow-md" style={{ backgroundImage: `url(${bg})` }}>
-      <button
-        aria-label="Toggle Menu"
-        onClick={() => setSidebarOpen((prev) => !prev)}
-        className="w-12 h-12 flex items-center justify-center text-white hover:bg-[#00509e] rounded-md focus:outline-none transition"
-      >
-        {sidebarOpen ? (
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            viewBox="0 0 24 24"
+      {/* Header cho mobile và tablet */}
+      {isSmallScreen && (
+        <header className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-3 h-[56px] shadow-md" style={{ backgroundImage: `url(${bg})` }}>
+          <button
+            aria-label="Toggle Menu"
+            onClick={toggleSidebar}
+            className="w-12 h-12 flex items-center justify-center text-white hover:bg-[#00509e] rounded-md focus:outline-none transition"
           >
-            <path d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            viewBox="0 0 24 24"
-          >
-            <path d="M3 12h18M3 6h18M3 18h18" />
-          </svg>
-        )}
-      </button>
+            {sidebarOpen ? (
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <path d="M3 12h18M3 6h18M3 18h18" />
+              </svg>
+            )}
+          </button>
 
-      {/* Logo chính giữa */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
-        <img
-          src={logoSidebar}
-          alt="Logo Bộ Xây Dựng"
-          className="h-10 w-auto"
-          draggable={false}
-        />
-      </div>
-    </header>
-    {sidebarOpen && (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-40 z-30 md:hidden"
-        onClick={() => setSidebarOpen(false)}
-      />
-    )}
-    <aside
-      className={`
-        fixed top-0 left-0 bottom-0 z-40 bg-gray-100 shadow-md font-sans
-        w-[300px] h-screen
-        transform transition-transform duration-300 ease-in-out
-        md:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:static 
-      `}
-    >
-      <div
-        className="relative bg-center bg-cover p-5"
-        style={{ backgroundImage: `url(${backgroundSidebar})` }}
-      >
-        <div className="flex flex-col items-center relative z-10">
-          <img
-            src={logoSidebar}
-            alt="Logo Bộ Xây Dựng"
-            className="w-4/5 max-w-[180px] mb-4"
-          />
-          <div className="w-[250px] flex justify-center items-center rounded-full">
-            <input
-              type="text"
-              placeholder="Tìm kiếm..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-full 
-                backdrop-blur-sm bg-white/70 text-sm outline-none transition
-                focus:border-blue-600 focus:ring-2 focus:ring-blue-300
-                shadow-m"
+          {/* Logo chính giữa */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
+            <img
+              src={logoSidebar}
+              alt="Logo Bộ Xây Dựng"
+              className="h-10 w-auto"
+              draggable={false}
             />
           </div>
-        </div>
-        <div
-          className="absolute inset-0 rounded-b-xl bg-black bg-opacity-20 pointer-events-none"
-          aria-hidden="true"
-        />
-      </div>
+        </header>
+      )}
 
-      {/* Các phần menu */}
-      <div className="flex flex-col flex-grow overflow-auto mt-2 md:mt-0">
-        {/* Project menu */}
-        <div className="py-1">
-  <div
-    className={`flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-lg hover:bg-gray-200 transition
-      ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
-    onClick={() => {
-      if (user?.PhanQuyenID !== 9) toggleMenu('project');
-    }}
-  >
-    <img 
-      src={projectIcon} 
-      width={20} 
-      alt="Project Icon" 
-      className="mr-2"
-      style={user?.PhanQuyenID === 9 ? { opacity: 0.5 } : {}}
-    />
-    <span>Quản lý dự án</span>
-    {user?.PhanQuyenID !== 9 && (
-      <img
-        src={downIcon}
-        width={16}
-        alt="Dropdown Icon"
-        className={`ml-auto transition-transform duration-300 ${
-          openMenus.project ? 'rotate-180' : ''
-        }`}
-      />
-    )}
-  </div>
-  <div
-    className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
-      ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
-  >
-    <div
-      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
-        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
-      onClick={() => {
-        if (user?.PhanQuyenID !== 9) handleDashboard();
-      }}
-    >
-      Danh sách dự án
-    </div>
-    <div
-      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
-        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
-      onClick={() => {
-        if (user?.PhanQuyenID !== 9) handleMapboard();
-      }}
-    >
-      Dự án dạng bản đồ
-    </div>
-    <div
-      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
-        ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
-      onClick={() => {
-        if (user?.PhanQuyenID !== 9) handleAddNew();
-      }}
-    >
-      Thêm dự án mới
-    </div>
-  </div>
-</div>
+      {/* Sidebar */}
+      <div className={`flex ${isSmallScreen ? ' inset-0 z-30' : ''}`}>
+        {/* Overlay chỉ hiển thị trên màn hình nhỏ khi sidebar mở */}
+        {isSmallScreen && sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-40 z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
 
-        {/* Các menu khác */}
-        {[
-          {
-            key: 'progress',
-            icon: progressIcon,
-            label: 'Quản lý tiến độ',
-            submenu: [
-              { label: 'Hạng mục công việc', onClick: () => handleSimpleNavigation(`/work-items`) },
-              { label: 'Khó khăn & vướng mắc', onClick: () => handleSimpleNavigation('/approvals') },
-              { label: 'Báo cáo tiến độ', onClick: () => handleSimpleNavigation(`/project-progress`) },
-            ],
-          },
-          {
-            key: 'requirements',
-            icon: requirementsIcon,
-            label: 'Nhà thầu thi công',
-            submenu: [
-              //{ label: 'Khu vực thi công', onClick: () => handleNavigation('/construction-areas') },
-              // { label: 'Tiến độ các nhà thầu', onClick: () => handleSimpleNavigation('/constructor-progress') },
-              { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
-            ],
-          },
-          {
-            key: 'report',
-            icon: reportIcon,
-            label: 'Báo cáo',
-            submenu: [
-              { label: 'Báo cáo chi tiết theo dự án', onClick: () => handleNavigation('/project-report') },
-              //{ label: 'Báo cáo theo các nhà thầu', onClick: () => handleNavigation('/contractor-report') },
-              //{ label: 'Xuất báo cáo Excel', onClick: () => handleNavigation('/export-excel') },
-            ],
-          },
-          {
-            key: 'setting',
-            icon: settingIcon,
-            label: 'Cài đặt',
-            submenu: [
-              { label: 'Cài đặt tài khoản', onClick: () =>handleSimpleNavigation('/account-settings') },
-              { label: 'Đổi mật khẩu', onClick: () => handleNavigation('/change-password') },
-            ],
-          },
-        ].map(({ key, icon, label, submenu }) => (
-          <div key={key} className="py-1">
-            <div
-              className={`flex items-center px-5 py-2 cursor-pointer text-gray-600 font-semibold text-lg
-                hover:bg-gray-200 transition
-                ${isMenuItemDisabled(key) ? 'cursor-not-allowed opacity-50' : 'text-gray-700'}`}
-              onClick={() => {
-                if (!isMenuItemDisabled(key)) toggleMenu(key);
-              }}
-            >
-              <img src={icon} width={20} alt={`${label} Icon`} className="mr-2" />
-              <span>{label}</span>
+        <aside
+          className={`
+            bg-gray-100 shadow-md font-sans
+            w-[300px] h-screen
+            transform transition-transform duration-300 ease-in-out
+            ${isSmallScreen ? 'fixed z-40' : 'relative'}
+            ${isSmallScreen && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
+            lg:translate-x-0 lg:relative
+          `}
+        >
+          <div
+            className="relative bg-center bg-cover p-5"
+            style={{ backgroundImage: `url(${backgroundSidebar})` }}
+          >
+            <div className="flex flex-col items-center relative z-10">
               <img
-                src={downIcon}
-                width={16}
-                alt="Dropdown Icon"
-                className={`ml-auto transition-transform duration-300 ${
-                  openMenus[key] ? 'rotate-180' : ''
-                }`}
+                src={logoSidebar}
+                alt="Logo Bộ Xây Dựng"
+                className="w-4/5 max-w-[180px] mb-4"
               />
+              <div className="w-[250px] flex justify-center items-center rounded-full">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-full 
+                    backdrop-blur-sm bg-white/70 text-sm outline-none transition
+                    focus:border-blue-600 focus:ring-2 focus:ring-blue-300
+                    shadow-m"
+                />
+              </div>
             </div>
             <div
-              className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
-              ${openMenus[key] ? 'max-h-[400px]' : 'max-h-0'}`}
-            >
-              {submenu.map(({ label: subLabel, onClick }, idx) => (
+              className="absolute inset-0 rounded-b-xl bg-black bg-opacity-20 pointer-events-none"
+              aria-hidden="true"
+            />
+          </div>
+
+          {/* Các phần menu */}
+          <div className="flex flex-col flex-grow overflow-auto mt-2 md:mt-0">
+            {/* Project menu */}
+            <div className="py-1">
+              <div
+                className={`flex items-center px-5 py-2 cursor-pointer text-gray-800 font-semibold text-lg hover:bg-gray-200 transition
+                  ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+                onClick={() => {
+                  if (user?.PhanQuyenID !== 9) toggleMenu('project');
+                }}
+              >
+                <img 
+                  src={projectIcon} 
+                  width={20} 
+                  alt="Project Icon" 
+                  className="mr-2"
+                  style={user?.PhanQuyenID === 9 ? { opacity: 0.5 } : {}}
+                />
+                <span>Quản lý dự án</span>
+                {user?.PhanQuyenID !== 9 && (
+                  <img
+                    src={downIcon}
+                    width={16}
+                    alt="Dropdown Icon"
+                    className={`ml-auto transition-transform duration-300 ${
+                      openMenus.project ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
+              </div>
+              <div
+                className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
+                  ${openMenus.project ? 'max-h-[500px]' : 'max-h-0'}`}
+              >
                 <div
-                  key={idx}
                   className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
-                  ${isMenuItemDisabled(key) ? 'cursor-not-allowed' : ''}`}
+                    ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
                   onClick={() => {
-                    if (!isMenuItemDisabled(key)) onClick();
+                    if (user?.PhanQuyenID !== 9) handleDashboard();
                   }}
                 >
-                  {subLabel}
+                  Danh sách dự án
                 </div>
-              ))}
+                <div
+                  className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                    ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+                  onClick={() => {
+                    if (user?.PhanQuyenID !== 9) handleMapboard();
+                  }}
+                >
+                  Dự án dạng bản đồ
+                </div>
+                <div
+                  className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                    ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+                  onClick={() => {
+                    if (user?.PhanQuyenID !== 9) handleAddNew();
+                  }}
+                >
+                  Thêm dự án mới
+                </div>
+              </div>
             </div>
+
+            {/* Các menu khác */}
+            {[
+              {
+                key: 'progress',
+                icon: progressIcon,
+                label: 'Quản lý tiến độ',
+                submenu: [
+                  { label: 'Hạng mục công việc', onClick: () => handleSimpleNavigation(`/work-items`) },
+                  { label: 'Khó khăn & vướng mắc', onClick: () => handleSimpleNavigation('/approvals') },
+                  { label: 'Báo cáo tiến độ', onClick: () => handleSimpleNavigation(`/project-progress`) },
+                ],
+              },
+              {
+                key: 'requirements',
+                icon: requirementsIcon,
+                label: 'Nhà thầu thi công',
+                submenu: [
+                  { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
+                ],
+              },
+              {
+                key: 'report',
+                icon: reportIcon,
+                label: 'Báo cáo',
+                submenu: [
+                  { label: 'Báo cáo chi tiết theo dự án', onClick: () => handleNavigation('/project-report') },
+                ],
+              },
+              {
+                key: 'setting',
+                icon: settingIcon,
+                label: 'Cài đặt',
+                submenu: [
+                  { label: 'Cài đặt tài khoản', onClick: () =>handleSimpleNavigation('/account-settings') },
+                  { label: 'Đổi mật khẩu', onClick: () => handleNavigation('/change-password') },
+                ],
+              },
+            ].map(({ key, icon, label, submenu }) => (
+              <div key={key} className="py-1">
+                <div
+                  className={`flex items-center px-5 py-2 cursor-pointer text-gray-600 font-semibold text-lg
+                    hover:bg-gray-200 transition
+                    ${isMenuItemDisabled(key) ? 'cursor-not-allowed opacity-50' : 'text-gray-700'}`}
+                  onClick={() => {
+                    if (!isMenuItemDisabled(key)) toggleMenu(key);
+                  }}
+                >
+                  <img src={icon} width={20} alt={`${label} Icon`} className="mr-2" />
+                  <span>{label}</span>
+                  <img
+                    src={downIcon}
+                    width={16}
+                    alt="Dropdown Icon"
+                    className={`ml-auto transition-transform duration-300 ${
+                      openMenus[key] ? 'rotate-180' : ''
+                    }`}
+                  />
+                </div>
+                <div
+                  className={`overflow-hidden text-base text-gray-600 transition-max-height duration-300 ease-out
+                  ${openMenus[key] ? 'max-h-[400px]' : 'max-h-0'}`}
+                >
+                  {submenu.map(({ label: subLabel, onClick }, idx) => (
+                    <div
+                      key={idx}
+                      className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                      ${isMenuItemDisabled(key) ? 'cursor-not-allowed' : ''}`}
+                      onClick={() => {
+                        if (!isMenuItemDisabled(key)) onClick();
+                      }}
+                    >
+                      {subLabel}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </aside>
       </div>
-    </aside>
-  </>
+    </>
   );
 };
 

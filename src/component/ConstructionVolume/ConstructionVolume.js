@@ -49,19 +49,19 @@ const ConstructionVolume = ({ data, packageId }) => {
     <div className="bg-white rounded-lg overflow-hidden h-full flex flex-col shadow-sm">
       <Header />
       <div className="flex-1 p-3 md:p-4 sm:p-2 xs:p-1 overflow-y-auto min-h-[100px]">
-        <ul className="list-disc pl-4 md:pl-5 sm:pl-3 xs:pl-2 space-y-2 md:space-y-3 sm:space-y-1.5 xs:space-y-1">
+        <ul className="space-y-2 md:space-y-3 sm:space-y-1.5 xs:space-y-1">
           {data.khoiLuongThiCong.map((item, index) => (
             <li
               key={item.KhoiLuong_ID || index}
-              className="text-sm md:text-base sm:text-xs xs:text-xs text-gray-800 text-left leading-relaxed"
+              className="text-sm md:text-base sm:text-xs xs:text-xs text-gray-800 text-left"
             >
-              <strong className="font-semibold">{item.TieuDe}:</strong> {item.NoiDung}
+              <div className="break-words overflow-hidden">
+                <strong className="font-semibold">{item.TieuDe}:</strong> 
+                <span className="whitespace-normal"> {item.NoiDung}</span>
+              </div>
             </li>
           ))}
         </ul>
-        
-        {/* Nút thêm khối lượng - responsive */}
-        
       </div>
       
       {showPopup && (

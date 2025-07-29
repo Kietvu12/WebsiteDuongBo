@@ -46,6 +46,7 @@ const ProjectProgress = () => {
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
@@ -108,17 +109,24 @@ const ProjectProgress = () => {
 
     fetchData();
   }, [selectedProjectId, navigate]);
+  
   useEffect(() => {
-    if (searchTerm.trim() === '') {
+    // Nếu đang hiển thị gợi ý, hiển thị danh sách dự án theo điều kiện tìm kiếm
+    if (showSuggestions) {
+      if (searchTerm.trim() === '') {
+        // Nếu ô tìm kiếm trống, hiển thị tất cả dự án
+        setFilteredProjects(projects);
+      } else {
+        // Nếu có từ khóa tìm kiếm, lọc theo từ khóa
+        const filtered = projects.filter(project =>
+          project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredProjects(filtered);
+      }
+    } else {
       setFilteredProjects([]);
-      return;
     }
-
-    const filtered = projects.filter(project =>
-      project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProjects(filtered);
-  }, [searchTerm, projects]);
+  }, [searchTerm, projects, showSuggestions]);
 
   // Event handlers
   const handleSearchChange = (e) => {
@@ -140,6 +148,13 @@ const ProjectProgress = () => {
       handleProjectSelect(filteredProjects[0]);
     }
   };
+  
+  const handleInputFocus = () => {
+    setShowSuggestions(true);
+    // Hiển thị tất cả dự án khi focus vào ô tìm kiếm
+    setFilteredProjects(projects);
+  };
+  
   const renderTitle = () => {
     if (project) {
       return `Tiến độ các hạng mục - ${project.tenDuAn}`;
@@ -200,16 +215,17 @@ const ProjectProgress = () => {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
 
             {/* Search */}
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
-                <div className="flex-grow">
+                <div className="flex-grow relative">
                   <input
+                    ref={searchInputRef}
                     type="text"
                     placeholder="Tìm kiếm dự án..."
-                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 "
+                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    onFocus={() => setShowSuggestions(true)}
+                    onFocus={handleInputFocus}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   />
                   {showSuggestions && filteredProjects.length > 0 && (
@@ -217,7 +233,7 @@ const ProjectProgress = () => {
                       {filteredProjects.map(project => (
                         <li
                           key={project.DuAnID}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer "
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => handleProjectSelect(project)}
                         >
                           {project.TenDuAn}
@@ -228,7 +244,7 @@ const ProjectProgress = () => {
                 </div>
                 <button
                   type="submit"
-                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300  whitespace-nowrap"
+                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 whitespace-nowrap"
                   disabled={isLoadingProjects}
                 >
                   {isLoadingProjects ? (
@@ -243,7 +259,7 @@ const ProjectProgress = () => {
                 </button>
               </form>
               {isLoadingProjects && (
-                <p className=" text-gray-500 mt-1">Đang tải danh sách dự án...</p>
+                <p className="text-gray-500 mt-1">Đang tải danh sách dự án...</p>
               )}
             </div>
 

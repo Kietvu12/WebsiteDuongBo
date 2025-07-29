@@ -32,6 +32,8 @@ const useClickOutside = (ref, callback) => {
 const Approvals = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showAddPopup, setShowAddPopup] = useState(false);
   const [fromDate, setFromDate] = useState('2023-02-26');
   const [toDate, setToDate] = useState('2023-09-26');
@@ -43,112 +45,135 @@ const Approvals = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
-  const { logout } = useProject();
+  const { logout, user} = useProject();
   const [showMenu, setShowMenu] = useState(false);
 
   const menuRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
   });
-
-    useEffect(() => {
-      const savedSearchTerm = localStorage.getItem('lastSearchTerm');
-      const savedProjectId = localStorage.getItem('lastSelectedProjectId');
-      
-      if (savedSearchTerm) setSearchTerm(savedSearchTerm);
-      if (savedProjectId) setSelectedProjectId(savedProjectId);
-    }, []);
-
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  
+  // Khôi phục state từ localStorage khi component mount
   useEffect(() => {
-    const fetchProjects = async () => {
-      setIsLoadingProjects(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/duAnList`);
-        const data = await response.json();
-        if (data.success) {
-          setProjects(data.data);
-          if (!localStorage.getItem('lastSelectedProjectId') && data.data.length > 0) {
-            const firstProject = data.data[0];
-            setSearchTerm(firstProject.TenDuAn);
-            setSelectedProjectId(firstProject.DuAnID);
-            
-            // Lưu vào localStorage
-            localStorage.setItem('lastSearchTerm', firstProject.TenDuAn);
-            localStorage.setItem('lastSelectedProjectId', firstProject.DuAnID);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-      } finally {
-        setIsLoadingProjects(false);
-      }
-    };
-
-    fetchProjects();
+    const savedSearchTerm = localStorage.getItem('lastSearchTerm');
+    const savedProjectId = localStorage.getItem('lastSelectedProjectId');
+    
+    if (savedSearchTerm) setSearchTerm(savedSearchTerm);
+    if (savedProjectId) setSelectedProjectId(savedProjectId);
   }, []);
+  
+
+  const fetchProjects = async () => {
+    setIsLoadingProjects(true);
+    try {
+      let url = `${API_BASE_URL}/duAnList`;
+      
+      // Thêm params nếu là nhà thầu
+      if (user?.PhanQuyenID === 9) {
+        url += `?nhaThauID=${user.NhaThauID}`;
+      }
+  
+      const response = await fetch(url);
+      const data = await response.json();
+  
+      if (data.success) {
+        setProjects(data.data);
+        if (data.data.length === 0 && user?.PhanQuyenID === 9) {
+          alert('Tài khoản nhà thầu chưa được giao dự án nào');
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi tải dự án:', error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user?.PhanQuyenID, user?.NhaThauID]);
+  
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
+  
         if (selectedProjectId) {
           const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
           setProject(response.data.data.duAnTong);
+          
+          // Lưu state vào localStorage khi có thay đổi
           localStorage.setItem('lastSelectedProjectId', selectedProjectId);
           localStorage.setItem('lastSearchTerm', searchTerm);
         }
-
+  
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [selectedProjectId, navigate]);
+  
   useEffect(() => {
-    if (searchTerm.trim() === '') {
+    // Nếu đang hiển thị gợi ý và có searchTerm, lọc danh sách
+    if (showSuggestions) {
+      if (searchTerm.trim() === '') {
+        // Nếu ô tìm kiếm trống, hiển thị tất cả dự án
+        setFilteredProjects(projects);
+      } else {
+        // Nếu có từ khóa tìm kiếm, lọc theo từ khóa
+        const filtered = projects.filter(project =>
+          project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredProjects(filtered);
+      }
+    } else {
       setFilteredProjects([]);
-      return;
     }
-
-    const filtered = projects.filter(project =>
-      project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredProjects(filtered);
-  }, [searchTerm, projects]);
-
+  }, [searchTerm, projects, showSuggestions]);
+  
   // Event handlers
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setShowSuggestions(true);
   };
-
+  
   const handleProjectSelect = (project) => {
     setSearchTerm(project.TenDuAn);
     setSelectedProjectId(project.DuAnID);
     setShowSuggestions(false);
+    
+    // Lưu vào localStorage khi chọn dự án
     localStorage.setItem('lastSearchTerm', project.TenDuAn);
     localStorage.setItem('lastSelectedProjectId', project.DuAnID);
   };
-
+  
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (filteredProjects.length > 0) {
       handleProjectSelect(filteredProjects[0]);
     }
   };
+  
+  const handleInputFocus = () => {
+    setShowSuggestions(true);
+    // Hiển thị tất cả dự án khi focus vào ô tìm kiếm
+    setFilteredProjects(projects);
+  };
+  
   const renderTitle = () => {
     if (project) {
       return `Vướng mắc các hạng mục - ${project.tenDuAn}`;
     }
     return 'Vướng mắc các hạng mục';
   };
-
 
   return (
     <div className='plan'>
@@ -193,7 +218,7 @@ const Approvals = () => {
         </div>
 
           {/* Tiêu đề - căn giữa và chiếm không gian còn lại */}
-          <h1 className="flex-1 text-left font-bold text-gray-800 px-2 mt-3">
+          <h1 className="flex-1 mt-6 text-xm sm:text-sm md:text-base text-left font-bold text-gray-800 px-2 mt-3">
             {renderTitle()}
           </h1>
 
@@ -202,16 +227,17 @@ const Approvals = () => {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
 
             {/* Search */}
-            <div className="flex-1">
+            <div className="flex-1 relative">
               <form onSubmit={handleSearchSubmit} className="flex gap-2 w-full">
-                <div className="flex-grow">
+                <div className="flex-grow relative">
                   <input
+                    ref={searchInputRef}
                     type="text"
                     placeholder="Tìm kiếm dự án..."
-                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400 "
+                    className="border border-gray-300 rounded px-3 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    onFocus={() => setShowSuggestions(true)}
+                    onFocus={handleInputFocus}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   />
                   {showSuggestions && filteredProjects.length > 0 && (
@@ -219,7 +245,7 @@ const Approvals = () => {
                       {filteredProjects.map(project => (
                         <li
                           key={project.DuAnID}
-                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer "
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => handleProjectSelect(project)}
                         >
                           {project.TenDuAn}
@@ -230,7 +256,7 @@ const Approvals = () => {
                 </div>
                 <button
                   type="submit"
-                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300  whitespace-nowrap"
+                  className="bg-gray-200 px-4 py-1.5 rounded hover:bg-gray-300 whitespace-nowrap"
                   disabled={isLoadingProjects}
                 >
                   {isLoadingProjects ? (
@@ -245,32 +271,12 @@ const Approvals = () => {
                 </button>
               </form>
               {isLoadingProjects && (
-                <p className=" text-gray-500 mt-1">Đang tải danh sách dự án...</p>
+                <p className="text-gray-500 mt-1">Đang tải danh sách dự án...</p>
               )}
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
-
-              {/* Date Filter */}
-              <div className="flex items-center gap-2">
-                <span className=" sm: text-gray-700 whitespace-nowrap">Thời gian:</span>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
-                />
-                <span className=" sm: text-gray-700">đến</span>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded px-2 py-1  sm: w-[130px]"
-                />
-              </div>
-
-            </div>
+            
           </div>
         </div>
       </div>

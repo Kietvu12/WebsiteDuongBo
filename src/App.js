@@ -21,7 +21,9 @@ import AddNewContructors from './page/AddNewContructors/AddNewContructors';
 import { useEffect } from 'react';
 import ConstructionProgress from './component/ConstructionProgress/ConstructionProgress';
 import ConstructorProgress from './page/ConstructorProgress/ConstructorProgress';
+import { useState } from 'react';
 import AccountSetting from './page/AccountSetting/AccountSetting';
+import ContractorDashboard from './page/CampaignDashboard/CampaignDashboard';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -94,23 +96,123 @@ function App() {
   }, []);
 
   if (loading || !authChecked) return <div>Đang tải thông tin người dùng...</div>;
+  function ResponsiveZoom({ children }) {
+    const [scale, setScale] = useState(1.1); // Mặc định 110%
+
+    useEffect(() => {
+      function handleResize() {
+        const screenWidth = window.innerWidth;
+        if (screenWidth >= 2220) {
+          setScale(1.2);
+        }
+        else if (screenWidth >= 2020) {
+          setScale(1.1);
+        }
+        else if (screenWidth >= 1920) {
+          setScale(1);
+        }
+        else if (screenWidth >= 1850) {
+          setScale(0.98);
+        }
+        else if (screenWidth >= 1740) {
+          setScale(0.96);
+        } 
+        else if (screenWidth >= 1640) {
+          setScale(0.85);
+          
+        }else if (screenWidth >= 1620) {
+          setScale(0.83);
+          
+        }else if (screenWidth >= 1545) {
+          setScale(0.74);
+          
+        } else if (screenWidth >= 1540) {
+          setScale(0.78);
+        }
+        else if (screenWidth >= 1520) {
+          setScale(0.78);
+        }
+        else if (screenWidth >= 1480) {
+          setScale(0.75);
+        }
+        else if (screenWidth >= 1440) {
+          setScale(0.7);
+
+        } else if (screenWidth >= 1420) {
+          setScale(0.7);
+        } else if (screenWidth >= 1340) {
+          setScale(0.65);
+        } else if (screenWidth >= 1300) {
+          setScale(0.63);
+
+        } else if (screenWidth >= 1280) {
+          setScale(0.65);
+        } else if (screenWidth >= 1240) {
+          setScale(0.6);
+        }
+        else if (screenWidth >= 1220) {
+          setScale(0.58);
+        }else if (screenWidth >= 1140) {
+          setScale(0.54);
+
+        } 
+        else if (screenWidth >= 1040) {
+          setScale(0.5);
+
+        }else if (screenWidth >= 1024) {
+          setScale(0.62);
+        }
+        else if (screenWidth >= 945) {
+          setScale(0.6);
+
+        } else if (screenWidth >= 768) {
+          setScale(0.5);
+        } else {
+          setScale(1);
+        }
+      }
+
+      // Gọi ngay lần đầu
+      handleResize();
+
+      // Lắng nghe sự kiện resize
+      window.addEventListener('resize', handleResize);
+
+      return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    return (
+      <div style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: `${100 / scale}%`,
+        height: `${100 / scale}%`
+      }}>
+        {children}
+      </div>
+    );
+  }
 
   return (
     <ProjectProvider>
-      <Router>
+      <Router basename="/dadb">
         <Routes>
           <Route path='/' element={<Login />} />
           <Route path='/home' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
-                {user?.PhanQuyenID === 9 ? <Navigate to="/work-items" replace /> : <DashBoard />}
+                <ResponsiveZoom>
+                  <DashBoard />
+                </ResponsiveZoom>
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
           <Route path='/map-views' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
+                <ResponsiveZoom>
                 <MapBoard />
+                </ResponsiveZoom>
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
@@ -152,7 +254,9 @@ function App() {
           <Route path='/work-items' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
+                <ResponsiveZoom>
                   <WorkItem />
+                </ResponsiveZoom>
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
@@ -198,6 +302,13 @@ function App() {
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
+          <Route path='/contractor-dashboard' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <ContractorDashboard />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
           <Route path='/constructor-progress' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
@@ -219,7 +330,10 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" />;
   }
 
-  // Nếu là quyền 9 và đang truy cập trang khác work-item
+  // Nếu là nhà thầu (quyền 9) và đang truy cập trang chính, chuyển hướng sang work-items
+  if (user.PhanQuyenID === 9 && location.pathname === '/home') {
+    return <Navigate to="/work-items" />;
+  }
 
   return children;
 };

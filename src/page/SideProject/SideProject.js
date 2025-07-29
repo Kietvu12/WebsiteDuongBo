@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axios from "axios";
 import "./SideProject.css";
 import menuIcon from "../../assets/img/menu-icon.png";
@@ -22,6 +23,8 @@ import AddNewPackage from '../AddNewPackage/AddNewPackage';
 import { FiPlus, FiArrowLeft } from 'react-icons/fi';
 import edit from "../../assets/img/edit.png"
 import AddNewSubProjects from "../AddNewSubProject(1)/AddNewSubProject";
+import TienDoHangMucPopup from "../DashBoard/TienDoHangMucPopup";
+
 
 const useClickOutside = (ref, callback) => {
   useEffect(() => {
@@ -40,6 +43,45 @@ const useClickOutside = (ref, callback) => {
 
 
 const SideProject = () => {
+    const ProgressPieChart = ({ project }) => {
+      const data = [
+        { name: 'Hoàn thành', value: parseFloat(project.phanTramHoanThanh || 0), color: '#16A34A' },
+        { name: 'Chậm tiến độ', value: parseFloat(project.phanTramChamTienDo || 0), color: '#CA8A04' },
+        { name: 'Đang làm', value: parseFloat(project.phanTramKeHoach || 0), color: '#2563EB' },
+      ];
+  
+      return (
+        <div className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={30}
+                outerRadius={45}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    };
+     const [popupData, setPopupData] = useState({
+        status: null,  // 'danglam' | 'hoanthanh' | 'chamtienDo'
+        duAnId: null   // ID của dự án được chọn
+      });
+      const handleOpenPopup = (duAnId, status) => {
+        setPopupData({ status, duAnId });
+      };
+      const handleClosePopup = () => {
+        setPopupData({ status: null, duAnId: null });
+      };
   const location = useLocation();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const { DuAnID } = useParams();
@@ -63,9 +105,9 @@ const SideProject = () => {
   const [showAddSideProject, setShowAddSideProject] = useState(false);
   const [showEdit, setShowEdit] = useState(false)
   const [showAddPackage, setShowAddPackage] = useState(false);
-   const [expandedMenuId, setExpandedMenuId] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage] = useState(10);
+  const [expandedMenuId, setExpandedMenuId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const { logout } = useProject();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -75,7 +117,7 @@ const SideProject = () => {
   useClickOutside(menuRef, () => {
     setShowMenu(false);
   });
-  
+
   const handleExportReport = () => {
     navigate("/bao-cao-tong");
   };
@@ -521,24 +563,24 @@ const SideProject = () => {
           <FaRegBell />
           <span></span>
           <div className="inline-block" ref={menuRef}>
-              <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
-                onClick={() => setShowMenu(!showMenu)}
-              >
-                R
-              </button>
-              {showMenu && (
-            <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
-              <button
-                className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-              >
-                Đăng xuất
+            <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
+              onClick={() => setShowMenu(!showMenu)}
+            >
+              R
+            </button>
+            {showMenu && (
+              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                <button
+                  className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                >
+                  Đăng xuất
                 </button>
-            </div>
-          )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -546,15 +588,15 @@ const SideProject = () => {
 
       {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
       <div className="md:hidden flex justify-between items-center px-4 mb-2">
-        <button 
+        <button
           onClick={() => setShowMobileFilters(!showMobileFilters)}
           className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
         >
           <FaFilter className="text-gray-600" />
           <span>Bộ lọc</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={handleExportReport}
           className="bg-green-700 text-white px-4 py-1 rounded font-bold mr-2 ml-2"
         >
@@ -615,7 +657,7 @@ const SideProject = () => {
                 className="appearance-none outline-none border-none bg-transparent w-[120px]"
               />
             </div>
-          </div>  
+          </div>
 
           {/* Status */}
           <div>
@@ -670,7 +712,7 @@ const SideProject = () => {
 
       <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
         <div className="bg-white rounded-lg p-4 flex flex-col flex-1 min-h-screen">
-        <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
+          <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
             {/* Ô tìm kiếm */}
             <div className="w-full md:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
               <input
@@ -737,21 +779,13 @@ const SideProject = () => {
 
             {/* Nút xuất báo cáo */}
             <div className="w-full md:w-auto max-w-[1451px]:w-full flex justify-start">
+             
               <button
-                onClick={resetFilters}
-                className="px-4 py-1.5 mr-2 md:px-3 md:py-1 lg:px-4 lg:py-1.5 bg-gray-100 hover:bg-gray-200 rounded font-bold text-sm md:text-xs lg:text-sm max-w-[1451px]:w-full"
+                onClick={() => setShowAddSideProject(true)}
+                className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold "
               >
-                XÓA LỌC
+                TẠO DỰ ÁN MỚI
               </button>
-              <button className="bg-green-700 mr-2 text-white px-4 py-1.5 md:px-3 md:py-1 lg:px-4 lg:py-1.5 rounded font-bold text-sm md:text-xs lg:text-sm w-full md:w-auto max-w-[1451px]:w-full">
-                XUẤT BÁO CÁO
-              </button>
-              <button
-              onClick={() => setShowAddSideProject(true)}
-              className="bg-teal-900 text-white pl-10 pr-10 px-4 py-1 rounded font-bold "
-            >
-              TẠO DỰ ÁN MỚI
-            </button>
             </div>
           </div>
 
@@ -892,13 +926,14 @@ const SideProject = () => {
                 <table className="w-full border border-gray-300">
                   <thead className="bg-gray-100 text-gray-700 sticky top-0 z-10">
                     <tr className="text-center">
-                      <th className="border px-2 py-2 w-8">CHỌN</th>
-                      <th className="border px-2 py-2 w-20">THAO TÁC</th>
-                      <th className="border px-2 py-2 w-24">MÃ DỰ ÁN</th>
-                      <th className="border px-2 py-2 min-w-[180px]">TÊN DỰ ÁN</th>
-                      <th className="border px-2 py-2 w-24">DÀI TUYẾN</th>
-                      <th className="border px-2 py-2 w-28">TRẠNG THÁI</th>
-                      <th className="border px-2 py-2 w-48">TIẾN ĐỘ</th>
+                    <th className="border text-gray-500 px-2 py-2 w-8">Chọn</th>
+                      <th className="border text-gray-500 px-2 py-2 w-20">Thao tác</th>
+                      <th className="border text-gray-500 px-2 py-2 w-24">Mã dự án</th>
+                      <th className="border text-gray-500 px-2 py-2 min-w-[100px]">Tên dự án</th>
+                      <th className="border text-gray-500 px-2 py-2 w-24">Dài tuyến</th>
+                      <th className="border text-gray-500 px-2 py-2 min-w-[50px]">Trạng thái</th>
+                      <th className="border text-gray-500 px-2 py-2 w-28">Gói thầu</th>
+                      <th className="border text-gray-500 px-2 py-2 w-80">Tiến độ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -995,63 +1030,71 @@ const SideProject = () => {
                                 Xem chi tiết
                               </div>
                             </td>
-                            <td className="border px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
+                            <td className="border font-bold px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
                               {project.TenDuAn}
                             </td>
                             <td className="border px-2 py-2 text-sm text-center">
                               {project.TongChieuDai} Km
                             </td>
                             <td className="border px-2 py-2 text-center">
+                              <div className="flex justify-center">
+                                <span
+                                  className={`px-2 py-1 text-sm text-white rounded-full whitespace-nowrap ${getStatusColor(project.TrangThai)}`}
+                                >
+                                  {project.TrangThai}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="border px-2 py-2 text-center">
                               <span
-                                className={`px-2 py-1 text-xs text-white rounded-full ${getStatusColor(
-                                  project.TrangThai
-                                )}`}
+                                className="px-2 py-1 text-xm text-gray-600 rounded-full"
                               >
-                                {project.TrangThai}
+                                <span className="font-bold">{project.soLuongGoiThau}</span> gói thầu
                               </span>
                             </td>
                             <td className="border px-2 py-2 text-sm">
-                              <div className="grid grid-rows-3 gap-1">
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={planIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Kế hoạch"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-blue-600">
-                                    Kế hoạch:{" "}
-                                    <strong>{project.phanTramKeHoach || "0"}%</strong>
-                                  </span>
+                              <div className="flex items-start gap-4">
+                                <div className="w-24 h-24 flex-shrink-0">
+                                  <ProgressPieChart project={project} />
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={actualIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Hoàn thành"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-green-600">
-                                    Hoàn thành:{" "}
-                                    <strong>{project.phanTramHoanThanh || "0"}%</strong>
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={delayIcon}
-                                    width="14"
-                                    height="14"
-                                    alt="Chậm tiến độ"
-                                    className="flex-shrink-0"
-                                  />
-                                  <span className="text-yellow-600">
-                                    Chậm tiến độ:{" "}
-                                    <strong>{project.phanTramChamTienDo || "0"}%</strong>
-                                  </span>
+                                <div className="grid grid-rows-3 gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <img src={planIcon} width="14" height="14" alt="Kế hoạch" className="flex-shrink-0" />
+                                    <span
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
+                                    >
+                                      Đang làm: <strong className="text-blue-600">{project.phanTramKeHoach ?? '0'}%</strong>
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <img src={actualIcon} width="14" height="14" alt="Hoàn thành" className="flex-shrink-0" />
+                                    <span
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
+                                    >
+                                      Hoàn thành: <strong className="text-green-600">{project.phanTramHoanThanh ?? '0'}%</strong>
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <img src={delayIcon} width="14" height="14" alt="Chậm tiến độ" className="flex-shrink-0" />
+                                    <span
+                                      className="text-gray-600 cursor-pointer"
+                                      onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
+                                    >
+                                      Chậm tiến độ: <strong className="text-yellow-600">{project.phanTramChamTienDo ?? '0'}%</strong>
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
+                              {popupData.status && popupData.duAnId === project.DuAnID && (
+                                <TienDoHangMucPopup
+                                  duAnId={popupData.duAnId}
+                                  status={popupData.status}
+                                  onClose={handleClosePopup}
+                                />
+                              )}
+
                             </td>
                           </tr>
                         ))
@@ -1061,34 +1104,34 @@ const SideProject = () => {
                           colSpan="7"
                           className="text-center text-gray-500 py-4"
                         >
-                                          <div className="text-center text-gray-500 py-4">
-                  Không tìm thấy dự án nào phù hợp
-                  <div className="mt-2  text-gray-500">
-                    <p>Dự án này hiện chưa có dự án thành phần nào.</p>
-                    <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
-                  </div>
-                  <div className="mt-6">
-                    <button
-                      type="button"
-                      className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      onClick={() => setShowAddPackage(true)}
-                    >
-                      <svg
-                        className="-ml-1 mr-2 h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Thêm mới gói thầu
-                    </button>
-                  </div>
-                </div>
+                          <div className="text-center text-gray-500 py-4">
+                            Không tìm thấy dự án nào phù hợp
+                            <div className="mt-2  text-gray-500">
+                              <p>Dự án này hiện chưa có dự án thành phần nào.</p>
+                              <p className="mt-1">Bạn có thể thêm gói thầu trực tiếp vào dự án này.</p>
+                            </div>
+                            <div className="mt-6">
+                              <button
+                                type="button"
+                                className="inline-flex items-center px-4 py-2 border border-transparent  font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                onClick={() => setShowAddPackage(true)}
+                              >
+                                <svg
+                                  className="-ml-1 mr-2 h-5 w-5"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Thêm mới gói thầu
+                              </button>
+                            </div>
+                          </div>
                         </td>
                       </tr>
                     )}
@@ -1207,15 +1250,15 @@ const SideProject = () => {
                             <img src={pin} alt="Ghim" className="w-5 h-5" />
                           </button>
                           <button
-                                className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                                title="Sửa thông tin"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEdit(subProject.DuAnID, subProject.ParentID);
-                                }}
-                              >
-                                <img src={edit} alt="Ghim" className="w-5 h-5" />
-                              </button>
+                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
+                            title="Sửa thông tin"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(subProject.DuAnID, subProject.ParentID);
+                            }}
+                          >
+                            <img src={edit} alt="Ghim" className="w-5 h-5" />
+                          </button>
                         </div>
                       </div>
 
@@ -1332,50 +1375,50 @@ const SideProject = () => {
 
       {/* Popup thêm mới */}
       {showAddSideProject && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className={modalContainerClass}>
-      <AddNewSubProjects
-        DuAnID={project.DuAnID}
-        onClose={() => setShowAddSideProject(false)}
-        onSuccess={(newProject) => {
-          fetchProjectDetails();
-          setShowAddSideProject(false);
-        }}
-      />
-    </div>
-  </div>
-)}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className={modalContainerClass}>
+            <AddNewSubProjects
+              DuAnID={project.DuAnID}
+              onClose={() => setShowAddSideProject(false)}
+              onSuccess={(newProject) => {
+                fetchProjectDetails();
+                setShowAddSideProject(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
-{showAddPackage && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className={modalContainerClass}>
-      <AddNewPackage
-        projectId={DuAnID}
-        onClose={() => setShowAddPackage(false)}
-        onSuccess={(newPackage) => {
-          // Xử lý khi thêm thành công
-        }}
-      />
-    </div>
-  </div>
-)}
+      {showAddPackage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className={modalContainerClass}>
+            <AddNewPackage
+              projectId={DuAnID}
+              onClose={() => setShowAddPackage(false)}
+              onSuccess={(newPackage) => {
+                // Xử lý khi thêm thành công
+              }}
+            />
+          </div>
+        </div>
+      )}
 
-{showEdit && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-    <div className={modalContainerClass}>
-      <AddNewSubProject
-        isEdit={1}
-        ProjectID={selectedID}
-        DuAnID={selectedParentID}
-        onClose={() => setShowEdit(false)}
-        onSuccess={() => {
-          fetchProjectDetails();
-          setShowEdit(false);
-        }}
-      />
-    </div>
-  </div>
-)}
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className={modalContainerClass}>
+            <AddNewSubProject
+              isEdit={1}
+              ProjectID={selectedID}
+              DuAnID={selectedParentID}
+              onClose={() => setShowEdit(false)}
+              onSuccess={() => {
+                fetchProjectDetails();
+                setShowEdit(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
     </div>
   );

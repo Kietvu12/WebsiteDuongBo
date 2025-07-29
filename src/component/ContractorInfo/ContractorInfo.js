@@ -1,15 +1,12 @@
 import React from 'react';
 import { FaUsers } from 'react-icons/fa';
 
-const ContractorInfo = ({ data }) => {
+const ContractorInfo = ({ data, ps, pe }) => {
   if (!data) return null;
-  console.log("Dữ liệu nhà thầu:", data);
 
   const { NgayKhoiCong, NgayHoanThanh, TrangThai, danhGiaRuiRo, nhaThau = [] } = data;
-  console.log("Dữ liệu nahf thầu:", data);
 
   const formatDate = (dateString) => {
-    if (!dateString) return '---';
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
   };
@@ -19,52 +16,63 @@ const ContractorInfo = ({ data }) => {
   const getRiskBorder = (risk) => {
     switch (risk) {
       case 'Rủi ro cao':
-        return 'border-red-600 text-red-600 bg-red-50 rounded-full';
+        return 'border-red-600 text-red-600 bg-red-50';
       case 'Rủi ro trung bình':
-        return 'border-yellow-600 text-yellow-600 bg-yellow-50 rounded-full';
+        return 'border-yellow-600 text-yellow-600 bg-yellow-50';
       case 'Rủi ro thấp':
-        return 'border-green-600 text-green-600 bg-green-50 rounded-full';
+        return 'border-green-600 text-green-600 bg-green-50';
       default:
-        return 'border-gray-600 text-gray-600 bg-gray-50 rounded-full';
+        return 'border-gray-600 text-gray-600 bg-gray-50';
     }
   };
+  
 
   return (
-    <div className="bg-white rounded-lg mt-2 overflow-hidden">
-      <div className="p-1 bg-gray-50 border-b border-gray-100 flex items-center">
+    <div className="bg-white rounded-lg mt-2 overflow-hidden shadow-sm">
+      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center">
         <FaUsers className="text-gray-500 mr-2" size={14} />
         <h2 className="text-lg font-semibold text-gray-800">NHÀ THẦU CHÍNH</h2>
       </div>
-      <div className="p-4 max-h-50 overflow-y-auto">
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Tên công ty:</span> {contractorNames || 'Không có thông tin nhà thầu'}</p>
+      
+      <div className="p-4">
+        {/* Thông tin cơ bản - sử dụng flex với label cố định */}
+        <div className="space-y-3">
+          <div className="flex">
+            <span className="text-sm font-bold text-gray-800 w-28 flex-shrink-0">Tên công ty:</span>
+            <span className="text-sm text-gray-800 break-words">{contractorNames || data.tenNhaThau ||  '---'}</span>
+          </div>
+          
+          <div className="flex">
+            <span className="text-sm font-bold text-gray-800 w-28 flex-shrink-0">Địa chỉ:</span>
+            <span className="text-sm text-gray-800 break-words">{data.DiaChiTruSo || data.diaChiTruSo || 'Không có dữ liệu'}</span>
+          </div>
+          
+          <div className="flex">
+            <span className="text-sm font-bold text-gray-800 w-28 flex-shrink-0">Mã số thuế:</span>
+            <span className="text-sm text-gray-800 break-words">{data.MaSoThue || data.maSoThue || 'Không có dữ liệu'}</span>
+          </div>
         </div>
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 break-words whitespace-normal">
-            <span className='text-xm font-bold text-gray-800'>Địa chỉ: </span>
-            {data.DiaChiTruSo || 'Không có thông tin nhà thầu'}
-          </p>
-        </div>
-        <div className="mb-2">
-          <p className="text-xm font-medium text-gray-800 truncate"><span className='text-xm font-bold text-gray-800'>Mã số thuế: </span>{data.MaSoThue || 'Không có thông tin nhà thầu'}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-4 justify-items-center">
-          <div className="w-full text-center">
-            <span className="block text-sm font-medium text-gray-500">Ngày bắt đầu</span>
-            <span className="text-sm font-bold text-[#15294A] bg-[#B4D5F6] rounded-full px-2 py-1">
-              {formatDate(NgayKhoiCong)}
+
+        {/* Thông tin thời gian và trạng thái */}
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="flex flex-col items-center">
+            <span className="text-xs font-medium text-gray-500 mb-1">Ngày bắt đầu</span>
+            <span className="text-xs font-bold text-[#15294A] bg-[#B4D5F6] rounded-full px-3 py-1 w-full text-center">
+            {NgayKhoiCong ? formatDate(NgayKhoiCong) : (ps ? formatDate(ps) : '---')}
             </span>
           </div>
-          <div className="w-full text-center">
-            <span className="block text-sm font-medium text-gray-500">Ngày kết thúc</span>
-            <span className="text-sm font-bold text-[#7F3232] bg-[#F2AEA9] rounded-full px-2 py-1">
-              {formatDate(NgayHoanThanh)}
+          
+          <div className="flex flex-col items-center">
+            <span className="text-xs font-medium text-gray-500 mb-1">Ngày kết thúc</span>
+            <span className="text-xs font-bold text-[#7F3232] bg-[#F2AEA9] rounded-full px-3 py-1 w-full text-center">
+            {NgayHoanThanh ? formatDate(NgayHoanThanh) : (pe ? formatDate(pe) : '---')}
             </span>
           </div>
-          <div className="w-full text-center">
-            <span className="block text-sm font-medium text-gray-500">Tình trạng</span>
-            <span className={`text-sm font-bold border rounded-full px-3 py-1 ${getRiskBorder(danhGiaRuiRo || TrangThai)}`}>
-              {danhGiaRuiRo || TrangThai || '---'}
+          
+          <div className="flex flex-col items-center">
+            <span className="text-xs font-medium text-gray-500 mb-1">Tình trạng</span>
+            <span className={`text-xs font-bold border rounded-full px-3 py-1 w-full text-center ${getRiskBorder(danhGiaRuiRo || TrangThai)}`}>
+              {danhGiaRuiRo || TrangThai || 'Không có dữ liệu'}
             </span>
           </div>
         </div>

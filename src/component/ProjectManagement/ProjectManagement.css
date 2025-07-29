@@ -255,3 +255,58 @@
       grid-template-columns: 1fr;
     }
   }
+
+/* CSS để hỗ trợ responsive cho ProjectManagement */
+
+/* Ẩn thanh cuộn ngang khi thu nhỏ giao diện */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE và Edge */
+}
+
+/* Đảm bảo các phần tử input, button có kích thước đủ lớn trên mobile */
+@media (max-width: 640px) {
+  input, select, textarea, button {
+    font-size: 14px !important;
+  }
+  
+  /* Thu nhỏ các icon */
+  svg {
+    transform: scale(0.9);
+  }
+  
+  /* Điều chỉnh padding cho mobile */
+  .p-4 {
+    padding: 0.75rem !important;
+  }
+  
+  /* Thu gọn margin */
+  .mb-4, .my-4 {
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .mt-4, .my-4 {
+    margin-top: 0.75rem !important;
+  }
+}
+
+/* Đảm bảo biểu đồ vừa màn hình */
+.h-80 {
+  height: 18rem;
+  max-height: 40vh;
+}
+
+/* Tăng kích thước cho desktop */
+@media (min-width: 1280px) {
+  .text-lg {
+    font-size: 1.125rem !important;
+  }
+  
+  .text-base {
+    font-size: 1rem !important;
+  }
+}
