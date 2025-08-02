@@ -64,7 +64,12 @@ const MapController = ({ allRoutes }) => {
 
         if (validCoords.length > 0) {
           const bounds = L.latLngBounds(validCoords);
-          map.fitBounds(bounds, { padding: [50, 50] });
+          //map.fitBounds(bounds, { padding: [50, 50] });
+          map.flyToBounds(bounds, {
+            padding: [50, 50],
+            duration: 1, // Thời gian animation (giây)
+            easeLinearity: 0.25, // Độ mượt
+          });
         }
       } catch (error) {
         console.error("Error setting map bounds:", error);
@@ -134,7 +139,7 @@ const getStatusColor = (status) => {
   switch (status) {
     case "Đang thi công":
       return "#4CAF50";
-    case "Đang thi công":
+    case "Đang chuẩn bị":
       return "#2196F3";
     case "Hoàn thành":
       return "#FFC107";
@@ -228,12 +233,14 @@ const MapComponent = ({ projects = [] }) => {
       const newRoutes = [];
       const errors = [];
 
+      console.log("projects: ", projects);
+
       for (const project of projects) {
         try {
           const statusColor = getStatusColor(project.TrangThai);
 
           // Kiểm tra KML cho dự án chính
-          const projectKmlUrl = `${window.location.origin}/kml/haTinh-HCM.kml`;
+          const projectKmlUrl = `${window.location.origin}/kml/project-${project.DuAnID}.kml`;
           const hasProjectKml = await checkKmlExists(projectKmlUrl);
 
           // Xử lý dự án thành phần
@@ -252,6 +259,8 @@ const MapComponent = ({ projects = [] }) => {
                 const endLat = parseCoordinate(subProject.coordinates.end.lat);
                 const endLng = parseCoordinate(subProject.coordinates.end.lng);
 
+                const statusColorSub = getStatusColor(subProject.TrangThai);
+
                 if (
                   [startLat, startLng, endLat, endLng].every((c) => c !== null)
                 ) {
@@ -260,7 +269,7 @@ const MapComponent = ({ projects = [] }) => {
                   let path = [startPos, endPos];
 
                   // Kiểm tra KML cho dự án thành phần
-                  const subProjectKmlUrl = `${window.location.origin}/kml/yenBai-thanhHoa.kml`;
+                  const subProjectKmlUrl = `${window.location.origin}/kml/subProject-${subProject.DuAnID}.kml`;
                   const hasSubProjectKml = await checkKmlExists(
                     subProjectKmlUrl
                   );
@@ -299,11 +308,85 @@ const MapComponent = ({ projects = [] }) => {
                     path: hasSubProjectKml ? null : path,
                     projectData: subProject,
                     parentProject: project,
-                    color: statusColor,
+                    color: statusColorSub,
                     parentProjectName: project.TenDuAn,
                     status: subProject.TrangThai || project.TrangThai,
                     kmlFile: hasSubProjectKml ? subProjectKmlUrl : null,
                   });
+                }
+              }
+
+              if (subProject.goiThau?.length > 0) {
+
+                for (const goiThau of subProject.goiThau) {
+                  const startLat = parseCoordinate(goiThau.ToaDo_BatDau_Y);
+                  const startLng = parseCoordinate(goiThau.ToaDo_BatDau_X);
+                  const endLat = parseCoordinate(goiThau.ToaDo_KetThuc_Y);
+                  const endLng = parseCoordinate(goiThau.ToaDo_KetThuc_X);
+
+                  if (
+                    [startLat, startLng, endLat, endLng].every(
+                      (c) => c !== null
+                    )
+                  ) {
+                    const startPos = [startLat, startLng];
+                    const endPos = [endLat, endLng];
+                    let path = [startPos, endPos];
+
+                    const statusColorGoiThau = getStatusColor(
+                      goiThau.TrangThai
+                    );
+
+                    console.log("color goi thau: ", statusColorGoiThau);
+                    console.log(goiThau);
+
+                    // Kiểm tra KML cho gói thầu
+                    const goiThauKmlUrl = `${window.location.origin}/kml/goithau-${goiThau.GoiThau_ID}.kml`;
+                    const hasGoiThauKml = await checkKmlExists(goiThauKmlUrl);
+
+                    if (!hasGoiThauKml) {
+                      try {
+                        const response = await axios.get(
+                          `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
+                          {
+                            params: { overview: "full", geometries: "geojson" },
+                            timeout: 10000,
+                          }
+                        );
+
+                        if (response.data?.routes?.[0]?.geometry?.coordinates) {
+                          path =
+                            response.data.routes[0].geometry.coordinates.map(
+                              (coord) => [coord[1], coord[0]]
+                            );
+                        }
+                      } catch (error) {
+                        console.warn(
+                          `Không thể lấy tuyến đường cho gói thầu ${goiThau.TenGoiThau}:`,
+                          error.message
+                        );
+                      }
+                    }
+
+                    const routeId = `goithau-${goiThau.GoiThau_ID}`;
+                    newRoutes.push({
+                      id: routeId,
+                      parentId: subProject.DuAnID,
+                      name: goiThau.TenGoiThau,
+                      start: startPos,
+                      end: endPos,
+                      path: hasGoiThauKml ? null : path,
+                      projectData: goiThau,
+                      parentProject: subProject,
+                      color: statusColorGoiThau,
+                      parentProjectName: subProject.TenDuAn,
+                      status:
+                        goiThau.TrangThai ||
+                        subProject.TrangThai ||
+                        project.TrangThai,
+                      kmlFile: hasGoiThauKml ? goiThauKmlUrl : null,
+                    });
+                  }
                 }
               }
             }
@@ -440,7 +523,7 @@ const MapComponent = ({ projects = [] }) => {
           route.status === "Chậm tiến độ"
         : true;
 
-    // Bộ lọc theo cha/con
+    // Bộ lọc theo cha/con/goi thau
     const viewModeMatch =
       viewMode === "all"
         ? true
@@ -448,6 +531,8 @@ const MapComponent = ({ projects = [] }) => {
         ? route.id?.includes("project-") && !route.id?.includes("subproject-")
         : viewMode === "sub"
         ? route.id?.includes("subproject-")
+        : viewMode === "goithau"
+        ? route.id?.startsWith("goithau-")
         : true;
 
     return statusMatch && viewModeMatch;
@@ -497,6 +582,9 @@ const MapComponent = ({ projects = [] }) => {
             </option>
             <option className="text-black" value="sub">
               Dự án thành phần
+            </option>
+            <option className="text-black" value="goithau">
+              Gói thầu
             </option>
           </select>
         </div>
@@ -571,7 +659,6 @@ const MapComponent = ({ projects = [] }) => {
 
               return (
                 <React.Fragment key={`${route.id}-${viewMode}`}>
-
                   {route.kmlFile ? (
                     <KmlLayer
                       key={`${route.id}-${viewMode}-${Date.now()}`}
