@@ -278,7 +278,8 @@ const Sidebar = () => {
                 icon: requirementsIcon,
                 label: 'Nhà thầu thi công',
                 submenu: [
-                  { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') }
+                  { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') },
+                  { label: 'Quản lý danh sách nhà thầu', onClick: () => handleSimpleNavigation('/contractor-dashboard') }
                 ],
               },
               {

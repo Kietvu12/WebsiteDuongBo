@@ -307,11 +307,9 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
 
 
   return (
-    <div className="flex flex-col md:flex-row min-w-[600px] h-screen bg-gray-50" style={getResponsiveStyle()}>
-      {/* Mobile Sidebar Toggle */}
-      
+    <div className="flex flex-col md:flex-row h-screen bg-gray-50 overflow-hidden" style={getResponsiveStyle()}>
       {/* Sidebar - Project Menu */}
-      <div className="md:block w-full md:w-96 border-r border-gray-200 bg-white overflow-y-auto hide-scrollbar min-w-0">
+      <div className="w-full md:w-80 lg:w-96 border-r border-gray-200 bg-white overflow-y-auto hide-scrollbar min-w-0 flex-shrink-0">
         <ProjectMenu
           projectId={projectId}
           onItemSelect={handlePlanSelect}
@@ -323,9 +321,9 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-4 md:p-6 overflow-y-auto hide-scrollbar">
+      <div className="flex-1 p-2 sm:p-4 md:p-6 overflow-y-auto hide-scrollbar min-w-0">
         {selectedPlan ? (
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto min-w-0">
             <div className="bg-white p-4 rounded-lg shadow-sm mb-6 space-y-3">
               {/* Dòng 1: Tên công tác */}
               <div className="flex flex-wrap items-center gap-2">

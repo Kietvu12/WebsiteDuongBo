@@ -225,6 +225,20 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+function extractPercentageFromNote(ghiChu) {
+  if (!ghiChu) return null;
+  
+  // Tìm các mẫu như "đạt 100%", "đạt 99,80%"
+  const percentMatch = ghiChu.match(/(\d+)[,.]?(\d*)%/);
+  if (percentMatch) {
+    const whole = parseInt(percentMatch[1]);
+    const decimal = percentMatch[2] ? parseFloat(`0.${percentMatch[2]}`) : 0;
+    return whole + decimal;
+  }
+  return null;
+}
+
+
 app.post('/api/nhathau', async (req, res) => {
   const connection = await pool.getConnection();
   try {
@@ -335,6 +349,151 @@ app.post('/api/nhathau', async (req, res) => {
     res.status(error.code === 'MISSING_FIELDS' ? 400 : 500).json({ 
       success: false,
       error: error.message || 'Lỗi server khi thêm nhà thầu' 
+    });
+  } finally {
+    connection.release();
+  }
+});
+app.post('/api/bao-cao-tien-do/batch', async (req, res) => {
+  const { goiThauId, ngayCapNhat, duLieuTienDo } = req.body;
+
+  if (!goiThauId || !ngayCapNhat || !duLieuTienDo || !Array.isArray(duLieuTienDo)) {
+    return res.status(400).json({ 
+      success: false,
+      message: 'Thiếu thông tin bắt buộc: goiThauId, ngayCapNhat hoặc duLieuTienDo' 
+    });
+  }
+
+  const connection = await pool.getConnection();
+  await connection.beginTransaction();
+
+  try {
+    // Lấy thông tin nhà thầu từ gói thầu
+    const [goiThau] = await connection.query(
+      'SELECT NhaThauID FROM goithau WHERE GoiThau_ID = ?',
+      [goiThauId]
+    );
+    
+    if (goiThau.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ 
+        success: false,
+        message: 'Không tìm thấy gói thầu với ID đã cung cấp' 
+      });
+    }
+    
+    const nhaThauId = goiThau[0].NhaThauID;
+
+    // Xử lý từng bản ghi trong mảng dữ liệu
+    for (const item of duLieuTienDo) {
+      const {
+        ten_hang_muc: tenHangMuc,
+        ten_ke_hoach: tenKeHoach,
+        khoi_luong_hoan_thanh: khoiLuongHoanThanh,
+        khoi_luong_ke_hoach: khoiLuongKeHoach,
+        don_vi: donVi,
+        vuong_mac: vuongMac,
+        mo_ta_vuong_mac: moTaVuongMac,
+        ghi_chu: ghiChu
+      } = item;
+
+      // 1. Xử lý hạng mục
+      let [hangMuc] = await connection.query(
+        'SELECT HangMucID FROM hangmuc WHERE GoiThauID = ? AND TenHangMuc = ?',
+        [goiThauId, tenHangMuc]
+      );
+
+      let hangMucId;
+      if (hangMuc.length === 0) {
+        // Tạo hạng mục mới nếu chưa tồn tại
+        const [result] = await connection.query(
+          'INSERT INTO hangmuc (GoiThauID, TenHangMuc) VALUES (?, ?)',
+          [goiThauId, tenHangMuc]
+        );
+        hangMucId = result.insertId;
+      } else {
+        hangMucId = hangMuc[0].HangMucID;
+      }
+
+      // 2. Xử lý kế hoạch
+      let [keHoach] = await connection.query(
+        'SELECT KeHoachID, NgayKetThuc FROM quanlykehoach WHERE HangMucID = ? AND TenCongTac = ?',
+        [hangMucId, tenKeHoach]
+      );
+
+      let keHoachId;
+      let ngayKetThuc = null; // Sẽ cập nhật sau nếu cần
+
+      if (keHoach.length === 0) {
+        // Xác định khối lượng kế hoạch
+        const khoiLuongKH = (khoiLuongKeHoach === null || khoiLuongKeHoach === 0 || khoiLuongKeHoach === '-') 
+          ? 100 
+          : khoiLuongKeHoach;
+
+        // Xác định đơn vị tính
+        const dvTinhKH = (!donVi || donVi === '-') ? '%' : donVi;
+
+        // Tạo kế hoạch mới
+        const [result] = await connection.query(
+          `INSERT INTO quanlykehoach 
+          (HangMucID, NhaThauID, TenCongTac, KhoiLuongKeHoach, DonViTinh) 
+          VALUES (?, ?, ?, ?, ?)`,
+          [hangMucId, nhaThauId, tenKeHoach, khoiLuongKH, dvTinhKH]
+        );
+        keHoachId = result.insertId;
+      } else {
+        keHoachId = keHoach[0].KeHoachID;
+        ngayKetThuc = keHoach[0].NgayKetThuc;
+      }
+
+      // 3. Cập nhật ngày hoàn thành cho hạng mục (lấy ngày kết thúc xa nhất)
+      if (ngayKetThuc) {
+        await connection.query(
+          `UPDATE hangmuc hm
+           SET hm.ThoiGianHoanThanh = (
+             SELECT MAX(qh.NgayKetThuc) 
+             FROM quanlykehoach qh 
+             WHERE qh.HangMucID = ?
+           )
+           WHERE hm.HangMucID = ?`,
+          [hangMucId, hangMucId]
+        );
+      }
+
+      // 4. Xử lý tiến độ thực hiện
+      let khoiLuongTH = khoiLuongHoanThanh;
+      let donViTH = donVi;
+
+      // Xử lý trường hợp khối lượng hoàn thành là 0 hoặc null hoặc "-"
+      if (khoiLuongTH === null || khoiLuongTH === 0 || khoiLuongTH === '-') {
+        const percentFromNote = extractPercentageFromNote(ghiChu);
+        if (percentFromNote !== null) {
+          khoiLuongTH = percentFromNote;
+          donViTH = '%';
+        }
+      }
+
+      // Thêm bản ghi tiến độ
+      await connection.query(
+        `INSERT INTO tiendothuchien 
+        (KeHoachID, NgayCapNhat, KhoiLuongThucHien, DonViTinh, MoTaVuongMac, GhiChu) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
+        [keHoachId, ngayCapNhat, khoiLuongTH, donViTH, moTaVuongMac, ghiChu]
+      );
+    }
+
+    await connection.commit();
+    res.status(200).json({ 
+      success: true,
+      message: `Đã cập nhật ${duLieuTienDo.length} bản ghi tiến độ thành công`
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error(error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Đã xảy ra lỗi khi cập nhật báo cáo tiến độ',
+      error: error.message
     });
   } finally {
     connection.release();

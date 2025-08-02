@@ -98,7 +98,7 @@ const Dashboard = () => {
   const triggerRef = useRef(null);
   const [expandedMenuId, setExpandedMenuId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(5);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
@@ -1167,7 +1167,7 @@ const Dashboard = () => {
 
                 {/* Phần phân trang */}
                 {filteredProjects.length > 0 && (
-                      <div className="sticky bottom-0 bg-white border-t border-gray-200 z-10">
+                      <div className="bottom-0 bg-white border-t border-gray-200 z-10">
                   <div className="flex justify-between items-center mt-4 px-4 py-2 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
                       Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} trong tổng số {filteredProjects.length} dự án
