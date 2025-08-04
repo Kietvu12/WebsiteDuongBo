@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -13,6 +13,10 @@ import axios from "axios";
 import "./MapComponent.css";
 import { useNavigate } from "react-router-dom";
 import vietnamGeoJson from "../../assets/data/vietnam.json";
+import { kml } from "@tmcw/togeojson";
+import { DOMParser } from "@xmldom/xmldom";
+import * as toGeoJSON from "@mapbox/togeojson";
+import { LatLngBounds } from "leaflet";
 
 import KmlLayer from "../KmlLayer";
 
@@ -49,6 +53,28 @@ const ZoomAwareMarker = ({ position, color, children }) => {
       {children}
     </Marker>
   );
+};
+
+const MapFitBoundsController = ({ boundsList = [] }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || boundsList.length === 0) return;
+
+    const combined = boundsList.reduce(
+      (acc, b) => acc.extend(b),
+      new LatLngBounds()
+    );
+
+    if (combined.isValid()) {
+      map.fitBounds(combined, {
+        padding: [50, 50],
+      });
+      //console.log("fit bounds");
+    }
+  }, [boundsList, map]); // đảm bảo chạy lại khi mảng mới được tạo
+
+  return null;
 };
 
 const MapController = ({ allRoutes }) => {
@@ -233,7 +259,7 @@ const MapComponent = ({ projects = [] }) => {
       const newRoutes = [];
       const errors = [];
 
-      console.log("projects: ", projects);
+      //console.log("projects: ", projects);
 
       for (const project of projects) {
         try {
@@ -317,7 +343,6 @@ const MapComponent = ({ projects = [] }) => {
               }
 
               if (subProject.goiThau?.length > 0) {
-
                 for (const goiThau of subProject.goiThau) {
                   const startLat = parseCoordinate(goiThau.ToaDo_BatDau_Y);
                   const startLng = parseCoordinate(goiThau.ToaDo_BatDau_X);
@@ -336,9 +361,6 @@ const MapComponent = ({ projects = [] }) => {
                     const statusColorGoiThau = getStatusColor(
                       goiThau.TrangThai
                     );
-
-                    console.log("color goi thau: ", statusColorGoiThau);
-                    console.log(goiThau);
 
                     // Kiểm tra KML cho gói thầu
                     const goiThauKmlUrl = `${window.location.origin}/kml/goithau-${goiThau.GoiThau_ID}.kml`;
@@ -538,6 +560,24 @@ const MapComponent = ({ projects = [] }) => {
     return statusMatch && viewModeMatch;
   });
 
+  const boundsListRef = useRef([]);
+  const [fitTrigger, setFitTrigger] = useState(0);
+
+  // Nhận bounds từ các KML/Polyline con
+  const handleBoundsFromChild = (bounds) => {
+    if (!bounds?.isValid()) return;
+    boundsListRef.current.push(bounds);
+
+    if (boundsListRef.current.length === filteredRoutes.length) {
+      setFitTrigger((prev) => prev + 1); // ép controller re-render
+    }
+  };
+
+  // Reset lại khi filteredRoutes thay đổi
+  useEffect(() => {
+    boundsListRef.current = [];
+  }, [filteredRoutes.length]);
+
   return (
     <div className="map-app-container">
       <div className="map-controls">
@@ -654,6 +694,11 @@ const MapComponent = ({ projects = [] }) => {
               allRoutes={filteredRoutes.map((route) => route.path)}
             />
 
+            <MapFitBoundsController
+              key={`fit-${fitTrigger}`} // ép re-render hoàn toàn
+              boundsList={[...boundsListRef.current]} // tạo mảng mới để useEffect nhận biết
+            />
+
             {filteredRoutes.map((route) => {
               const customIcon = createCustomIcon(route.color);
 
@@ -661,11 +706,12 @@ const MapComponent = ({ projects = [] }) => {
                 <React.Fragment key={`${route.id}-${viewMode}`}>
                   {route.kmlFile ? (
                     <KmlLayer
-                      key={`${route.id}-${viewMode}-${Date.now()}`}
+                      key={`${route.id}-${viewMode}`}
                       layerKey={`${route.id}-${viewMode}`}
                       url={route.kmlFile}
                       color={route.color}
                       onClick={() => handlePolylineClick(route)}
+                      onBoundsAvailable={handleBoundsFromChild}
                     />
                   ) : (
                     <Polyline

@@ -4,7 +4,7 @@ import L from "leaflet";
 import { DOMParser } from "@xmldom/xmldom";
 import { kml } from "@tmcw/togeojson";
 
-const KmlLayer = ({ url, color = "green", onClick, layerKey }) => {
+const KmlLayer = ({ url, color = "green", onClick, layerKey, onBoundsAvailable }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -38,7 +38,10 @@ const KmlLayer = ({ url, color = "green", onClick, layerKey }) => {
 
         // Fit bounds
         const bounds = newLayer.getBounds();
-        if (bounds.isValid()) map.fitBounds(bounds);
+        //if (bounds.isValid()) map.fitBounds(bounds);
+        if (bounds.isValid()) {
+          onBoundsAvailable?.(bounds); // 🔥 Gửi bounds về cha
+        }
 
       } catch (err) {
         console.error("Error loading KML:", err);
