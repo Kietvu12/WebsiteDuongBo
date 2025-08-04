@@ -1200,7 +1200,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       <div className="relative h-full flex items-center">
         <div
           className='text-xs font-medium absolute left-0'
-          style={{ left: `${position.left - 60}px` }}
+          style={{ left: `${Math.max(position.left - 60, 0)}px` }}
         >
           {formatDate(startDate)}
         </div>
@@ -1293,16 +1293,16 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     <div className="overflow-hidden border rounded-lg" ref={containerRef}>
       <ViewModeSelector />
       {/* Fixed columns */}
-      <div className="flex">
-        {/* Left fixed columns */}
-        <div className={`flex-shrink-0 bg-white border-r max-h-68 overflow-hidden w-full md:w-auto`}
-          ref={leftTableRef}>
+              <div className="flex">
+          {/* Left fixed columns */}
+          <div className={`flex-shrink-0 bg-white border-r max-h-68 overflow-hidden w-full md:w-auto relative`}
+            ref={leftTableRef}>
           <table className="divide-y divide-gray-200 w-full">
             <thead className={`bg-gray-50 sticky top-0 z-50 ${getFontSizeClass()}`} style={{ position: 'sticky', top: 0 }}>
               <tr>
                 <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-8 sm:w-12`}>STT</th>
                 <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-10 sm:w-16`}>Mã</th>
-                <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-32 sm:w-52 md:w-96`}>Công việc</th>
+                <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-20 sm:w-28 md:w-40`}>Công việc</th>
 
                 <th className={`${getPaddingClass()} text-xm font-medium text-gray-500 w-12 sm:w-14 md:w-20`}>Thao tác</th>
               </tr>
@@ -1438,19 +1438,21 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
         </div>
 
         {/* Scrollable timeline section */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           {/* Thêm nút điều hướng trái/phải */}
           <button
             onClick={handleScrollLeft}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-r-md p-2 shadow-md"
-            style={{ display: scrollPosition > 0 ? 'block' : 'none' }}
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-r-md p-2 shadow-lg border border-gray-200"
+            style={{ 
+              display: scrollPosition > 0 ? 'block' : 'none'
+            }}
           >
             <FiChevronLeft size={24} className="text-blue-800" />
           </button>
 
           <button
             onClick={handleScrollRight}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-l-md p-2 shadow-md"
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-l-md p-2 shadow-lg border border-gray-200"
           >
             <FiChevronLeft size={24} className="text-blue-800 transform rotate-180" />
           </button>
@@ -1472,7 +1474,8 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
           `}</style>
             <div style={{ 
               width: `${totalTimelineWidth}px`, 
-              minWidth: windowSize.width < 640 ? '100%' : '1000px' // Đảm bảo minWidth ít nhất 1000px
+              minWidth: windowSize.width < 640 ? '100%' : '1000px', // Đảm bảo minWidth ít nhất 1000px
+              paddingLeft: '60px' // Thêm padding để tránh bị che khuất
             }}>
               {/* Timeline header */}
               {renderTimelineHeader()}

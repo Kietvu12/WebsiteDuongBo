@@ -16,7 +16,7 @@ import {
 import axios from 'axios';
 import './ProjectMenu.css';
 
-const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
+const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   const restoredRef = useRef(false);
   const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +38,8 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
   const [apiResult, setApiResult] = useState(null);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [editableData, setEditableData] = useState([]);
+  const [processingInput, setProcessingInput] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   // Fetch data from API
@@ -58,7 +60,7 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
     if (projectId) {
       fetchData();
     }
-  }, [projectId]);
+  }, [projectId, API_BASE_URL]);
 
   const combinedPackages = useMemo(() => {
     return [].concat(
@@ -270,316 +272,133 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
     setReportDate(new Date().toISOString().split('T')[0]); // Set today's date as default
   };
 
-  const handleReportSubmit = async () => {
-    setApiLoading(true);
+  // Xử lý input từ người dùng qua API AI
+  const handleProcessInput = async () => {
+    const cleanedData = cleanInputText(reportData);
+    
+    if (!cleanedData.trim()) {
+      setApiError('Vui lòng nhập dữ liệu báo cáo!');
+      return;
+    }
+
+    setProcessingInput(true);
     setApiError(null);
     setApiResult(null);
+    
     try {
-      // Dữ liệu tĩnh để test API báo cáo thông minh
-      const testData = {
-        goiThauId: 38,
+      console.log('Sending request with data:', { text: cleanedData });
+      
+      const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/add_tien_do', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: cleanedData
+        })
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API Error ${response.status}: ${errorText || 'Lỗi mạng hoặc API không phản hồi!'}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response data:', data);
+      
+      if (data.project_info && Array.isArray(data.project_info)) {
+        // Thêm các trường cần thiết cho việc chỉnh sửa
+        const processedData = data.project_info.map((item, index) => ({
+          ...item,
+          id: index,
+          selected: true,
+          // Không set ngày từ reportDate, để trống để hiển thị --/--/----
+          ngay_bat_dau: '', // Luôn để trống ban đầu
+          ngay_ket_thuc: '', // Luôn để trống ban đầu
+          tien_do: item.khoi_luong_ke_hoach > 0 ? 
+            ((item.khoi_luong_hoan_thanh / item.khoi_luong_ke_hoach) * 100).toFixed(2) : 0
+        }));
+
+        setEditableData(processedData);
+        setApiResult({
+          success: true,
+          ocr_text: data.ocr_text,
+          project_info: processedData
+        });
+      } else {
+        console.error('Invalid data format:', data);
+        throw new Error('Dữ liệu trả về không đúng định dạng!');
+      }
+    } catch (err) {
+      console.error('API Call Error:', err);
+      setApiError(err.message || 'Đã xảy ra lỗi không xác định!');
+    } finally {
+      setProcessingInput(false);
+    }
+  };
+
+  // Cập nhật dữ liệu có thể chỉnh sửa
+  const updateEditableData = (index, field, value) => {
+    const newData = [...editableData];
+    newData[index][field] = value;
+    
+    // Tính toán lại tiến độ nếu thay đổi khối lượng
+    if (field === 'khoi_luong_hoan_thanh' || field === 'khoi_luong_ke_hoach') {
+      const khoiLuongHoanThanh = parseFloat(newData[index].khoi_luong_hoan_thanh) || 0;
+      const khoiLuongKeHoach = parseFloat(newData[index].khoi_luong_ke_hoach) || 0;
+      newData[index].tien_do = khoiLuongKeHoach > 0 ? 
+        ((khoiLuongHoanThanh / khoiLuongKeHoach) * 100).toFixed(2) : 0;
+    }
+    
+    setEditableData(newData);
+    
+    // Cập nhật apiResult để hiển thị
+    setApiResult(prev => ({
+      ...prev,
+      project_info: newData
+    }));
+  };
+
+  // Gửi dữ liệu đã chỉnh sửa
+  const handleReportSubmit = async () => {
+    const selectedData = editableData.filter(item => item.selected);
+    
+    if (selectedData.length === 0) {
+      setApiError('Vui lòng chọn ít nhất một mục để gửi!');
+      return;
+    }
+
+    setApiLoading(true);
+    setApiError(null);
+    
+    try {
+      const submitData = {
+        goiThauId: 38, // Có thể lấy từ projectId hoặc props
         ngayCapNhat: reportDate,
-        duLieuTienDo: [
-          {
-            "ten_hang_muc": "Phần cầu",
-            "ten_ke_hoach": "Dầm bản lắp ghép 24m",
-            "khoi_luong_hoan_thanh": 68,
-            "khoi_luong_ke_hoach": 68,
-            "don_vi": "dầm",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Phần cầu",
-            "ten_ke_hoach": "Dầm bản rỗng",
-            "khoi_luong_hoan_thanh": 105,
-            "khoi_luong_ke_hoach": 105,
-            "don_vi": "phiến",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "đạt 100%"
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Gia cố mái",
-            "khoi_luong_hoan_thanh": 8228,
-            "khoi_luong_ke_hoach": 15483,
-            "don_vi": "m2",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Đào hầm",
-            "khoi_luong_hoan_thanh": 1544,
-            "khoi_luong_ke_hoach": 1556,
-            "don_vi": "m",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Đào hầm nhánh trái",
-            "khoi_luong_hoan_thanh": 704,
-            "khoi_luong_ke_hoach": 716,
-            "don_vi": "m",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Đào hầm nhánh phải",
-            "khoi_luong_hoan_thanh": 840,
-            "khoi_luong_ke_hoach": 840,
-            "don_vi": "m",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Đào đất, đá cửa hầm",
-            "khoi_luong_hoan_thanh": 521448,
-            "khoi_luong_ke_hoach": 577504,
-            "don_vi": "m3",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Neo đá, neo dẫn trước",
-            "khoi_luong_hoan_thanh": 53924,
-            "khoi_luong_ke_hoach": 56833,
-            "don_vi": "bộ",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Cọc khoan nhồi tường chắn cửa Nam",
-            "khoi_luong_hoan_thanh": 28,
-            "khoi_luong_ke_hoach": 117,
-            "don_vi": "cọc",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "BT dầm mũ, dầm neo, dầm chân 30MPa",
-            "khoi_luong_hoan_thanh": 320,
-            "khoi_luong_ke_hoach": 1803,
-            "don_vi": "m3",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": null
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Bê tông phun",
-            "khoi_luong_hoan_thanh": 66096,
-            "khoi_luong_ke_hoach": 65940,
-            "don_vi": "m2",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "đạt 100%"
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Lưới thép",
-            "khoi_luong_hoan_thanh": 94432,
-            "khoi_luong_ke_hoach": 94623,
-            "don_vi": "m2",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "đạt 99,80%"
-          },
-          {
-            "ten_hang_muc": "Hầm Đèo Bụt",
-            "ten_ke_hoach": "Khung chống đỡ bằng thép",
-            "khoi_luong_hoan_thanh": 2242,
-            "khoi_luong_ke_hoach": 2277,
-            "don_vi": "tấn",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "đạt 98,44%"
-          },
-          {
-            "ten_hang_muc": "Tuyến chính",
-            "ten_ke_hoach": "Bê tông nhựa chặt 16 dày 6cm",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến chính",
-            "ten_ke_hoach": "Bê tông nhựa chặt 19 dày 6cm",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến chính",
-            "ten_ke_hoach": "Hỗn hợp nhựa bán rỗng 25 dày 10cm",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến chính",
-            "ten_ke_hoach": "Cấp phối đá dăm gia cố xi măng",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến chính",
-            "ten_ke_hoach": "Cấp phối đá dăm loại 1",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến nhánh nút giao",
-            "ten_ke_hoach": "Bê tông nhựa chặt 16 dày 6cm",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến nhánh nút giao",
-            "ten_ke_hoach": "Bê tông nhựa chặt 19 dày 6cm",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến nhánh nút giao",
-            "ten_ke_hoach": "Cấp phối đá dăm loại 1",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Tuyến nhánh nút giao",
-            "ten_ke_hoach": "Cấp phối đá dăm loại 2",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Lắp đặt dải phân cách giữa",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Lưới chống chói",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Hàng rào bảo vệ loại 1 (hàng rào B40)",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Hàng rào bảo vệ loại 2 (hàng rào lưới thép gai)",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Tôn hộ lan",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "km",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Lắp đặt giá long môn, CCV",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "cái",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          },
-          {
-            "ten_hang_muc": "Hệ thống an toàn giao thông",
-            "ten_ke_hoach": "Biển báo chỉ dẫn",
-            "khoi_luong_hoan_thanh": 0,
-            "khoi_luong_ke_hoach": 0,
-            "don_vi": "cái",
-            "vuong_mac": null,
-            "mo_ta_vuong_mac": null,
-            "ghi_chu": "Kế hoạch thực hiện một số hạng mục còn lại"
-          }
-        ]
+        duLieuTienDo: selectedData.map(item => ({
+          ten_hang_muc: item.ten_hang_muc,
+          ten_ke_hoach: item.ten_ke_hoach,
+          khoi_luong_hoan_thanh: parseFloat(item.khoi_luong_hoan_thanh) || 0,
+          khoi_luong_ke_hoach: parseFloat(item.khoi_luong_ke_hoach) || 0,
+          don_vi: item.don_vi,
+          // Chỉ gửi ngày nếu có giá trị hợp lệ (không rỗng và không phải --/--/----)
+          ...(item.ngay_bat_dau && item.ngay_bat_dau.trim() !== '' && item.ngay_bat_dau !== '--/--/----' && { ngay_bat_dau: item.ngay_bat_dau }),
+          ...(item.ngay_ket_thuc && item.ngay_ket_thuc.trim() !== '' && item.ngay_ket_thuc !== '--/--/----' && { ngay_ket_thuc: item.ngay_ket_thuc }),
+          vuong_mac: item.vuong_mac,
+          mo_ta_vuong_mac: item.mo_ta_vuong_mac
+        }))
       };
 
-      // Gọi API báo cáo thông minh
       const response = await fetch(`${API_BASE_URL}/api/bao-cao-tien-do/batch`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(testData)
+        body: JSON.stringify(submitData)
       });
 
       if (!response.ok) {
@@ -589,11 +408,8 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
       const data = await response.json();
       
       if (data.success) {
-        setApiResult({
-          success: true,
-          message: data.message,
-          duLieuTienDo: testData.duLieuTienDo
-        });
+        alert('Gửi dữ liệu thành công!');
+        handleReportCancel();
       } else {
         throw new Error(data.message || 'Đã xảy ra lỗi khi gửi báo cáo!');
       }
@@ -611,17 +427,24 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
     setApiResult(null);
     setApiError(null);
     setApiLoading(false);
+    setEditableData([]);
+    setProcessingInput(false);
+  };
+
+  // Hàm loại bỏ xuống dòng và khoảng trống không cần thiết
+  const cleanInputText = (text) => {
+    return text
+      .replace(/\n+/g, ' ')           // Thay thế xuống dòng bằng khoảng trống
+      .replace(/\r+/g, ' ')           // Thay thế carriage return bằng khoảng trống
+      .replace(/\t+/g, ' ')           // Thay thế tab bằng khoảng trống
+      .replace(/\s+/g, ' ')           // Thay thế nhiều khoảng trống liên tiếp bằng 1 khoảng trống
+      .trim();                        // Loại bỏ khoảng trống đầu và cuối
   };
 
   // Hàm xử lý khi người dùng nhập vào textarea
   const handleReportDataChange = (e) => {
-    const value = e.target.value;
-    // Loại bỏ các ký tự xuống dòng và khoảng trắng không cần thiết ngay khi nhập
-    const cleanedValue = value
-      .replace(/\r?\n|\r/g, ' ')  // Thay thế xuống dòng bằng khoảng trắng
-      .replace(/\s+/g, ' ')       // Thay thế nhiều khoảng trắng liên tiếp bằng một khoảng trắng
-      .trim();                    // Loại bỏ khoảng trắng ở đầu và cuối
-    setReportData(cleanedValue);
+    const cleanedText = cleanInputText(e.target.value);
+    setReportData(cleanedText);
   };
 
   if (loading) return <div className="loading-message">Đang tải dữ liệu...</div>;
@@ -674,13 +497,8 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
               DANH SÁCH DỰ ÁN & GÓI THẦU
             </div>
 
-            {/* Search Bar */}
-           
-
-            {/* Project Header */}
-
             {/* Gói thầu */}
-            { filteredPackages.length > 0 && (
+            {filteredPackages.length > 0 && (
               <div className="ml-4 border-l border-gray-200 min-w-0">
                 <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                   <h3 className="text-xs font-bold text-gray-600">Danh sách gói thầu</h3>
@@ -728,7 +546,6 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                       <div className="ml-4 border-l border-gray-200 min-w-0">
                         <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                           <h3 className="text-xs font-bold text-gray-600">Hạng mục thực hiện</h3>
-                          
                         </div>
                         {pkg.danhSachHangMuc.map((workItem) => (
                           <div key={workItem.hangMucId}>
@@ -769,7 +586,6 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                               <div className="ml-4 border-l border-gray-200 min-w-0">
                                 <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                                   <h3 className="text-xs font-bold text-gray-600">Kế hoạch thực hiện</h3>
-                                  
                                 </div>
                                 {workItem.danhSachKeHoach.map((plan) => (
                                   <div
@@ -778,18 +594,18 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                                       ? 'bg-blue-50 border-l-4 border-blue-600'
                                       : ''
                                       }`}
-                                      onClick={() => {
-                                        const context = {
-                                          tenDuAn: projectData.tenDuAn || projectData.duAnTong?.tenDuAn,
-                                          tenHangMuc: workItem.tenHangMuc
-                                        };
-                                        
-                                        handlePlanSelect(plan);
-                                        onPlanSelect( 
-                                          { ...plan, type: 'plan' },
-                                          context
-                                        );
-                                      }}
+                                    onClick={() => {
+                                      const context = {
+                                        tenDuAn: projectData.tenDuAn || projectData.duAnTong?.tenDuAn,
+                                        tenHangMuc: workItem.tenHangMuc
+                                      };
+                                      
+                                      handlePlanSelect(plan);
+                                      onPlanSelect( 
+                                        { ...plan, type: 'plan' },
+                                        context
+                                      );
+                                    }}
                                   >
                                     <div className="flex gap-2 items-center text-sm text-gray-700 min-w-0">
                                       <FaCalendarAlt className="text-purple-600 flex-shrink-0" />
@@ -857,348 +673,248 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              
 
-
-              {/* Hiển thị bảng dữ liệu luôn */}
-              <div className="mb-6 space-y-6">
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-sm">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-semibold text-green-800">Dữ liệu tiến độ sẽ gửi</h3>
+              {/* Form nhập dữ liệu báo cáo */}
+              {!apiResult && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nhập dữ liệu báo cáo tiến độ
+                  </label>
+                  <textarea
+                    value={reportData}
+                    onChange={handleReportDataChange}
+                    placeholder="Nhập hoặc dán nội dung báo cáo tiến độ tại đây... (Xuống dòng và khoảng trống thừa sẽ được tự động loại bỏ)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={6}
+                  />
+                  <div className="mt-1 text-xs text-gray-500">
+                    💡 Hệ thống sẽ tự động loại bỏ xuống dòng và khoảng trống không cần thiết
                   </div>
-                  
-                  {/* Hiển thị bảng project_info với dữ liệu mặc định */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <h4 className="text-sm font-semibold text-gray-700">Chi tiết dữ liệu tiến độ</h4>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      onClick={handleProcessInput}
+                      disabled={!reportData.trim() || processingInput}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {processingInput ? 'Đang xử lý...' : 'Phân tích dữ liệu'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading khi xử lý input */}
+              {processingInput && (
+                <div className="mb-6 flex items-center justify-center py-8">
+                  <div className="flex items-center space-x-3 text-green-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                    <span className="text-sm font-medium">Đang phân tích dữ liệu...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Hiển thị bảng dữ liệu sau khi xử lý */}
+              {apiResult && (
+                <div className="mb-6 space-y-6">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-sm">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
                       </div>
-                                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                          30 mục
-                        </span>
+                      <h3 className="text-lg font-semibold text-green-800">Dữ liệu tiến độ đã phân tích</h3>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                      <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                <div className="flex items-center space-x-2">
-                                  <input 
-                                    type="checkbox" 
-                                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    onChange={(e) => {
-                                      const checkboxes = document.querySelectorAll('.project-info-checkbox');
-                                      checkboxes.forEach(cb => cb.checked = e.target.checked);
-                                    }}
-                                  />
-                                  <span>Chọn</span>
-                                </div>
-                              </th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STT</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hạng mục</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kế hoạch</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khối lượng kế hoạch</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khối lượng đã thực hiện</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đơn vị</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ghi chú</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {[
-                              {
-                                ten_hang_muc: "Phần cầu",
-                                ten_ke_hoach: "Dầm bản lắp ghép 24m",
-                                khoi_luong_hoan_thanh: 68,
-                                khoi_luong_ke_hoach: 68,
-                                don_vi: "dầm",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Phần cầu",
-                                ten_ke_hoach: "Dầm bản rỗng",
-                                khoi_luong_hoan_thanh: 105,
-                                khoi_luong_ke_hoach: 105,
-                                don_vi: "phiến",
-                                ghi_chu: "đạt 100%"
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Gia cố mái",
-                                khoi_luong_hoan_thanh: 8228,
-                                khoi_luong_ke_hoach: 15483,
-                                don_vi: "m2",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Đào hầm",
-                                khoi_luong_hoan_thanh: 1544,
-                                khoi_luong_ke_hoach: 1556,
-                                don_vi: "m",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Đào hầm nhánh trái",
-                                khoi_luong_hoan_thanh: 704,
-                                khoi_luong_ke_hoach: 716,
-                                don_vi: "m",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Đào hầm nhánh phải",
-                                khoi_luong_hoan_thanh: 840,
-                                khoi_luong_ke_hoach: 840,
-                                don_vi: "m",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Đào đất, đá cửa hầm",
-                                khoi_luong_hoan_thanh: 521448,
-                                khoi_luong_ke_hoach: 577504,
-                                don_vi: "m3",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Neo đá, neo dẫn trước",
-                                khoi_luong_hoan_thanh: 53924,
-                                khoi_luong_ke_hoach: 56833,
-                                don_vi: "bộ",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Cọc khoan nhồi tường chắn cửa Nam",
-                                khoi_luong_hoan_thanh: 28,
-                                khoi_luong_ke_hoach: 117,
-                                don_vi: "cọc",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "BT dầm mũ, dầm neo, dầm chân 30MPa",
-                                khoi_luong_hoan_thanh: 320,
-                                khoi_luong_ke_hoach: 1803,
-                                don_vi: "m3",
-                                ghi_chu: null
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Bê tông phun",
-                                khoi_luong_hoan_thanh: 66096,
-                                khoi_luong_ke_hoach: 65940,
-                                don_vi: "m2",
-                                ghi_chu: "đạt 100%"
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Lưới thép",
-                                khoi_luong_hoan_thanh: 94432,
-                                khoi_luong_ke_hoach: 94623,
-                                don_vi: "m2",
-                                ghi_chu: "đạt 99,80%"
-                              },
-                              {
-                                ten_hang_muc: "Hầm Đèo Bụt",
-                                ten_ke_hoach: "Khung chống đỡ bằng thép",
-                                khoi_luong_hoan_thanh: 2242,
-                                khoi_luong_ke_hoach: 2277,
-                                don_vi: "tấn",
-                                ghi_chu: "đạt 98,44%"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến chính",
-                                ten_ke_hoach: "Bê tông nhựa chặt 16 dày 6cm",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến chính",
-                                ten_ke_hoach: "Bê tông nhựa chặt 19 dày 6cm",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến chính",
-                                ten_ke_hoach: "Hỗn hợp nhựa bán rỗng 25 dày 10cm",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến chính",
-                                ten_ke_hoach: "Cấp phối đá dăm gia cố xi măng",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến chính",
-                                ten_ke_hoach: "Cấp phối đá dăm loại 1",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến nhánh nút giao",
-                                ten_ke_hoach: "Bê tông nhựa chặt 16 dày 6cm",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến nhánh nút giao",
-                                ten_ke_hoach: "Bê tông nhựa chặt 19 dày 6cm",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến nhánh nút giao",
-                                ten_ke_hoach: "Cấp phối đá dăm loại 1",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Tuyến nhánh nút giao",
-                                ten_ke_hoach: "Cấp phối đá dăm loại 2",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Lắp đặt dải phân cách giữa",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Lưới chống chói",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Hàng rào bảo vệ loại 1 (hàng rào B40)",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Hàng rào bảo vệ loại 2 (hàng rào lưới thép gai)",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Tôn hộ lan",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "km",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Lắp đặt giá long môn, CCV",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "cái",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              },
-                              {
-                                ten_hang_muc: "Hệ thống an toàn giao thông",
-                                ten_ke_hoach: "Biển báo chỉ dẫn",
-                                khoi_luong_hoan_thanh: 0,
-                                khoi_luong_ke_hoach: 0,
-                                don_vi: "cái",
-                                ghi_chu: "Kế hoạch thực hiện một số hạng mục còn lại"
-                              }
-                            ].map((item, index) => (
-                              <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <input 
-                                    type="checkbox" 
-                                    className="project-info-checkbox h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                                    defaultChecked={true}
-                                  />
-                                </td>
-                                                                  <td className="px-4 py-3 whitespace-nowrap">
+
+                    {/* Hiển thị OCR text */}
+                    {apiResult.ocr_text && (
+                      <div className="mb-6">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <h4 className="text-sm font-semibold text-gray-700">Nội dung phân tích</h4>
+                        </div>
+                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                          <p className="text-sm text-gray-700 leading-relaxed">{apiResult.ocr_text}</p>
+                        </div>
+                      </div>
+                    )}
+                  
+                    {/* Bảng dữ liệu có thể chỉnh sửa */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <h4 className="text-sm font-semibold text-gray-700">Chi tiết dữ liệu tiến độ</h4>
+                        </div>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {editableData.length} mục
+                        </span>
+                      </div>
+                      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                                  <div className="flex items-center space-x-2">
+                                    <input 
+                                      type="checkbox" 
+                                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      onChange={(e) => {
+                                        const newData = editableData.map(item => ({
+                                          ...item,
+                                          selected: e.target.checked
+                                        }));
+                                        setEditableData(newData);
+                                        setApiResult(prev => ({
+                                          ...prev,
+                                          project_info: newData
+                                        }));
+                                      }}
+                                    />
+                                    <span>Thao tác</span>
+                                  </div>
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Hạng mục</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Kế hoạch</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL kế hoạch</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL thực hiện</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Đơn vị</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Tiến độ (%)</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Ngày bắt đầu</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Ngày kết thúc</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {editableData.map((item, index) => (
+                                <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
+                                  <td className="px-4 py-3 whitespace-nowrap w-20">
+                                    <input 
+                                      type="checkbox" 
+                                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                      checked={item.selected}
+                                      onChange={(e) => updateEditableData(index, 'selected', e.target.checked)}
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap w-12">
                                     <div className="text-sm font-medium text-gray-900">{index + 1}</div>
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">{item.ten_hang_muc}</div>
+                                  <td className="px-4 py-3 w-32">
+                                    <input
+                                      type="text"
+                                      value={item.ten_hang_muc}
+                                      onChange={(e) => updateEditableData(index, 'ten_hang_muc', e.target.value)}
+                                      className="text-sm font-medium text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
+                                    />
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <div className="text-sm text-gray-900 max-w-xs truncate" title={item.ten_ke_hoach}>
-                                      {item.ten_ke_hoach}
-                                    </div>
+                                  <td className="px-4 py-3 w-40">
+                                    <textarea
+                                      value={item.ten_ke_hoach}
+                                      onChange={(e) => updateEditableData(index, 'ten_ke_hoach', e.target.value)}
+                                      className="text-sm text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full resize-none"
+                                      rows={2}
+                                      style={{ minHeight: '40px', maxHeight: '80px' }}
+                                    />
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="text-sm font-semibold text-gray-900">
-                                      {item.khoi_luong_ke_hoach?.toLocaleString() || '0'}
-                                    </div>
+                                  <td className="px-4 py-3 w-24">
+                                    <input
+                                      type="number"
+                                      value={item.khoi_luong_ke_hoach}
+                                      onChange={(e) => updateEditableData(index, 'khoi_luong_ke_hoach', e.target.value)}
+                                      className="text-sm font-semibold text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
+                                    />
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="text-sm font-semibold text-gray-900">
-                                      {item.khoi_luong_hoan_thanh?.toLocaleString() || '0'}
-                                    </div>
+                                  <td className="px-4 py-3 w-24">
+                                    <input
+                                      type="number"
+                                      value={item.khoi_luong_hoan_thanh}
+                                      onChange={(e) => updateEditableData(index, 'khoi_luong_hoan_thanh', e.target.value)}
+                                      className="text-sm font-semibold text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
+                                    />
                                   </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {item.don_vi}
-                                    </div>
+                                  <td className="px-4 py-3 w-20">
+                                    <input
+                                      type="text"
+                                      value={item.don_vi}
+                                      onChange={(e) => updateEditableData(index, 'don_vi', e.target.value)}
+                                      className="text-sm font-medium text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
+                                    />
                                   </td>
-                                  <td className="px-4 py-3">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                      item.ghi_chu?.includes('đạt') 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : item.ghi_chu?.includes('Kế hoạch')
-                                        ? 'bg-blue-100 text-blue-800'
-                                        : 'bg-gray-100 text-gray-800'
+                                  <td className="px-4 py-3 w-24">
+                                    <div className={`text-sm font-semibold px-2 py-1 rounded-full text-center ${
+                                      parseFloat(item.tien_do) >= 100 ? 'bg-green-100 text-green-800' :
+                                      parseFloat(item.tien_do) >= 80 ? 'bg-blue-100 text-blue-800' :
+                                      parseFloat(item.tien_do) >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                                      parseFloat(item.tien_do) >= 40 ? 'bg-orange-100 text-orange-800' :
+                                      'bg-red-100 text-red-800'
                                     }`}>
-                                      {item.ghi_chu || '-'}
-                                    </span>
+                                      {item.tien_do}%
+                                    </div>
                                   </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                  <td className="px-4 py-3 w-28">
+                                    {item.ngay_bat_dau ? (
+                                      <div className="flex items-center space-x-1">
+                                        <input
+                                          type="date"
+                                          value={item.ngay_bat_dau}
+                                          onChange={(e) => updateEditableData(index, 'ngay_bat_dau', e.target.value)}
+                                          className="text-sm text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
+                                        />
+                                        <button
+                                          onClick={() => updateEditableData(index, 'ngay_bat_dau', '')}
+                                          className="text-red-500 hover:text-red-700 text-xs px-1"
+                                          title="Xóa ngày"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div 
+                                        className="text-sm text-gray-400 italic cursor-pointer hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded"
+                                        onClick={() => updateEditableData(index, 'ngay_bat_dau', new Date().toISOString().split('T')[0])}
+                                        title="Click để thêm ngày"
+                                      >
+                                        --/--/----
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 w-28">
+                                    {item.ngay_ket_thuc ? (
+                                      <div className="flex items-center space-x-1">
+                                        <input
+                                          type="date"
+                                          value={item.ngay_ket_thuc}
+                                          onChange={(e) => updateEditableData(index, 'ngay_ket_thuc', e.target.value)}
+                                          className="text-sm text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
+                                        />
+                                        <button
+                                          onClick={() => updateEditableData(index, 'ngay_ket_thuc', '')}
+                                          className="text-red-500 hover:text-red-700 text-xs px-1"
+                                          title="Xóa ngày"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <div 
+                                        className="text-sm text-gray-400 italic cursor-pointer hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded"
+                                        onClick={() => updateEditableData(index, 'ngay_ket_thuc', new Date().toISOString().split('T')[0])}
+                                        title="Click để thêm ngày"
+                                      >
+                                        --/--/----
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Kết quả trả về từ API */}
               {apiLoading && (
@@ -1224,90 +940,6 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                   </div>
                 </div>
               )}
-              {apiResult && (
-                <div className="mb-6 space-y-6">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-semibold text-blue-800">Kết quả gửi dữ liệu tiến độ</h3>
-                    </div>
-                    
-                    {/* Hiển thị OCR text */}
-                    {apiResult.ocr_text && (
-                      <div className="mb-6">
-                        <div className="flex items-center space-x-2 mb-3">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <h4 className="text-sm font-semibold text-gray-700">Nội dung phân tích</h4>
-                        </div>
-                        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                          <p className="text-sm text-gray-700 leading-relaxed">{apiResult.ocr_text}</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Hiển thị bảng project_info từ API nếu có */}
-                    {apiResult.project_info && apiResult.project_info.length > 0 && (
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                            <h4 className="text-sm font-semibold text-gray-700">Dữ liệu tiến độ đã gửi</h4>
-                          </div>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {apiResult.project_info.length} mục
-                          </span>
-                        </div>
-                        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hạng mục</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kế hoạch</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khối lượng</th>
-                                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ghi chú</th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {apiResult.project_info.map((item, index) => (
-                                  <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                      <div className="text-sm font-medium text-gray-900">{item.ten_hang_muc}</div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <div className="text-sm text-gray-900 max-w-xs truncate" title={item.ten_ke_hoach}>
-                                        {item.ten_ke_hoach}
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                      <div className="text-sm font-semibold text-gray-900">
-                                        {item.khoi_luong_hoan_thanh?.toLocaleString() || '-'}
-                                      </div>
-                                    </td>
-                                    <td className="px-4 py-3">
-                                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                        item.ghi_chu?.includes('Đạt') 
-                                          ? 'bg-green-100 text-green-800' 
-                                          : 'bg-blue-100 text-blue-800'
-                                      }`}>
-                                        {item.ghi_chu}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
               
               <div className="flex gap-2 justify-end">
                 <button
@@ -1317,13 +949,27 @@ const ProjectMenu = ({ projectId, onItemSelect,onPlanSelect }) => {
                 >
                   Hủy
                 </button>
-                <button
-                  onClick={handleReportSubmit}
-                  disabled={!reportDate || apiLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  Gửi dữ liệu tiến độ
-                </button>
+                {apiResult && (
+                  <button
+                    onClick={() => {
+                      setApiResult(null);
+                      setEditableData([]);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-yellow-100 border border-yellow-300 rounded-md hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    disabled={apiLoading}
+                  >
+                    Nhập lại
+                  </button>
+                )}
+                {apiResult && (
+                  <button
+                    onClick={handleReportSubmit}
+                    disabled={apiLoading}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {apiLoading ? 'Đang gửi...' : 'Gửi dữ liệu tiến độ'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
