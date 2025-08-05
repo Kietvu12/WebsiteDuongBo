@@ -31,3 +31,10 @@ ReferenceError: router is not defined
     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:170:5)
     at node:internal/main/run_main_module:36:49
+2025-08-05 15:40:39 [ERROR]: uncaughtException: Can't add new command when connection is in closed state
+Error: Can't add new command when connection is in closed state
+    at PoolConnection._addCommandClosedState (D:\duanduongbo\WebsiteDuongBo\back-end\node_modules\mysql2\lib\base\connection.js:159:17)
+    at PoolConnection.ping (D:\duanduongbo\WebsiteDuongBo\back-end\node_modules\mysql2\lib\base\connection.js:748:17)
+    at Timeout._onTimeout (D:\duanduongbo\WebsiteDuongBo\back-end\server.js:144:32)
+    at listOnTimeout (node:internal/timers:588:17)
+    at process.processTimers (node:internal/timers:523:7)

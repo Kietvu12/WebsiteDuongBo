@@ -102,7 +102,13 @@ function App() {
     useEffect(() => {
       function handleResize() {
         const screenWidth = window.innerWidth;
-        if (screenWidth >= 2220) {
+        if (screenWidth >= 2620) {
+          setScale(1.4);
+        }
+        if (screenWidth >= 2420) {
+          setScale(1.32);
+        }
+        else if (screenWidth >= 2220) {
           setScale(1.2);
         }
         else if (screenWidth >= 2020) {

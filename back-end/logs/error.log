@@ -3,3 +3,4 @@
 2025-07-22 12:20:32 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
 2025-07-22 12:20:49 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
 2025-07-22 12:27:43 [ERROR]: Database connection check failed: Access denied for user 'root'@'localhost' (using password: YES)
+2025-08-05 15:40:39 [ERROR]: Uncaught Exception: Can't add new command when connection is in closed state

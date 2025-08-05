@@ -180,38 +180,54 @@ async function checkDatabaseConnection() {
 }
 
 // 6. Middleware xử lý upload file
-function createUploadMiddleware(loaiDoiTuong, doiTuongID = 'temp') {
+ // Tối đa 5 files
+ function createUploadMiddleware(loaiDoiTuong) {
+  // Đảm bảo thư mục Uploads tồn tại
+  const uploadsRoot = path.join(__dirname, 'Uploads');
+  if (!fs.existsSync(uploadsRoot)) {
+    fs.mkdirSync(uploadsRoot, { recursive: true });
+  }
+
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      const folderPath = path.join(__dirname, 'uploads', loaiDoiTuong.toUpperCase(), String(doiTuongID));
-      
+      const ext = path.extname(file.originalname).toLowerCase();
+      let folderPath;
+
+      if (ext === '.kml') {
+        folderPath = path.join(uploadsRoot, loaiDoiTuong.toUpperCase(), 'KML');
+      } else {
+        // Tạo thư mục tạm cho file không phải KML
+        folderPath = path.join(uploadsRoot, loaiDoiTuong.toUpperCase(), 'TEMP');
+      }
+
+      // Đảm bảo thư mục tồn tại
       if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
+        fs.mkdirSync(folderPath, { recursive: true, mode: 0o755 });
       }
 
       cb(null, folderPath);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-      const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-      cb(null, filename);
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
+      cb(null, uniqueName);
     }
   });
 
   return multer({
-    storage,
-    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+    storage: storage,
+    limits: { fileSize: 100 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip'];
+      const allowedTypes = ['.kml', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png'];
       const ext = path.extname(file.originalname).toLowerCase();
       
       if (allowedTypes.includes(ext)) {
         cb(null, true);
       } else {
-        cb(new Error(`Loại file ${ext} không được hỗ trợ`));
+        cb(new Error(`Loại file ${ext} không được hỗ trợ`), false);
       }
     }
-  }).array('files', 5); // Tối đa 5 files
+  }).array('files', 10);
 }
 
 // 7. Health Check Endpoint
@@ -4319,52 +4335,40 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
   }
 });
 app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res) => {
+  let transaction;
   try {
+    transaction = await pool.getConnection();
+    await transaction.beginTransaction();
+
+    // Lấy dữ liệu từ body
+    const { body, files } = req;
     const {
-      TenGoiThau,
-      DuAn_ID,
-      GiaTriHĐ,
-      Km_BatDau,
-      Km_KetThuc,
-      ToaDo_BatDau_X,
-      ToaDo_BatDau_Y,
-      ToaDo_KetThuc_X,
-      ToaDo_KetThuc_Y,
-      NgayKhoiCong,
-      NgayHoanThanh,
-      TrangThai,
-      NhaThauID,
-      LoaiHinh_ID,
-      ThuocTinhValues
-    } = req.body;
+      TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+      ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
+      NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID,
+      LoaiHinh_ID, ThuocTinhValues
+    } = body;
 
-    // Start transaction
-    await pool.query('START TRANSACTION');
-
-    // 1. Xử lý file KML nếu có
-    let pathData = null;
-    const kmlFile = req.files?.find(file => 
-      path.extname(file.originalname).toLowerCase() === '.kml'
-    );
+    // 1. Xử lý file KML
+    let kmlFilePath = null;
+    const kmlFile = files?.find(f => path.extname(f.originalname).toLowerCase() === '.kml');
 
     if (kmlFile) {
-      try {
-        const kmlContent = fs.readFileSync(kmlFile.path, 'utf-8');
-        const kmlDom = new DOMParser().parseFromString(kmlContent);
-        const geoJson = kml(kmlDom);
-        
-        if (geoJson.features?.[0]?.geometry?.coordinates) {
-          pathData = JSON.stringify(geoJson.features[0].geometry.coordinates);
-        }
-        fs.unlinkSync(kmlFile.path); // Xóa file tạm sau khi xử lý
-      } catch (error) {
-        console.error('Lỗi xử lý KML:', error);
-        // Vẫn tiếp tục xử lý dù KML lỗi
+      // Di chuyển file KML từ thư mục TEMP sang thư mục chính thức
+      const kmlFolder = path.join(__dirname, 'Uploads', 'GOITHAU', 'KML');
+      if (!fs.existsSync(kmlFolder)) {
+        fs.mkdirSync(kmlFolder, { recursive: true });
       }
+
+      const newKmlPath = path.join(kmlFolder, kmlFile.filename);
+      fs.renameSync(kmlFile.path, newKmlPath);
+      
+      kmlFilePath = `/Uploads/GOITHAU/KML/${kmlFile.filename}`;
+      console.log('Đã lưu file KML tại:', kmlFilePath); // Log kiểm tra
     }
 
-    // 2. Insert main tender package info (thêm PathData)
-    const [goiThauResult] = await pool.query(
+    // 2. Thêm gói thầu vào database
+    const [goiThauResult] = await transaction.query(
       `INSERT INTO goithau (
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
@@ -4373,69 +4377,36 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       [
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, pathData
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, kmlFilePath
       ]
     );
 
     const GoiThau_ID = goiThauResult.insertId;
 
-    // 3. Insert into goithau_nhathau table if NhaThauID is provided
-    if (NhaThauID) {
-      await pool.query(
-        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
-        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
-      );
-    }
-
-    // 4. Link tender package to its type
-    if (LoaiHinh_ID) {
-      await pool.query(
-        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
-        [GoiThau_ID, LoaiHinh_ID]
-      );
-
-      // 5. Insert attribute values if provided
-      if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
-        for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
-          await pool.query(
-            `INSERT INTO giatrithuoctinh 
-            (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
-            VALUES (?, ?, "goithau", ?)`,
-            [ThuocTinh_ID, GoiThau_ID, GiaTri]
-          );
-        }
-      }
-    }
-
-    // 6. Handle other file uploads (non-KML)
+    // 3. Xử lý các file không phải KML
+    const otherFiles = files?.filter(f => f !== kmlFile) || [];
     const taiLieuResults = [];
-    const otherFiles = req.files?.filter(file => 
-      path.extname(file.originalname).toLowerCase() !== '.kml'
-    ) || [];
 
     if (otherFiles.length > 0) {
-      const newFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
-      if (!fs.existsSync(newFolder)) {
-        fs.mkdirSync(newFolder, { recursive: true });
+      const finalFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
+      if (!fs.existsSync(finalFolder)) {
+        fs.mkdirSync(finalFolder, { recursive: true });
       }
 
       for (const file of otherFiles) {
-        const newPath = path.join(newFolder, file.filename);
-        fs.renameSync(file.path, newPath);
+        const finalPath = path.join(finalFolder, file.filename);
+        fs.renameSync(file.path, finalPath);
 
-        const [fileResult] = await pool.query(
+        const [fileResult] = await transaction.query(
           `INSERT INTO tailieu (
             LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
             DuongDan, NguoiUpload, MoTa
           ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
           [
-            'GOITHAU',
-            GoiThau_ID,
-            file.originalname,
-            'KHAC',
+            'GOITHAU', GoiThau_ID, file.originalname,
+            path.extname(file.originalname).substring(1).toUpperCase(),
             `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
-            req.user?.userId || null,
-            ''
+            req.user?.userId || null, ''
           ]
         );
 
@@ -4447,43 +4418,76 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       }
     }
 
-    // Commit transaction
-    await pool.query('COMMIT');
+    // 4. Các xử lý khác (nhà thầu, loại hình, thuộc tính)
+    if (NhaThauID) {
+      await transaction.query(
+        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
+        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
+      );
+    }
 
+    if (LoaiHinh_ID) {
+      await transaction.query(
+        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
+        [GoiThau_ID, LoaiHinh_ID]
+      );
+
+      if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
+        for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
+          await transaction.query(
+            `INSERT INTO giatrithuoctinh 
+            (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
+            VALUES (?, ?, "goithau", ?)`,
+            [ThuocTinh_ID, GoiThau_ID, GiaTri]
+          );
+        }
+      }
+    }
+
+    await transaction.commit();
     res.json({
       success: true,
-      message: 'Tạo gói thầu mới thành công',
+      message: 'Tạo gói thầu thành công',
       data: {
         GoiThau_ID,
-        LoaiHinh_ID,
-        ThuocTinhValues,
-        taiLieu: taiLieuResults,
-        hasKml: !!pathData
+        kmlFilePath,
+        taiLieu: taiLieuResults
       }
     });
 
   } catch (error) {
-    await pool.query('ROLLBACK');
+    if (transaction) await transaction.rollback();
     
-    // Clean up uploaded files if error occurs
-    if (req.files && req.files.length > 0) {
+    // Xóa các file đã upload nếu có lỗi
+    if (req.files?.length) {
       req.files.forEach(file => {
         try {
           if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         } catch (err) {
-          console.error('Error deleting file:', err);
+          console.error('Lỗi khi xóa file tạm:', err);
         }
       });
     }
 
-    console.error('Error creating tender package:', error);
+    console.error('Lỗi khi tạo gói thầu:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi tạo gói thầu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  } finally {
+    if (transaction) transaction.release();
   }
 });
+
+// 3. Cấu hình phục vụ file tĩnh
+app.use('/Uploads', express.static(path.join(__dirname, 'Uploads'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.kml')) {
+      res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml');
+    }
+  }
+}));
 app.delete('/goithau/xoa/:GoiThau_ID', async (req, res) => {
   try {
     const { GoiThau_ID } = req.params;

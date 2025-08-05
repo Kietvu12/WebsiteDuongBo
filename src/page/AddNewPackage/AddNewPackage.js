@@ -150,6 +150,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
     }
   };
+  console.log("danh sách nhà thầu thi công:", nhaThauList);
   
   const drawRouteOnMap = (coordinates) => {
     // Xóa layer cũ nếu có

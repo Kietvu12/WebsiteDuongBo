@@ -475,8 +475,8 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     fetchData();
   }, [fetchData]);
 
-  // Hàm để mở tất cả các mục khi lần đầu tải dữ liệu
-  const expandAllItems = useCallback(() => {
+  // Hàm để mở chỉ đến level gói thầu khi lần đầu tải dữ liệu
+  const expandPackagesOnly = useCallback(() => {
     if (!data) return;
 
     const newExpandedItems = {
@@ -485,28 +485,25 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       items: {}
     };
 
-    // Mở tất cả gói thầu và hạng mục
+    // Chỉ mở các gói thầu (packages), không mở các hạng mục (items)
     [].concat(
       data?.duAnThanhPhan?.danhSachGoiThau || [],
       data?.duAnTong?.danhSachGoiThauTrucTiep || [],
       data?.duAnTong?.danhSachDuAnCon?.flatMap(duAnCon => duAnCon.danhSachGoiThau) || []
     ).forEach(pkg => {
       newExpandedItems.packages[pkg.goiThauId] = true;
-
-      pkg.danhSachHangMuc?.forEach(item => {
-        newExpandedItems.items[item.hangMucId] = true;
-      });
+      // Không mở các hạng mục (items) - để chúng ở trạng thái đóng
     });
 
     setExpandedItems(newExpandedItems);
   }, [data]);
 
-  // Gọi hàm mở tất cả các mục khi dữ liệu được tải xong
+  // Gọi hàm mở chỉ đến level gói thầu khi dữ liệu được tải xong
   useEffect(() => {
     if (data && !loading) {
-      expandAllItems();
+      expandPackagesOnly();
     }
-  }, [data, loading, expandAllItems]);
+  }, [data, loading, expandPackagesOnly]);
 
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState(null);
@@ -814,13 +811,32 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
 
   const toggleItem = (type, id) => {
-    setExpandedItems(prev => ({
-      ...prev,
-      [type]: {
-        ...prev[type],
-        [id]: !prev[type][id]
+    setExpandedItems(prev => {
+      // Nếu đang mở rộng hạng mục (items), đóng tất cả hạng mục khác
+      if (type === 'items') {
+        const newItems = {};
+        // Đóng tất cả hạng mục trước
+        Object.keys(prev.items).forEach(itemId => {
+          newItems[itemId] = false;
+        });
+        // Sau đó mở/đóng hạng mục được click
+        newItems[id] = !prev.items[id];
+        
+        return {
+          ...prev,
+          items: newItems
+        };
       }
-    }));
+      
+      // Với các loại khác (packages, categories), hoạt động bình thường
+      return {
+        ...prev,
+        [type]: {
+          ...prev[type],
+          [id]: !prev[type][id]
+        }
+      };
+    });
   };
 
   // Gantt timeline calculations
@@ -983,7 +999,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
     });
 
     return (
-      <div className="bg-gray-50 sticky top-0 z-50" style={{ position: 'sticky', top: 0 }}>
+      <div className="bg-gray-50 sticky top-0 z-50">
         {/* Year headers */}
         <div className="flex h-4">
           {Object.entries(fullYearStructure).map(([year, months]) => {
@@ -994,11 +1010,10 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
             return (
               <div key={year}
-                className={`border-r border-gray-300 text-center font-medium bg-gray-100 py-0.5 ${getFontSizeClass()}`}
+                className={`border-r border-gray-300 text-center font-medium bg-gray-100 py-0.5 relative ${getFontSizeClass()}`}
                 style={{
                   width: `${yearWidth}px`,
-                  minWidth: '240px', // Tăng kích thước tối thiểu đủ cho 12 tháng
-                  position: 'relative'
+                  minWidth: '240px' // Tăng kích thước tối thiểu đủ cho 12 tháng
                 }}>
                 {year}
               </div>
@@ -1014,12 +1029,10 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                 const monthWidth = calculateColumnWidth(monthData.daysInMonth);
                 return (
                   <div key={`${year}-${monthIndex}`}
-                    className={`border-r border-gray-300 text-center py-0 ${windowSize.width < 640 ? 'text-[8px]' : 'text-[10px]'}`}
+                    className={`border-r border-gray-300 text-center py-0 font-bold text-gray-600 ${windowSize.width < 640 ? 'text-[8px]' : 'text-[10px]'}`}
                     style={{
                       width: `${monthWidth}px`,
-                      minWidth: '20px',
-                      fontWeight: 'bold',
-                      color: '#666'
+                      minWidth: '20px'
                     }}>
                     {monthData.name}
                   </div>
@@ -1196,39 +1209,44 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       return formatDate(date);
     };
 
-    return (
-      <div className="relative h-full flex items-center">
-        <div
-          className='text-xs font-medium absolute left-0'
-          style={{ left: `${Math.max(position.left - 60, 0)}px` }}
-        >
-          {formatDate(startDate)}
-        </div>
-        <div
-          className={`${height} rounded-lg relative ${getProgressColor(progress)} opacity-80 hover:opacity-100 transition-opacity`}
-          style={{
-            marginLeft: `${position.left}px`,
-            width: `${position.width}px`,
-            minWidth: '8px',
-            zIndex: 10 // Tăng z-index lên 10 để đè lên các đường kẻ dọc
-          }}
-        >
-          <div className="absolute inset-0 flex items-center justify-center text-white text-xs font-medium">
-            {position.width > 20 ? `${progress.toFixed(0)}%` : ''}
+          return (
+        <div className="relative h-full flex items-center">
+          <div
+            className={`${height} rounded-lg relative ${getProgressColor(progress)} opacity-80 hover:opacity-100 transition-opacity z-10`}
+            style={{
+              marginLeft: `${position.left}px`,
+              width: `${position.width}px`,
+              minWidth: '8px'
+            }}
+          >
+            {/* Text ngày bắt đầu - nằm trong cùng ô với thanh Gantt */}
+            <div
+              className='text-xs font-medium absolute text-gray-600 bg-white px-1 rounded shadow-sm'
+              style={{ 
+                left: '-2px',
+                top: '-20px',
+                zIndex: 20
+              }}
+            >
+              {formatDate(startDate)}
+            </div>
+            
+            <div className="absolute inset-0 flex items-center justify-center text-white text-xs font-medium">
+              {position.width > 20 ? `${progress.toFixed(0)}%` : ''}
+            </div>
+            <div
+              className="h-full bg-black bg-opacity-20 rounded-lg"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            ></div>
           </div>
           <div
-            className="h-full bg-black bg-opacity-20 rounded-lg"
-            style={{ width: `${Math.min(progress, 100)}%` }}
-          ></div>
+            className='text-xs font-medium absolute'
+            style={{ left: `${position.left + position.width + 5}px` }}
+          >
+            {formatDate(endDate)}
+          </div>
         </div>
-        <div
-          className='text-xs font-medium absolute'
-          style={{ left: `${position.left + position.width + 5}px` }}
-        >
-          {formatDate(endDate)}
-        </div>
-      </div>
-    );
+      );
   };
 
   // Điều chỉnh độ rộng timeline theo kích thước cửa sổ và chế độ xem
@@ -1298,7 +1316,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
           <div className={`flex-shrink-0 bg-white border-r max-h-68 overflow-hidden w-full md:w-auto relative`}
             ref={leftTableRef}>
           <table className="divide-y divide-gray-200 w-full">
-            <thead className={`bg-gray-50 sticky top-0 z-50 ${getFontSizeClass()}`} style={{ position: 'sticky', top: 0 }}>
+            <thead className={`bg-gray-50 sticky top-0 z-50 ${getFontSizeClass()}`}>
               <tr>
                 <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-8 sm:w-12`}>STT</th>
                 <th className={`${getPaddingClass()} text-xm text-left font-medium text-gray-500 w-10 sm:w-16`}>Mã</th>
@@ -1333,9 +1351,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                             <FaChevronDown className="w-3 h-3 mr-1 flex-shrink-0" /> :
                             <FaChevronRight className="w-3 h-3 mr-1 flex-shrink-0" />
                           }
-                          <span className={`break-words ${getFontSizeClass()}`} style={{
-                            maxWidth: windowSize.width < 480 ? '120px' : windowSize.width < 640 ? '160px' : windowSize.width < 1024 ? '200px' : '240px'
-                          }} title={packageItem.tenGoiThau}>{packageItem.tenGoiThau}</span>
+                          <span className={`break-words ${getFontSizeClass()} ${windowSize.width < 480 ? 'max-w-[120px]' : windowSize.width < 640 ? 'max-w-[160px]' : windowSize.width < 1024 ? 'max-w-[200px]' : 'max-w-[240px]'}`} title={packageItem.tenGoiThau}>{packageItem.tenGoiThau}</span>
                         </button>
                       </td>
 
@@ -1355,6 +1371,22 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                         Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100) : 0;
                       const bgColor = progress >= 100 ? 'bg-green-100' : progress >= 40 ? 'bg-yellow-100' : 'bg-red-100';
 
+                      // Lấy ngày bắt đầu sớm nhất và ngày kết thúc muộn nhất của tất cả kế hoạch trong hạng mục
+                      const itemStart = item.danhSachKeHoach && item.danhSachKeHoach.length > 0
+                        ? item.danhSachKeHoach.reduce((min, kh) => {
+                            if (!kh.ngayBatDau) return min;
+                            if (!min) return kh.ngayBatDau;
+                            return new Date(kh.ngayBatDau) < new Date(min) ? kh.ngayBatDau : min;
+                          }, null)
+                        : null;
+                      const itemEnd = item.danhSachKeHoach && item.danhSachKeHoach.length > 0
+                        ? item.danhSachKeHoach.reduce((max, kh) => {
+                            if (!kh.ngayKetThuc) return max;
+                            if (!max) return kh.ngayKetThuc;
+                            return new Date(kh.ngayKetThuc) > new Date(max) ? kh.ngayKetThuc : max;
+                          }, null)
+                        : null;
+
                       return (
                         <React.Fragment key={`item-${item.hangMucId}`}>
                           <tr
@@ -1373,9 +1405,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                                   <FaChevronDown className="w-3 h-3 mr-1 flex-shrink-0" /> :
                                   <FaChevronRight className="w-3 h-3 mr-1 flex-shrink-0" />
                                 }
-                                <span className={`break-words font-medium ${getFontSizeClass()}`} style={{
-                                  maxWidth: windowSize.width < 640 ? '140px' : windowSize.width < 1024 ? '180px' : '220px'
-                                }} title={`HM: ${item.tenHangMuc}`}>HM: {item.tenHangMuc}</span>
+                                <span className={`break-words font-medium ${getFontSizeClass()} ${windowSize.width < 640 ? 'max-w-[140px]' : windowSize.width < 1024 ? 'max-w-[180px]' : 'max-w-[220px]'}`} title={`HM: ${item.tenHangMuc}`}>HM: {item.tenHangMuc}</span>
                               </button>
                             </td>
 
@@ -1404,9 +1434,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                               </td>
                               <td className={`${getPaddingClass()} whitespace-nowrap ${getFontSizeClass()}`}>KH-{plan.keHoachId}</td>
                               <td className={`${getPaddingClass()}`}>
-                                <div className={`${getFontSizeClass()} break-words`} style={{
-                                  maxWidth: windowSize.width < 640 ? '120px' : windowSize.width < 1024 ? '160px' : '200px'
-                                }} title={plan.tenCongTac}>{plan.tenCongTac}</div>
+                                <div className={`${getFontSizeClass()} break-words ${windowSize.width < 640 ? 'max-w-[120px]' : windowSize.width < 1024 ? 'max-w-[160px]' : 'max-w-[200px]'}`} title={plan.tenCongTac}>{plan.tenCongTac}</div>
                                 <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-90 transition-opacity duration-300">
                                   <button onClick={() => handleViewDetails(plan)} className={`px-1 py-0.5 ${windowSize.width < 640 ? 'text-[10px]' : 'text-xs'} text-white bg-blue-800 rounded hover:bg-blue-900`}>
                                     Chi tiết
@@ -1442,10 +1470,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
           {/* Thêm nút điều hướng trái/phải */}
           <button
             onClick={handleScrollLeft}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-r-md p-2 shadow-lg border border-gray-200"
-            style={{ 
-              display: scrollPosition > 0 ? 'block' : 'none'
-            }}
+            className={`absolute left-0 top-1/2 transform -translate-y-1/2 z-50 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-r-md p-2 shadow-lg border border-gray-200 ${scrollPosition > 0 ? 'block' : 'hidden'}`}
           >
             <FiChevronLeft size={24} className="text-blue-800" />
           </button>
@@ -1460,22 +1485,16 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
           {/* Thêm CSS để ẩn thanh cuộn nhưng vẫn cho phép cuộn */}
           <div
             ref={ganttScrollContainerRef}
-            className="overflow-x-auto max-w-4xl hide-scrollbar"
+            className="overflow-x-auto max-w-4xl hide-scrollbar scrollbar-none"
             onScroll={handleScroll}
-            style={{
-              scrollbarWidth: 'none', /* Firefox */
-              msOverflowStyle: 'none',  /* IE 10+ */
-            }}
           >
                       <style>{`
             .hide-scrollbar::-webkit-scrollbar {
               display: none; /* Chrome, Safari, Edge */
             }
           `}</style>
-            <div style={{ 
-              width: `${totalTimelineWidth}px`, 
-              minWidth: windowSize.width < 640 ? '100%' : '1000px', // Đảm bảo minWidth ít nhất 1000px
-              paddingLeft: '60px' // Thêm padding để tránh bị che khuất
+            <div className={`${windowSize.width < 640 ? 'w-full' : 'min-w-[1000px]'}`} style={{ 
+              width: `${totalTimelineWidth}px`
             }}>
               {/* Timeline header */}
               {renderTimelineHeader()}
@@ -1527,8 +1546,22 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                         const progress = item.tongKhoiLuongKeHoach ?
                           Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100) : 0;
                         const bgColor = progress >= 100 ? 'bg-green-100' : progress >= 40 ? 'bg-yellow-100' : 'bg-red-100';
-                        const itemStart = item.danhSachKeHoach?.[0]?.ngayBatDau;
-                        const itemEnd = item.danhSachKeHoach?.[item.danhSachKeHoach.length - 1]?.ngayKetThuc;
+
+                        // Lấy ngày bắt đầu sớm nhất và ngày kết thúc muộn nhất của tất cả kế hoạch trong hạng mục
+                        const itemStart = item.danhSachKeHoach && item.danhSachKeHoach.length > 0
+                          ? item.danhSachKeHoach.reduce((min, kh) => {
+                              if (!kh.ngayBatDau) return min;
+                              if (!min) return kh.ngayBatDau;
+                              return new Date(kh.ngayBatDau) < new Date(min) ? kh.ngayBatDau : min;
+                            }, null)
+                          : null;
+                        const itemEnd = item.danhSachKeHoach && item.danhSachKeHoach.length > 0
+                          ? item.danhSachKeHoach.reduce((max, kh) => {
+                              if (!kh.ngayKetThuc) return max;
+                              if (!max) return kh.ngayKetThuc;
+                              return new Date(kh.ngayKetThuc) > new Date(max) ? kh.ngayKetThuc : max;
+                            }, null)
+                          : null;
 
                         return (
                           <React.Fragment key={`gantt-item-${item.hangMucId}`}>
@@ -1840,11 +1873,10 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
               />
               {searchTerm && (
                 <button
-                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-700 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-700 focus:outline-none bg-transparent border-none"
                   onClick={resetFilters}
                   tabIndex={-1}
                   title="Xóa tìm kiếm"
-                  style={{ background: 'transparent', border: 'none' }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1996,11 +2028,10 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
               />
               {searchTerm && (
                 <button
-                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-700 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-700 focus:outline-none bg-transparent border-none"
                   onClick={resetFilters}
                   tabIndex={-1}
                   title="Xóa tìm kiếm"
-                  style={{ background: 'transparent', border: 'none' }}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -2100,9 +2131,8 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
                 {/* Items */}
                 {expandedItems.packages[packageItem.goiThauId] && packageItem.danhSachHangMuc?.map((item, itemIndex) => {
-                  const progress = item.tongKhoiLuongKeHoach
-                    ? Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100)
-                    : 0;
+                  const progress = item.tongKhoiLuongKeHoach ?
+                    Math.min((item.tongKhoiLuongThucHien / item.tongKhoiLuongKeHoach) * 100, 100) : 0;
 
                   const bgColor =
                     progress >= 100
