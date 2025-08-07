@@ -54,11 +54,17 @@ export default function ApprovalSubTable({duAnThanhPhanId}) {
     setShowModal(true);
   };
 
-  // Xử lý xóa (tạm thời chỉ hiển thị console log)
-  const handleDelete = (id) => {
-    console.log('Xóa vướng mắc có ID:', id);
-    // TODO: Thêm API xóa sau này
-    alert(`Chức năng xóa tạm thời chưa khả dụng. ID cần xóa: ${id}`);
+  // Xử lý xóa vướng mắc
+  const handleDelete = async (id) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vướng mắc này không?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/vuongmac/${id}`);
+      setData(prev => prev.filter(item => item.vuongMacID !== id));
+      alert('Xóa vướng mắc thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xóa vướng mắc:', error);
+      alert('Có lỗi xảy ra khi xóa vướng mắc');
+    }
   };
 
   // Xử lý thay đổi form

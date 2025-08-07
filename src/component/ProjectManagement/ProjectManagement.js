@@ -25,7 +25,7 @@ import {
   Legend
 } from 'chart.js';
 import ContractorInfo from '../ContractorInfo/ContractorInfo';
-
+import { useProject } from '../../contexts/ProjectContext';
 // Đăng ký các thành phần cần thiết từ ChartJS
 ChartJS.register(
   CategoryScale,
@@ -57,6 +57,8 @@ const responsiveStyles = {
 };
 
 const ProjectManagement = ({ tenDuAn, projectId }) => {
+  const { user } = useProject();
+  console.log("User:", user.NguoiDungID);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showProgressForm, setShowProgressForm] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -69,7 +71,8 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
     khoiLuongThucHien: '',
     moTaVuongMac: '',
     loaiVuongMac: '',
-    ghiChu: ''
+    ghiChu: '',
+    nguoiBaoCaoId: user.NguoiDungID
   });
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -132,7 +135,8 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
         donViTinh: plan.DonViTinh || '',
         moTaVuongMac: '',
         loaiVuongMac: '',
-        ghiChu: ''
+        ghiChu: '',
+        nguoiBaoCaoId: user.NguoiDungID
       });
     }
   };
@@ -160,7 +164,7 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
       data.append('moTaVuongMac', formData.moTaVuongMac || '');
       data.append('loaiVuongMac', formData.loaiVuongMac || '');
       data.append('ghiChu', formData.ghiChu || '');
-
+      data.append('nguoiBaoCaoId', user.NguoiDungID);
       // Thêm tất cả file vào FormData
       files.forEach(file => {
         data.append('files', file);
@@ -182,7 +186,8 @@ const ProjectManagement = ({ tenDuAn, projectId }) => {
           khoiLuongThucHien: '',
           moTaVuongMac: '',
           loaiVuongMac: '',
-          ghiChu: ''
+          ghiChu: '',
+          nguoiBaoCaoId: user.NguoiDungID
         });
         setFiles([]);
       }

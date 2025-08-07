@@ -281,119 +281,187 @@ const fetchData = async () => {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên người dùng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên đăng nhập</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mật khẩu</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nhà thầu</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quyền</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAccounts.map(account => (
-                <tr key={account.NguoiDungID} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{account.HoTen}</div>
-                    
-                    <div className="text-sm text-gray-500">{account.ChucVu}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.Email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.TenDangNhap}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{account.MatKhau}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {account.TenNhaThau || 'Không thuộc nhà thầu'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap relative"> {/* Thêm relative vào đây */}
-  {editingId === account.NguoiDungID ? (
-    <div className="relative z-50"> {/* Thêm wrapper div với z-50 */}
-      <Select
-        options={permissions.map(p => ({
-          value: p.PhanQuyenID,
-          label: p.TenQuyen
-        }))}
-        value={{
-          value: editForm.PhanQuyenID,
-          label: getPermissionName(editForm.PhanQuyenID)
-        }}
-        onChange={(selected) => setEditForm({
-          ...editForm,
-          PhanQuyenID: selected.value
-        })}
-        className="w-48"
-        menuPortalTarget={document.body} // Quan trọng: render menu ra ngoài flow
-        styles={{
-          menuPortal: base => ({ ...base, zIndex: 9999 }) // Đảm bảo menu hiển thị trên cùng
-        }}
-      />
-    </div>
-  ) : (
-    <span className="text-sm font-medium">
-      {getPermissionName(account.PhanQuyenID)}
-    </span>
-  )}
-</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span 
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${account.TrangThai ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
-                    >
-                      {account.TrangThai ? 'Hoạt động' : 'Vô hiệu hóa'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {editingId === account.NguoiDungID ? (
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleUpdatePermission(account.NguoiDungID)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Lưu"
-                        >
-                          <FaSave />
-                        </button>
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="text-gray-600 hover:text-gray-900 p-1"
-                          title="Hủy"
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex space-x-4">
-                        <button
-                          onClick={() => {
-                            setEditingId(account.NguoiDungID);
-                            setEditForm({
-                              PhanQuyenID: account.PhanQuyenID,
-                              TrangThai: account.TrangThai
-                            });
-                          }}
-                          className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Đổi quyền"
-                        >
-                          <FaEdit />
-                        </button>
-                        <button
-                          onClick={() => toggleAccountStatus(account.NguoiDungID, account.TrangThai)}
-                          className={`p-1 ${account.TrangThai ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
-                          title={account.TrangThai ? 'Vô hiệu hóa' : 'Kích hoạt'}
-                        >
-                          {account.TrangThai ? 'Vô hiệu' : 'Kích hoạt'}
-                        </button>
-                      </div>
-                    )}
-                  </td>
+        <>
+          {/* Bảng cho desktop */}
+          <div className="bg-white rounded-lg shadow overflow-x-auto hidden md:block w-full">
+            <table className="min-w-max w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên người dùng</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell hidden">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell hidden">Tên đăng nhập</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell hidden">Mật khẩu</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider md:table-cell hidden">Nhà thầu</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quyền</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAccounts.map(account => (
+                  <tr key={account.NguoiDungID} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{account.HoTen}</div>
+                      <div className="text-sm text-gray-500">{account.ChucVu}</div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell hidden">{account.Email}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell hidden">{account.TenDangNhap}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell hidden">{account.MatKhau}</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell hidden">{account.TenNhaThau || 'Không thuộc nhà thầu'}</td>
+                    <td className="px-4 py-4 whitespace-nowrap relative">
+                      {editingId === account.NguoiDungID ? (
+                        <div className="relative z-50">
+                          <Select
+                            options={permissions.map(p => ({
+                              value: p.PhanQuyenID,
+                              label: p.TenQuyen
+                            }))}
+                            value={{
+                              value: editForm.PhanQuyenID,
+                              label: getPermissionName(editForm.PhanQuyenID)
+                            }}
+                            onChange={(selected) => setEditForm({
+                              ...editForm,
+                              PhanQuyenID: selected.value
+                            })}
+                            className="w-48"
+                            menuPortalTarget={document.body}
+                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium">
+                          {getPermissionName(account.PhanQuyenID)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      {editingId === account.NguoiDungID ? (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleUpdatePermission(account.NguoiDungID)}
+                            className="text-green-600 hover:text-green-900 p-1"
+                            title="Lưu"
+                          >
+                            <FaSave />
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="text-gray-600 hover:text-gray-900 p-1"
+                            title="Hủy"
+                          >
+                            <FaTimes />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={() => {
+                              setEditingId(account.NguoiDungID);
+                              setEditForm({
+                                PhanQuyenID: account.PhanQuyenID,
+                                TrangThai: account.TrangThai
+                              });
+                            }}
+                            className="text-blue-600 hover:text-blue-900 p-1"
+                            title="Đổi quyền"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => toggleAccountStatus(account.NguoiDungID, account.TrangThai)}
+                            className={`p-1 ${account.TrangThai ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
+                            title={account.TrangThai ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                          >
+                            {account.TrangThai ? 'Vô hiệu' : 'Kích hoạt'}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Card cho mobile */}
+          <div className="md:hidden space-y-4">
+            {filteredAccounts.map(account => (
+              <div key={account.NguoiDungID} className="bg-white rounded-lg shadow p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <div className="font-bold text-gray-900 text-base">{account.HoTen}</div>
+                    <div className="text-xs text-gray-500">{account.ChucVu}</div>
+                  </div>
+                  <div className="text-xs font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">
+                    {getPermissionName(account.PhanQuyenID)}
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 mb-1">Email: {account.Email}</div>
+                <div className="text-xs text-gray-500 mb-1">Tên đăng nhập: {account.TenDangNhap}</div>
+                <div className="text-xs text-gray-500 mb-1">Nhà thầu: {account.TenNhaThau || 'Không thuộc nhà thầu'}</div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => {
+                      setEditingId(account.NguoiDungID);
+                      setEditForm({
+                        PhanQuyenID: account.PhanQuyenID,
+                        TrangThai: account.TrangThai
+                      });
+                    }}
+                    className="text-blue-600 hover:text-blue-900 p-1 text-xs border rounded"
+                    title="Đổi quyền"
+                  >
+                    <FaEdit /> Đổi quyền
+                  </button>
+                  <button
+                    onClick={() => toggleAccountStatus(account.NguoiDungID, account.TrangThai)}
+                    className={`p-1 text-xs border rounded ${account.TrangThai ? 'text-yellow-600 hover:text-yellow-900' : 'text-green-600 hover:text-green-900'}`}
+                    title={account.TrangThai ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                  >
+                    {account.TrangThai ? 'Vô hiệu' : 'Kích hoạt'}
+                  </button>
+                </div>
+                {editingId === account.NguoiDungID && (
+                  <div className="mt-3">
+                    <Select
+                      options={permissions.map(p => ({
+                        value: p.PhanQuyenID,
+                        label: p.TenQuyen
+                      }))}
+                      value={{
+                        value: editForm.PhanQuyenID,
+                        label: getPermissionName(editForm.PhanQuyenID)
+                      }}
+                      onChange={(selected) => setEditForm({
+                        ...editForm,
+                        PhanQuyenID: selected.value
+                      })}
+                      className="w-full mb-2"
+                      menuPortalTarget={document.body}
+                      styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUpdatePermission(account.NguoiDungID)}
+                        className="text-green-600 hover:text-green-900 p-1 text-xs border rounded flex-1"
+                        title="Lưu"
+                      >
+                        <FaSave /> Lưu
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="text-gray-600 hover:text-gray-900 p-1 text-xs border rounded flex-1"
+                        title="Hủy"
+                      >
+                        <FaTimes /> Hủy
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

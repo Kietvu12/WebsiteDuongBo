@@ -2,14 +2,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from 'axios';
 import { FaCheckCircle, FaPlus, FaTimes, FaInfoCircle } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import { kml } from '@mapbox/togeojson';
-import { DOMParser } from 'xmldom';
+// DOMParser is built-in in browser environment
 import vietnamGeoJson from '../../assets/data/vietnam.json'
+
+
 import './AddNewPackage.css'
+import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
 
 const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   // State cho form
@@ -31,6 +33,16 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     ThuocTinhValues: goiThau?.ThuocTinhValues || {}
   });
 
+  // State cho quản lý nhà thầu phân cấp
+  const [contractorHierarchy, setContractorHierarchy] = useState([]);
+  const [showAddSubcontractorModal, setShowAddSubcontractorModal] = useState(false);
+  const [selectedMainContractor, setSelectedMainContractor] = useState(null);
+  const [expandedContractors, setExpandedContractors] = useState(new Set());
+  const [selectedSubContractors, setSelectedSubContractors] = useState(new Set());
+  const [contractorSearchTerm, setContractorSearchTerm] = useState('');
+  const [subContractorSearchTerm, setSubContractorSearchTerm] = useState('');
+  const [availableThuocTinh, setAvailableThuocTinh] = useState([]);
+
   const [files, setFiles] = useState([]);
   const [kmlFile, setKmlFile] = useState(null);
   const [existingFiles, setExistingFiles] = useState(goiThau?.taiLieu || []);
@@ -40,8 +52,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   const [thuocTinhList, setThuocTinhList] = useState([]);
   const [removedThuocTinh, setRemovedThuocTinh] = useState([]);
   const [selectedLoaiHinh, setSelectedLoaiHinh] = useState(null);
-  const [addressSuggestions, setAddressSuggestions] = useState([]);
-  const [selectedAddressType, setSelectedAddressType] = useState(null);
   const [showAddAttribute, setShowAddAttribute] = useState(false);
   const mapRef = useRef(null);
   const startMarkerRef = useRef(null);
@@ -59,14 +69,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
       mapRef.current = map;
-
-      map.on('click', (e) => {
-        if (selectedAddressType === 'start') {
-          setStartPoint(e.latlng);
-        } else if (selectedAddressType === 'end') {
-          setEndPoint(e.latlng);
-        }
-      });
     }
 
     // Khởi tạo marker nếu có tọa độ
@@ -84,6 +86,8 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     if (isEdit && goiThau?.LoaiHinh_ID) {
       fetchThuocTinhList(goiThau.LoaiHinh_ID);
     }
+
+
   }, [isEdit, goiThau]);
 
   useEffect(() => {
@@ -150,7 +154,8 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       console.error('Lỗi khi tải danh sách nhà thầu:', error);
     }
   };
-  console.log("danh sách nhà thầu thi công:", nhaThauList);
+
+
   
   const drawRouteOnMap = (coordinates) => {
     // Xóa layer cũ nếu có
@@ -262,6 +267,10 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       console.error('Lỗi khi tải thuộc tính loại hình:', error);
     }
   };
+  const handleAddAttributeSuccess = (newAttribute) => {
+    setThuocTinhList(prev => [...prev, newAttribute]);
+  setAvailableThuocTinh(prev => [...prev, newAttribute]);
+};
 
   const handleLoaiHinhChange = async (e) => {
     const value = e.target.value;
@@ -284,7 +293,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     const requiredFields = [
       'TenGoiThau', 'GiaTriHĐ', 'Km_BatDau', 'Km_KetThuc', 
       'ToaDo_BatDau_X', 'ToaDo_BatDau_Y', 'ToaDo_KetThuc_X', 'ToaDo_KetThuc_Y',
-      'NgayKhoiCong', 'NgayHoanThanh', 'NhaThauID', 'LoaiHinh_ID'
+      'NgayKhoiCong', 'NgayHoanThanh', 'LoaiHinh_ID'
     ];
 
     requiredFields.forEach(field => {
@@ -293,6 +302,12 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         isValid = false;
       }
     });
+
+    // Kiểm tra nhà thầu
+    if (contractorHierarchy.length === 0) {
+      errors['contractors'] = 'Vui lòng chọn ít nhất một nhà thầu chính';
+      isValid = false;
+    }
 
     setRequiredFieldsError(errors);
     return isValid;
@@ -327,8 +342,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       }).addTo(mapRef.current);
       startMarkerRef.current = marker;
     }
-
-    setSelectedAddressType(null);
   };
 
   const setEndPoint = (latlng) => {
@@ -360,37 +373,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       }).addTo(mapRef.current);
       endMarkerRef.current = marker;
     }
-
-    setSelectedAddressType(null);
-  };
-
-  const handleAddressSearch = async (query, type) => {
-    setSelectedAddressType(type);
-    if (query.length < 3) {
-      setAddressSuggestions([]);
-      return;
-    }
-
-    try {
-      const provider = new OpenStreetMapProvider();
-      const results = await provider.search({ query });
-      setAddressSuggestions(results);
-    } catch (error) {
-      console.error('Lỗi tìm kiếm địa chỉ:', error);
-      setAddressSuggestions([]);
-    }
-  };
-
-  const selectAddress = (result, type) => {
-    const { x: lng, y: lat } = result;
-    const latlng = L.latLng(lat, lng);
-    if (type === 'start') {
-      setStartPoint(latlng);
-    } else {
-      setEndPoint(latlng);
-    }
-    mapRef.current.setView(latlng, 15);
-    setAddressSuggestions([]);
   };
 
   const handleInputChange = (e) => {
@@ -421,19 +403,168 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
     setThuocTinhList([...thuocTinhList, thuocTinh]);
   };
 
+  // Hàm xử lý nhà thầu phân cấp
+  const addMainContractor = (nhaThauId) => {
+    const nhaThau = nhaThauList.find(nt => nt.NhaThauID == nhaThauId);
+    if (!nhaThau) return;
+
+    const newContractor = {
+      NhaThauID: nhaThau.NhaThauID,
+      TenNhaThau: nhaThau.TenNhaThau,
+      VaiTro: 'Nhà thầu chính',
+      ParentId: null,
+      subContractors: []
+    };
+
+    setContractorHierarchy([...contractorHierarchy, newContractor]);
+  };
+
+  const addSubContractor = (mainContractorId, subContractorId) => {
+    const subContractor = nhaThauList.find(nt => nt.NhaThauID == subContractorId);
+    if (!subContractor) return;
+
+    setContractorHierarchy(prev => prev.map(contractor => {
+      if (contractor.NhaThauID === mainContractorId) {
+        return {
+          ...contractor,
+          subContractors: [...contractor.subContractors, {
+            NhaThauID: subContractor.NhaThauID,
+            TenNhaThau: subContractor.TenNhaThau,
+            VaiTro: 'Nhà thầu phụ',
+            ParentId: mainContractorId
+          }]
+        };
+      }
+      return contractor;
+    }));
+  };
+
+  const toggleSubContractorSelection = (subContractorId) => {
+    setSelectedSubContractors(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(subContractorId)) {
+        newSet.delete(subContractorId);
+      } else {
+        newSet.add(subContractorId);
+      }
+      return newSet;
+    });
+  };
+
+  const addSelectedSubContractors = () => {
+    if (!selectedMainContractor || selectedSubContractors.size === 0) return;
+
+    selectedSubContractors.forEach(subContractorId => {
+      addSubContractor(selectedMainContractor.NhaThauID, subContractorId);
+    });
+
+    // Reset và đóng modal
+    setSelectedSubContractors(new Set());
+    setShowAddSubcontractorModal(false);
+    setSelectedMainContractor(null);
+    setSubContractorSearchTerm('');
+  };
+
+  const removeSubContractor = (mainContractorId, subContractorId) => {
+    setContractorHierarchy(prev => prev.map(contractor => {
+      if (contractor.NhaThauID === mainContractorId) {
+        return {
+          ...contractor,
+          subContractors: contractor.subContractors.filter(sub => sub.NhaThauID !== subContractorId)
+        };
+      }
+      return contractor;
+    }));
+  };
+
+  const removeMainContractor = (contractorId) => {
+    setContractorHierarchy(prev => prev.filter(contractor => contractor.NhaThauID !== contractorId));
+  };
+
+  const toggleContractorExpansion = (contractorId) => {
+    setExpandedContractors(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(contractorId)) {
+        newSet.delete(contractorId);
+      } else {
+        newSet.add(contractorId);
+      }
+      return newSet;
+    });
+  };
+
+  const getAvailableSubContractors = (mainContractorId) => {
+    const mainContractor = contractorHierarchy.find(c => c.NhaThauID === mainContractorId);
+    const usedContractorIds = new Set([
+      ...contractorHierarchy.map(c => c.NhaThauID),
+      ...(mainContractor?.subContractors.map(s => s.NhaThauID) || [])
+    ]);
+    
+    return nhaThauList.filter(nt => !usedContractorIds.has(nt.NhaThauID));
+  };
+
+  const getAvailableMainContractors = () => {
+    const usedContractorIds = new Set([
+      ...contractorHierarchy.map(c => c.NhaThauID),
+      ...contractorHierarchy.flatMap(c => c.subContractors.map(s => s.NhaThauID))
+    ]);
+    
+    return nhaThauList.filter(nt => !usedContractorIds.has(nt.NhaThauID));
+  };
+
+  const getFilteredMainContractors = () => {
+    const availableContractors = getAvailableMainContractors();
+    if (!contractorSearchTerm.trim()) return availableContractors;
+    
+    return availableContractors.filter(contractor =>
+      contractor.TenNhaThau.toLowerCase().includes(contractorSearchTerm.toLowerCase())
+    );
+  };
+
+  const getFilteredSubContractors = (mainContractorId) => {
+    const availableSubContractors = getAvailableSubContractors(mainContractorId);
+    if (!subContractorSearchTerm.trim()) return availableSubContractors;
+    
+    return availableSubContractors.filter(contractor =>
+      contractor.TenNhaThau.toLowerCase().includes(subContractorSearchTerm.toLowerCase())
+    );
+  };
+
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    const kmlFile = selectedFiles.find(f => f.name.toLowerCase().endsWith('.kml'));
+    const kmlFileSelected = selectedFiles.find(f => f.name.toLowerCase().endsWith('.kml'));
     
-    if (kmlFile) {
+    if (kmlFileSelected) {
+      // Lưu file KML vào state để upload
+      setKmlFile(kmlFileSelected);
+      
       const reader = new FileReader();
       reader.onload = (event) => {
         try {
           const kmlContent = event.target.result;
-          const kmlDom = new DOMParser().parseFromString(kmlContent, 'text/xml');
-          const geoJson = kml(kmlDom);
+          console.log('KML Content length:', kmlContent.length);
           
-          console.log('Parsed GeoJSON:', geoJson); // Debug
+          // Sử dụng browser's native DOMParser
+          const parser = new DOMParser();
+          const kmlDom = parser.parseFromString(kmlContent, 'application/xml');
+          console.log('KML DOM:', kmlDom);
+          
+          // Kiểm tra lỗi parsing
+          const parseError = kmlDom.getElementsByTagName('parsererror');
+          if (parseError.length > 0) {
+            throw new Error('Lỗi parse XML: ' + parseError[0].textContent);
+          }
+          
+          // Thử parse KML với error handling tốt hơn
+          let geoJson;
+          try {
+            geoJson = kml(kmlDom);
+            console.log('Parsed GeoJSON:', geoJson); // Debug
+          } catch (kmlError) {
+            console.error('Lỗi khi parse KML với @mapbox/togeojson:', kmlError);
+            console.error('KML DOM structure:', kmlDom);
+            throw new Error('Không thể parse file KML. Vui lòng kiểm tra định dạng file.');
+          }
 
           // Kiểm tra kỹ cấu trúc GeoJSON
           if (!geoJson?.features?.length) {
@@ -494,8 +625,12 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
           alert(`Lỗi xử lý KML: ${error.message}`);
         }
       };
-      reader.readAsText(kmlFile);
+      reader.readAsText(kmlFileSelected);
     }
+    
+    // Lưu các file khác (không phải KML)
+    const otherFiles = selectedFiles.filter(f => !f.name.toLowerCase().endsWith('.kml'));
+    setFiles(otherFiles);
   };
 
   const handleRemoveExistingFile = (taiLieuID) => {
@@ -550,6 +685,10 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    console.log('=== SUBMIT DEBUG ===');
+    console.log('contractorHierarchy at submit:', contractorHierarchy);
+    console.log('contractorHierarchy length:', contractorHierarchy.length);
+
     if (!validateForm()) {
       const firstErrorField = Object.keys(requiredFieldsError)[0];
       if (firstErrorField) {
@@ -577,21 +716,62 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       formDataToSend.append('NgayKhoiCong', formData.NgayKhoiCong);
       formDataToSend.append('NgayHoanThanh', formData.NgayHoanThanh);
       formDataToSend.append('TrangThai', formData.TrangThai);
-      formDataToSend.append('NhaThauID', formData.NhaThauID);
       formDataToSend.append('LoaiHinh_ID', formData.LoaiHinh_ID);
       formDataToSend.append('ThuocTinhValues', JSON.stringify(formData.ThuocTinhValues));
+
+      // Chuẩn bị dữ liệu nhà thầu phân cấp
+      const nhaThauData = [];
+      contractorHierarchy.forEach(mainContractor => {
+        // Thêm nhà thầu chính
+        nhaThauData.push({
+          NhaThauID: parseInt(mainContractor.NhaThauID),
+          VaiTro: 'Nhà thầu chính',
+          ParentId: null
+        });
+        
+        // Thêm các nhà thầu phụ
+        mainContractor.subContractors.forEach(subContractor => {
+          nhaThauData.push({
+            NhaThauID: parseInt(subContractor.NhaThauID),
+            VaiTro: 'Nhà thầu phụ',
+            ParentId: parseInt(mainContractor.NhaThauID) // ParentId là ID của nhà thầu chính
+          });
+        });
+      });
+
+      console.log('=== DEBUG Frontend NhaThauData ===');
+      console.log('contractorHierarchy:', contractorHierarchy);
+      console.log('contractorHierarchy length:', contractorHierarchy.length);
+      
+      contractorHierarchy.forEach((contractor, index) => {
+        console.log(`Main contractor ${index + 1}:`, contractor);
+        console.log(`  - Subcontractors count:`, contractor.subContractors.length);
+        contractor.subContractors.forEach((sub, subIndex) => {
+          console.log(`  - Subcontractor ${subIndex + 1}:`, sub);
+        });
+      });
+      
+      console.log('nhaThauData to send:', nhaThauData);
+      console.log('nhaThauData length:', nhaThauData.length);
+      console.log('NhaThauData JSON string:', JSON.stringify(nhaThauData));
+
+      formDataToSend.append('NhaThauData', JSON.stringify(nhaThauData));
+      
+      // Fallback cho compatibility với API cũ
+      if (contractorHierarchy.length > 0) {
+        formDataToSend.append('NhaThauID', contractorHierarchy[0].NhaThauID);
+      }
 
       // Thêm danh sách tài liệu cần xóa (nếu có)
       if (isEdit && filesToRemove.length > 0) {
         formDataToSend.append('TaiLieuXoa', JSON.stringify(filesToRemove));
       }
 
-      // Thêm file KML nếu có
+      // Thêm tất cả files (bao gồm cả KML và files khác)
       if (kmlFile) {
-        formDataToSend.append('kmlFile', kmlFile);
+        formDataToSend.append('files', kmlFile);
       }
-
-      // Thêm các file khác (không phải KML)
+      
       files.forEach(file => {
         formDataToSend.append('files', file);
       });
@@ -636,6 +816,8 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         setThuocTinhList([]);
         setRemovedThuocTinh([]);
         setSelectedLoaiHinh(null);
+        setContractorHierarchy([]);
+        setExpandedContractors(new Set());
         onSuccess(response.data.data);
         onClose();
       } else {
@@ -649,7 +831,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="container bg-white rounded-lg  mx-auto p-2 max-w-screen-2xl">
+    <div className="container bg-white rounded-lg  mx-auto p-4 max-w-screen-2xl">
       <div className="flex justify-between items-center mb-4"> {/* Thêm div wrapper với flex */}
         <h1 className="text-xl font-bold">Tạo Mới Gói Thầu</h1>
         <button
@@ -768,38 +950,134 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
             <div className="space-y-3">
               <h2 className="text-lg font-semibold border-b pb-2">Thông tin khác</h2>
 
+              {/* Quản lý nhà thầu phân cấp */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nhà thầu</label>
-                <select
-                  name="NhaThauID"
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    requiredFieldsError.NhaThauID ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  value={formData.NhaThauID}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Chọn nhà thầu</option>
-                  {nhaThauList.map(nhaThau => (
-                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>{nhaThau.TenNhaThau}</option>
-                  ))}
-                </select>
-              </div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nhà thầu</label>
+                
+                {/* Giao diện tìm kiếm và chọn nhà thầu chính */}
+                <div className="mb-3 relative">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm nhà thầu chính..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10"
+                      value={contractorSearchTerm}
+                      onChange={(e) => setContractorSearchTerm(e.target.value)}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                      <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* Dropdown kết quả tìm kiếm */}
+                  {contractorSearchTerm && getFilteredMainContractors().length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {getFilteredMainContractors().map(nhaThau => (
+                        <div
+                          key={nhaThau.NhaThauID}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                          onClick={() => {
+                            addMainContractor(nhaThau.NhaThauID);
+                            setContractorSearchTerm('');
+                          }}
+                        >
+                          {nhaThau.TenNhaThau}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Thông báo không tìm thấy */}
+                  {contractorSearchTerm && getFilteredMainContractors().length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 text-sm text-gray-500 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+                      Không tìm thấy nhà thầu phù hợp
+                    </div>
+                  )}
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Loại hình</label>
-                <select
-                  name="LoaiHinh_ID"
-                  className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    requiredFieldsError.LoaiHinh_ID ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  value={formData.LoaiHinh_ID}
-                  onChange={handleLoaiHinhChange}
-                >
-                  <option value="">Chọn loại hình</option>
-                  {loaiHinhList.map(loaiHinh => (
-                    <option key={loaiHinh.LoaiHinh_ID} value={loaiHinh.LoaiHinh_ID}>{loaiHinh.TenLoaiHinh}</option>
+                {/* Danh sách nhà thầu đã chọn */}
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {contractorHierarchy.map(contractor => (
+                    <div key={contractor.NhaThauID} className="border border-gray-200 rounded-md">
+                      {/* Nhà thầu chính */}
+                      <div className="flex items-center justify-between p-3 bg-blue-50">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleContractorExpansion(contractor.NhaThauID)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            {expandedContractors.has(contractor.NhaThauID) ? '▼' : '▶'}
+                          </button>
+                          <span className="font-medium text-sm">{contractor.TenNhaThau}</span>
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Nhà thầu chính
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedMainContractor(contractor);
+                              setSelectedSubContractors(new Set()); // Reset selection
+                              setShowAddSubcontractorModal(true);
+                            }}
+                            className="text-green-600 hover:text-green-800 text-sm"
+                            title="Thêm nhà thầu phụ"
+                          >
+                            <FaPlus />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeMainContractor(contractor.NhaThauID)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                            title="Xóa nhà thầu chính"
+                          >
+                            <FaTimes />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Nhà thầu phụ */}
+                      {expandedContractors.has(contractor.NhaThauID) && contractor.subContractors.length > 0 && (
+                        <div className="p-2 bg-gray-50">
+                          {contractor.subContractors.map(subContractor => (
+                            <div key={subContractor.NhaThauID} className="flex items-center justify-between py-2 px-3 bg-white rounded border mb-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm ml-4">└ {subContractor.TenNhaThau}</span>
+                                <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                                  Nhà thầu phụ
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeSubContractor(contractor.NhaThauID, subContractor.NhaThauID)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                                title="Xóa nhà thầu phụ"
+                              >
+                                <FaTimes />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </select>
+                </div>
+
+                {contractorHierarchy.length === 0 && (
+                  <div className={`text-center py-4 text-gray-500 text-sm border border-dashed rounded-md ${
+                    requiredFieldsError.contractors ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  }`}>
+                    Chưa có nhà thầu nào được chọn
+                  </div>
+                )}
+                
+                {requiredFieldsError.contractors && (
+                  <p className="mt-1 text-xs text-red-600">{requiredFieldsError.contractors}</p>
+                )}
               </div>
 
               <div>
@@ -821,108 +1099,20 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Thuộc tính tùy chỉnh */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="bg-white rounded p-2 border border-gray-200 lg:col-span-2 bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-center mb-1">
-                  <h2 className="text-xs font-semibold text-gray-700 flex items-center">
-                    <FaCheckCircle className="mr-1 text-green-500 text-xs" />
-                    Thuộc tính dự án
-                  </h2>
-                  <button
-                    onClick={() => setShowAddAttribute(true)}
-                    className="flex items-center px-2 py-0.5 bg-green-500 text-white rounded text-xxs hover:bg-green-600 transition-colors"
-                  >
-                    <FaPlus className="mr-0.5 text-xs" />
-                    Thêm thuộc tính
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
-                  {thuocTinhList.length > 0 ? (
-                    thuocTinhList.map(thuocTinh => (
-                      <div
-                        key={thuocTinh.ThuocTinh_ID}
-                        className="p-1 border border-gray-200 rounded hover:border-blue-300 transition-colors"
-                        data-thuoctinh={`thuocTinh_${thuocTinh.ThuocTinh_ID}`}
-                      >
-                        <div className="flex items-start space-x-1">
-                          <div className="flex-1 space-y-1">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xxs font-medium text-gray-700 truncate">
-                                {thuocTinh.TenThuocTinh}
-                                {thuocTinh.BatBuoc === 1 && <span className="text-red-500 ml-0.5">*</span>}
-                              </label>
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-red-500 transition-colors text-xxs"
-                                onClick={() => removeThuocTinh(thuocTinh)}
-                              >
-                                <FaTimes className="h-2.5 w-2.5" />
-                              </button>
-                            </div>
-                            {renderInputByType(thuocTinh)}
-                            {thuocTinh.DonVi && (
-                              <div className="text-xxs text-gray-500 truncate">Đơn vị: {thuocTinh.DonVi}</div>
-                            )}
-                          </div>
-                        </div>
-                        {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`] && (
-                          <p className="mt-1 text-xxs text-red-600">
-                            {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`]}
-                          </p>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-3 text-gray-400 text-xxs">
-                      {selectedLoaiHinh ? 'Chưa có thuộc tính nào' : 'Vui lòng chọn loại hình dự án'}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-                <div className="p-3 border-b border-gray-200">
-                  <h2 className="text-sm font-semibold text-gray-700 flex items-center">
-                    <FaInfoCircle className="mr-2 text-blue-500" />
-                    Thuộc tính có sẵn
-                  </h2>
-                </div>
-
-                <div className="p-3 max-h-[300px] overflow-y-auto">
-                  {removedThuocTinh.length > 0 ? (
-                    <div className="space-y-2">
-                      {removedThuocTinh.map(thuocTinh => (
-                        <div
-                          key={thuocTinh.ThuocTinh_ID}
-                          className="p-2 bg-gray-50 rounded-md hover:bg-blue-50 cursor-pointer transition-colors flex justify-between items-center"
-                          onClick={() => restoreThuocTinh(thuocTinh)}
-                        >
-                          <span className="text-sm text-gray-700 truncate">{thuocTinh.TenThuocTinh}</span>
-                          <FaPlus className="h-3 w-3 text-green-500" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-gray-400 text-sm">
-                      Không có thuộc tính nào
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tài liệu đính kèm (có thể chọn nhiều file)
               </label>
               <input
                 type="file"
-                accept=".kml"
+                multiple
+                accept=".kml,.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.zip"
                 onChange={handleFileChange}
                 className="block w-full text-sm text-gray-900 border border-gray-300 rounded-md cursor-pointer bg-gray-50 focus:outline-none"
               />
-
+              <p className="mt-1 text-xs text-gray-500">
+                Hỗ trợ: KML, PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG, ZIP (tối đa 5 files, 100MB mỗi file)
+              </p>
             </div>
 
             {/* Nút submit */}
@@ -939,15 +1129,6 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-3">Bản đồ công trình</h2>
           <div id="map" className="h-96 rounded-md border"></div>
-
-          {selectedAddressType && (
-            <div className="mt-3 p-2 bg-yellow-100 rounded-md text-xs">
-              <p className="font-medium">
-                {selectedAddressType === 'start' ? 'Đang chọn điểm bắt đầu' : 'Đang chọn điểm kết thúc'}
-              </p>
-              <p>Vui lòng click vào vị trí trên bản đồ hoặc tìm kiếm địa chỉ</p>
-            </div>
-          )}
 
           <div className="mt-3 grid grid-cols-2 gap-2">
             <div className="p-2 bg-blue-100 rounded-md">
@@ -967,125 +1148,235 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
               )}
             </div>
           </div>
-          <div className="space-y-3 mt-2">
-            <h2 className="text-lg font-semibold border-b pb-2">Vị trí công trình</h2>
+          {/* Loại hình và thuộc tính */}
+          <div className="space-y-3 mt-4">
+            <h2 className="text-lg font-semibold border-b pb-2">Loại hình và thuộc tính</h2>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Điểm bắt đầu</label>
-
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                  onChange={(e) => handleAddressSearch(e.target.value, 'start')}
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-                  onClick={() => setSelectedAddressType('start')}
-                >
-                  Chọn trên bản đồ
-                </button>
-              </div>
-
-              {selectedAddressType === 'start' && addressSuggestions.length > 0 && (
-                <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-                  {addressSuggestions.map((result, index) => (
-                    <li
-                      key={index}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => selectAddress(result, 'start')}
-                    >
-                      {result.label}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Kinh độ"
-                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_BatDau_X ? 'border-red-500' : 'border-gray-300'}`}
-                  value={formData.ToaDo_BatDau_X}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    ToaDo_BatDau_X: e.target.value
-                  })}
-                />
-                <input
-                  type="text"
-                  placeholder="Vĩ độ"
-                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_BatDau_Y ? 'border-red-500' : 'border-gray-300'}`}
-                  value={formData.ToaDo_BatDau_Y}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    ToaDo_BatDau_Y: e.target.value
-                  })}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Loại hình</label>
+              <select
+                name="LoaiHinh_ID"
+                className={`w-full px-3 py-2 border rounded-md text-sm ${
+                  requiredFieldsError.LoaiHinh_ID ? 'border-red-500' : 'border-gray-300'
+                }`}
+                value={formData.LoaiHinh_ID}
+                onChange={handleLoaiHinhChange}
+              >
+                <option value="">Chọn loại hình</option>
+                {loaiHinhList.map(loaiHinh => (
+                  <option key={loaiHinh.LoaiHinh_ID} value={loaiHinh.LoaiHinh_ID}>{loaiHinh.TenLoaiHinh}</option>
+                ))}
+              </select>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Điểm kết thúc</label>
+            {/* Thuộc tính tùy chỉnh */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="col-span-2 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex justify-between items-center p-3 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center">
+                    <FaCheckCircle className="mr-2 text-green-500" />
+                    Thuộc tính dự án
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowAddAttribute(true);
+                    }}
+                    className="flex items-center px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 transition-colors"
+                  >
+                    <FaPlus className="mr-1 text-xs" />
+                    Thêm thuộc tính
+                  </button>
+                </div>
 
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm địa chỉ hoặc click trên bản đồ"
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                  onChange={(e) => handleAddressSearch(e.target.value, 'end')}
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600"
-                  onClick={() => setSelectedAddressType('end')}
-                >
-                  Chọn trên bản đồ
-                </button>
+                <div className="p-3 max-h-48 overflow-y-auto">
+                  {thuocTinhList.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {thuocTinhList.map(thuocTinh => (
+                        <div
+                          key={thuocTinh.ThuocTinh_ID}
+                          className="p-2 border border-gray-200 rounded hover:border-blue-300 transition-colors"
+                          data-thuoctinh={`thuocTinh_${thuocTinh.ThuocTinh_ID}`}
+                        >
+                          <div className="flex items-start space-x-2">
+                            <div className="flex-1 space-y-1">
+                              <div className="flex justify-between items-center">
+                                <label className="text-xs font-medium text-gray-700 truncate">
+                                  {thuocTinh.TenThuocTinh}
+                                  {thuocTinh.BatBuoc === 1 && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                <button
+                                  type="button"
+                                  className="text-gray-400 hover:text-red-500 transition-colors text-xs"
+                                  onClick={() => removeThuocTinh(thuocTinh)}
+                                >
+                                  <FaTimes className="h-3 w-3" />
+                                </button>
+                              </div>
+                              {renderInputByType(thuocTinh)}
+                              {thuocTinh.DonVi && (
+                                <div className="text-xs text-gray-500 truncate">Đơn vị: {thuocTinh.DonVi}</div>
+                              )}
+                            </div>
+                          </div>
+                          {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`] && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {requiredFieldsError[`thuocTinh_${thuocTinh.ThuocTinh_ID}`]}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm">
+                      {selectedLoaiHinh ? 'Chưa có thuộc tính nào' : 'Vui lòng chọn loại hình dự án'}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {selectedAddressType === 'end' && addressSuggestions.length > 0 && (
-                <ul className="border rounded-md max-h-40 overflow-y-auto text-sm">
-                  {addressSuggestions.map((result, index) => (
-                    <li
-                      key={index}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
-                      onClick={() => selectAddress(result, 'end')}
-                    >
-                      {result.label}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="col-span-1 bg-white rounded-lg border border-gray-200 shadow-sm">
+                <div className="p-3 border-b border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center">
+                    <FaInfoCircle className="mr-2 text-blue-500" />
+                    Thuộc tính có sẵn
+                  </h3>
+                </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Kinh độ"
-                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_KetThuc_X ? 'border-red-500' : 'border-gray-300'}`}
-                  value={formData.ToaDo_KetThuc_X}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    ToaDo_KetThuc_X: e.target.value
-                  })}
-                />
-                <input
-                  type="text"
-                  placeholder="Vĩ độ"
-                  className={`px-3 py-2 border rounded-md text-sm ${requiredFieldsError.ToaDo_KetThuc_Y ? 'border-red-500' : 'border-gray-300'}`}
-                  value={formData.ToaDo_KetThuc_Y}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    ToaDo_KetThuc_Y: e.target.value
-                  })}
-                />
+                <div className="p-3 max-h-48 overflow-y-auto">
+                  {removedThuocTinh.length > 0 ? (
+                    <div className="space-y-2">
+                      {removedThuocTinh.map(thuocTinh => (
+                        <div
+                          key={thuocTinh.ThuocTinh_ID}
+                          className="p-2 bg-gray-50 rounded-md hover:bg-blue-50 cursor-pointer transition-colors flex justify-between items-center"
+                          onClick={() => restoreThuocTinh(thuocTinh)}
+                        >
+                          <span className="text-sm text-gray-700 truncate">{thuocTinh.TenThuocTinh}</span>
+                          <FaPlus className="h-3 w-3 text-green-500" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-gray-400 text-sm">
+                      Không có thuộc tính nào
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+      {showAddAttribute && selectedLoaiHinh && (
+                <AddNewAttribute
+                    loaiHinhId={selectedLoaiHinh.LoaiHinh_ID}
+                    onClose={() => setShowAddAttribute(false)}
+                    onAddSuccess={handleAddAttributeSuccess}
+                />
+            )}
+
+      {/* Modal thêm nhà thầu phụ */}
+      {showAddSubcontractorModal && selectedMainContractor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]" style={{ zIndex: 9999 }}>
+          <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                Thêm nhà thầu phụ cho {selectedMainContractor.TenNhaThau}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddSubcontractorModal(false);
+                  setSelectedMainContractor(null);
+                  setSubContractorSearchTerm('');
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            
+            {/* Ô tìm kiếm nhà thầu phụ */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm nhà thầu phụ..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pr-10"
+                  value={subContractorSearchTerm}
+                  onChange={(e) => setSubContractorSearchTerm(e.target.value)}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {getFilteredSubContractors(selectedMainContractor.NhaThauID).length > 0 ? (
+                getFilteredSubContractors(selectedMainContractor.NhaThauID).map(nhaThau => (
+                  <div
+                    key={nhaThau.NhaThauID}
+                    className={`flex items-center p-3 border rounded-md cursor-pointer transition-colors ${
+                      selectedSubContractors.has(nhaThau.NhaThauID)
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => toggleSubContractorSelection(nhaThau.NhaThauID)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedSubContractors.has(nhaThau.NhaThauID)}
+                      onChange={() => toggleSubContractorSelection(nhaThau.NhaThauID)}
+                      className="mr-3 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm flex-1">{nhaThau.TenNhaThau}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  {subContractorSearchTerm ? 'Không tìm thấy nhà thầu phù hợp' : 'Không có nhà thầu nào khả dụng'}
+                </div>
+              )}
+            </div>
+            
+            {getFilteredSubContractors(selectedMainContractor.NhaThauID).length > 0 && (
+              <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                <span className="text-sm text-gray-600">
+                  Đã chọn: {selectedSubContractors.size} nhà thầu
+                </span>
+                <div className="space-x-2">
+                  <button
+                    onClick={() => {
+                      setSelectedSubContractors(new Set());
+                      setShowAddSubcontractorModal(false);
+                      setSelectedMainContractor(null);
+                      setSubContractorSearchTerm('');
+                    }}
+                    className="px-3 py-1 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    onClick={addSelectedSubContractors}
+                    disabled={selectedSubContractors.size === 0}
+                    className={`px-3 py-1 text-sm rounded ${
+                      selectedSubContractors.size > 0
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Thêm ({selectedSubContractors.size})
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

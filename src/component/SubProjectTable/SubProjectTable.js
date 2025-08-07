@@ -554,8 +554,9 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
   const handleCategoryAdded = (newCategory) => {
     setShowAddCategoryModal(false);
   };
-  const handleAddPlanClick = (hangMucId) => {
+  const handleAddPlanClick = (hangMucId, goiThauId) => {
     setSelectedCategoryId(hangMucId);
+    setSelectedPackageId(goiThauId);
     setShowAddPlanModal(true);
   };
 
@@ -767,28 +768,24 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
       setDeletingId(null);
     }
   };
-  const handleDeleteKeHoach = async (hangMucId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa hạng mục này?')) {
+  const handleDeleteKeHoach = async (keHoachId) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa kế hoạch này?')) {
       return;
     }
-
     try {
-      setDeletingId(hangMucId); // Để hiển thị loading cho item cụ thể
-
-      const response = await fetch(`${API_BASE_URL}/kehoach/${hangMucId}`, {
+      setDeletingId(keHoachId);
+      const response = await fetch(`${API_BASE_URL}/kehoach/${keHoachId}`, {
         method: 'DELETE'
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.message || 'Xóa không thành công');
       }
-
-      // Gọi lại fetchData để cập nhật danh sách
+      alert('Xóa kế hoạch thành công!');
       fetchData();
     } catch (error) {
       console.error('Delete error:', error);
+      alert('Có lỗi xảy ra khi xóa kế hoạch');
     } finally {
       setDeletingId(null);
     }
@@ -1413,14 +1410,14 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                             <button
                             className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
                             title="Thêm kế hoạch"
-                            onClick={() => handleAddPlanClick(item.hangMucId)}
+                            onClick={() => handleAddPlanClick(item.hangMucId, packageItem.goiThauId)}
                           >
                             <FaPlus size={14} />
                           </button>
                           <button
                             className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
                             title="Xóa"
-                            onClick={() => handleAddCategoryClick(item.hangMucId)}
+                            onClick={() => handleDeleteHangMuc(item.hangMucId)}
                           >
                             <FaTrash size={14} />
                           </button>
@@ -1449,7 +1446,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                               </td>
 
                               <td className={`${getPaddingClass()} whitespace-nowrap`}>
-                                <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100" title="Xóa">
+                                <button className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100" title="Xóa" onClick={() => handleDeleteKeHoach(plan.keHoachId)}>
                                   <FaTrash size={windowSize.width < 640 ? 10 : 12} />
                                 </button>
                               </td>
@@ -2186,13 +2183,14 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
                           <button
                             className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
                             title="Thêm kế hoạch"
-                            onClick={() => handleAddPlanClick(item.hangMucId)}
+                            onClick={() => handleAddPlanClick(item.hangMucId, packageItem.goiThauId)}
                           >
                             <FaPlus size={14} />
                           </button>
                           <button
                             className="text-gray-600 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
                             title="Xóa"
+                            onClick={() => handleDeleteHangMuc(item.hangMucId)}
                           >
                             <FaTrash size={14} />
                           </button>
@@ -2285,6 +2283,7 @@ const SubProjectTable = ({ duAnThanhPhanId, packageId, onClose }) => {
 
       {showAddPlanModal && (
         <AddNewPlan
+        goiThauId={selectedPackageId}
           hangMucId={selectedCategoryId}
           onClose={() => setShowAddPlanModal(false)}
           onSuccess={handlePlanAdded}

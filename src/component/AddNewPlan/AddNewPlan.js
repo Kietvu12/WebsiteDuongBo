@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const AddNewPlan = ({ hangMucId, onClose, onSuccess }) => {
+const AddNewPlan = ({ goiThauId, hangMucId, onClose, onSuccess }) => {
+  console.log("GoiThauId", goiThauId);
+  
   const [formData, setFormData] = useState({
+    GoiThauID: goiThauId,
     HangMucID: hangMucId,
     NhaThauID: '',
     TenCongTac: '',
@@ -18,11 +21,13 @@ const AddNewPlan = ({ hangMucId, onClose, onSuccess }) => {
   const [nhaThauList, setNhaThauList] = useState([]);
   const [fetchingContractors, setFetchingContractors] = useState(true);
   const [fetchError, setFetchError] = useState(null);
+  const [contractorSearchTerm, setContractorSearchTerm] = useState('');
+  const [showContractorDropdown, setShowContractorDropdown] = useState(false);
 
   useEffect(() => {
     const fetchContractors = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/nhaThauList`);
+        const response = await axios.get(`${API_BASE_URL}/goiThau/${goiThauId}/nhaThauList`);
         if (response.data.success) {
           setNhaThauList(response.data.data);
         } else {
@@ -39,6 +44,30 @@ const AddNewPlan = ({ hangMucId, onClose, onSuccess }) => {
     fetchContractors();
   }, [API_BASE_URL]);
 
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.contractor-dropdown')) {
+        setShowContractorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Cập nhật hiển thị khi đã chọn nhà thầu
+  useEffect(() => {
+    if (formData.NhaThauID) {
+      const selectedContractor = nhaThauList.find(nt => nt.NhaThauID == formData.NhaThauID);
+      if (selectedContractor) {
+        setContractorSearchTerm(selectedContractor.TenNhaThau);
+      }
+    }
+  }, [formData.NhaThauID, nhaThauList]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -46,6 +75,36 @@ const AddNewPlan = ({ hangMucId, onClose, onSuccess }) => {
 
   const handleFileChange = (e) => {
     setFiles([...e.target.files]);
+  };
+
+  const getFilteredContractors = () => {
+    if (!contractorSearchTerm.trim()) return nhaThauList;
+    
+    return nhaThauList.filter(contractor =>
+      contractor.TenNhaThau.toLowerCase().includes(contractorSearchTerm.toLowerCase())
+    );
+  };
+
+  const getContractorStatus = (contractor) => {
+    if (!contractor) return '';
+    
+    if (contractor.VaiTro === 'Nhà thầu chính') {
+      // Đếm số nhà thầu phụ của nhà thầu chính này
+      const subContractors = nhaThauList.filter(nt => nt.ParentId === contractor.NhaThauID);
+      const count = subContractors.length;
+      return count > 0 ? `${count} nhà thầu phụ` : 'Nhà thầu chính';
+    } else if (contractor.VaiTro === 'Nhà thầu phụ' && contractor.ParentId) {
+      // Tìm nhà thầu chính của nhà thầu phụ này
+      const mainContractor = nhaThauList.find(nt => nt.NhaThauID === contractor.ParentId);
+      return mainContractor ? `Thầu phụ của ${mainContractor.TenNhaThau}` : 'Nhà thầu phụ';
+    }
+    return contractor.VaiTro || 'Không xác định';
+  };
+
+  const handleContractorSelect = (contractor) => {
+    setFormData(prev => ({ ...prev, NhaThauID: contractor.NhaThauID }));
+    setContractorSearchTerm(contractor.TenNhaThau);
+    setShowContractorDropdown(false);
   };
 
   const handleSubmit = async (e) => {
@@ -105,20 +164,53 @@ const AddNewPlan = ({ hangMucId, onClose, onSuccess }) => {
               ) : fetchError ? (
                 <div className="text-red-500 text-sm">{fetchError}</div>
               ) : (
-                <select
-                  name="NhaThauID"
-                  value={formData.NhaThauID}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded-md"
-                  required
-                >
-                  <option value="">Chọn nhà thầu</option>
-                  {nhaThauList && nhaThauList.map(nhaThau => (
-                    <option key={nhaThau.NhaThauID} value={nhaThau.NhaThauID}>
-                      {nhaThau.TenNhaThau || `Nhà thầu ${nhaThau.NhaThauID}`}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative contractor-dropdown">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm nhà thầu..."
+                    value={contractorSearchTerm}
+                    onChange={(e) => {
+                      setContractorSearchTerm(e.target.value);
+                      setShowContractorDropdown(true);
+                    }}
+                    onFocus={() => setShowContractorDropdown(true)}
+                    className="w-full px-3 py-2 border rounded-md"
+                    required
+                  />
+                  
+                  {/* Dropdown kết quả tìm kiếm */}
+                  {showContractorDropdown && getFilteredContractors().length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {getFilteredContractors().map(contractor => (
+                        <div
+                          key={contractor.NhaThauID}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => handleContractorSelect(contractor)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm">{contractor.TenNhaThau}</div>
+                              <div className="text-xs text-gray-500">{getContractorStatus(contractor)}</div>
+                              {contractor.MaSoThue && (
+                                <div className="text-xs text-gray-400">MST: {contractor.MaSoThue}</div>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400 ml-2">
+                              {contractor.VaiTro === 'Nhà thầu chính' ? 'Chính' : 'Phụ'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Thông báo không tìm thấy */}
+                  {showContractorDropdown && contractorSearchTerm && getFilteredContractors().length === 0 && (
+                    <div className="absolute z-50 w-full mt-1 text-sm text-gray-500 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+                      Không tìm thấy nhà thầu phù hợp
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div>

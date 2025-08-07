@@ -40,6 +40,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   const [apiError, setApiError] = useState(null);
   const [editableData, setEditableData] = useState([]);
   const [processingInput, setProcessingInput] = useState(false);
+  const [selectedGoiThauId, setSelectedGoiThauId] = useState(null);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   // Fetch data from API
@@ -264,12 +265,14 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     setSearchTerm('');
   };
 
-  const handleReportClick = (type, title) => {
+  // Sửa hàm handleReportClick để nhận thêm goiThauId
+  const handleReportClick = (type, title, goiThauId = null) => {
     setReportType(type);
     setReportTitle(title);
     setShowReportForm(true);
     setReportData('');
     setReportDate(new Date().toISOString().split('T')[0]); // Set today's date as default
+    setSelectedGoiThauId(goiThauId);
   };
 
   // Xử lý input từ người dùng qua API AI
@@ -377,7 +380,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     
     try {
       const submitData = {
-        goiThauId: 38, // Có thể lấy từ projectId hoặc props
+        goiThauId: selectedGoiThauId, // Lấy từ state thay vì fix cứng
         ngayCapNhat: reportDate,
         duLieuTienDo: selectedData.map(item => ({
           ten_hang_muc: item.ten_hang_muc,
@@ -429,6 +432,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     setApiLoading(false);
     setEditableData([]);
     setProcessingInput(false);
+    setSelectedGoiThauId(null);
   };
 
   // Hàm loại bỏ xuống dòng và khoảng trống không cần thiết
@@ -531,6 +535,18 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                         <div className="font-semibold text-xs truncate">{pkg.tenGoiThau}</div>
                         <div className="text-xs text-gray-500">{pkg.phanTramHoanThanh}% hoàn thành</div>
                       </div>
+                      {/* Nút báo cáo thông minh riêng cho từng gói thầu */}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleReportClick('packages', `Báo cáo thông minh cho gói thầu GOI-${pkg.goiThauId}`, pkg.goiThauId);
+                        }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors ml-2"
+                        title={`Báo cáo thông minh cho gói thầu GOI-${pkg.goiThauId}`}
+                      >
+                        <FaChartLine className="text-xs" />
+                        Báo cáo
+                      </button>
                       {pkg.danhSachHangMuc?.length > 0 && (
                         <div
                           onClick={(e) => e.stopPropagation()}

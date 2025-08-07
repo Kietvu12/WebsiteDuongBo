@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
@@ -15,6 +16,7 @@ const authRoutes = require('./routes/auth.route');
 const nhathauRoutes = require('./routes/nhathau.route');
 const bcrypt = require('bcrypt');
 const { combine, timestamp, printf } = winston.format;
+// KML processing libraries removed - we only store file path now
 
 // 1. Cấu hình logging
 const logFormat = printf(({ level, message, timestamp }) => {
@@ -55,6 +57,9 @@ const port = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files từ thư mục uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // 1. Cấu hình CORS chi tiết
 app.use(cors({
@@ -180,54 +185,102 @@ async function checkDatabaseConnection() {
 }
 
 // 6. Middleware xử lý upload file
- // Tối đa 5 files
- function createUploadMiddleware(loaiDoiTuong) {
-  // Đảm bảo thư mục Uploads tồn tại
-  const uploadsRoot = path.join(__dirname, 'Uploads');
-  if (!fs.existsSync(uploadsRoot)) {
-    fs.mkdirSync(uploadsRoot, { recursive: true });
-  }
-
+function createUploadMiddleware(loaiDoiTuong, doiTuongID = 'temp') {
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      let folderPath;
-
-      if (ext === '.kml') {
-        folderPath = path.join(uploadsRoot, loaiDoiTuong.toUpperCase(), 'KML');
-      } else {
-        // Tạo thư mục tạm cho file không phải KML
-        folderPath = path.join(uploadsRoot, loaiDoiTuong.toUpperCase(), 'TEMP');
-      }
-
-      // Đảm bảo thư mục tồn tại
+      const folderPath = path.join(__dirname, 'uploads', loaiDoiTuong.toUpperCase(), String(doiTuongID));
+      
       if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true, mode: 0o755 });
+        fs.mkdirSync(folderPath, { recursive: true });
       }
 
       cb(null, folderPath);
     },
     filename: (req, file, cb) => {
       const ext = path.extname(file.originalname).toLowerCase();
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}${ext}`;
-      cb(null, uniqueName);
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      cb(null, filename);
     }
   });
 
   return multer({
-    storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 },
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
     fileFilter: (req, file, cb) => {
-      const allowedTypes = ['.kml', '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png'];
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip', '.kml'];
       const ext = path.extname(file.originalname).toLowerCase();
       
       if (allowedTypes.includes(ext)) {
         cb(null, true);
       } else {
-        cb(new Error(`Loại file ${ext} không được hỗ trợ`), false);
+        cb(new Error(`Loại file ${ext} không được hỗ trợ`));
       }
     }
-  }).array('files', 10);
+  }).array('files', 5); // Tối đa 5 files
+}
+
+// Hàm middleware upload động cho gói thầu - lưu tạm vào temp folder trước
+function createTempUploadMiddleware(loaiDoiTuong) {
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const tempFolderPath = path.join(__dirname, 'uploads', 'temp', loaiDoiTuong.toUpperCase());
+      
+      if (!fs.existsSync(tempFolderPath)) {
+        fs.mkdirSync(tempFolderPath, { recursive: true });
+      }
+
+      cb(null, tempFolderPath);
+    },
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const filename = `${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      cb(null, filename);
+    }
+  });
+
+  return multer({
+    storage,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+    fileFilter: (req, file, cb) => {
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png', '.zip', '.kml'];
+      const ext = path.extname(file.originalname).toLowerCase();
+      
+      if (allowedTypes.includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error(`Loại file ${ext} không được hỗ trợ`));
+      }
+    }
+  }).array('files', 5); // Tối đa 5 files
+}
+
+// Hàm helper để di chuyển file từ temp folder sang folder chính thức
+function moveFilesToFinalDestination(files, loaiDoiTuong, doiTuongID) {
+  const finalFolder = path.join(__dirname, 'uploads', loaiDoiTuong.toUpperCase(), String(doiTuongID));
+  
+  if (!fs.existsSync(finalFolder)) {
+    fs.mkdirSync(finalFolder, { recursive: true });
+  }
+
+  const movedFiles = [];
+  
+  for (const file of files) {
+    const newPath = path.join(finalFolder, file.filename);
+    try {
+      fs.renameSync(file.path, newPath);
+      movedFiles.push({
+        ...file,
+        path: newPath,
+        destination: finalFolder
+      });
+    } catch (error) {
+      console.error(`Error moving file ${file.filename}:`, error);
+      // Nếu không di chuyển được, giữ nguyên file ở temp
+      movedFiles.push(file);
+    }
+  }
+  
+  return movedFiles;
 }
 
 // 7. Health Check Endpoint
@@ -1344,10 +1397,10 @@ app.get('/goiThau/chiTiet/:goiThauId', async (req, res) => {
     // 2. Lấy danh sách nhà thầu liên quan
     let routeData = null;
     if (goiThau[0].PathData) {
-      // Nếu có KML: Parse JSON từ PathData
+      // Nếu có KML: Trả về đường dẫn file KML
       routeData = {
         type: 'kml',
-        path: JSON.parse(goiThau[0].PathData)
+        filePath: goiThau[0].PathData
       };
     } else {
       // Nếu không có KML: Dùng tọa độ đầu-cuối
@@ -2912,10 +2965,12 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
       donViTinh,
       moTaVuongMac,
       loaiVuongMac,
-      ghiChu
+      ghiChu,
+      nguoiBaoCaoId
     } = req.body;
 
     const ngayCapNhat = new Date().toISOString().split('T')[0];
+    
 
     // 1. Kiểm tra dữ liệu đầu vào
     if (!khoiLuongThucHien || isNaN(khoiLuongThucHien)) {
@@ -2962,12 +3017,29 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
     // 5. Xử lý vướng mắc nếu có
     let vuongMacId = null;
     if (moTaVuongMac && loaiVuongMac) {
+      // Kiểm tra người báo cáo có tồn tại không nếu có ID
+      if (nguoiBaoCaoId) {
+        const [nguoiDung] = await pool.query(
+          'SELECT * FROM taikhoan WHERE NguoiDungID = ?',
+          [nguoiBaoCaoId]
+        );
+        
+        if (nguoiDung.length === 0) {
+          await pool.query('ROLLBACK');
+          return res.status(400).json({
+            success: false,
+            message: 'Người báo cáo không tồn tại trong hệ thống'
+          });
+        }
+      }
+
       const [vuongMacResult] = await pool.query(
         `INSERT INTO vuongmac 
-         (KeHoachID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh, MucDo)
-         VALUES (?, ?, ?, ?, ?)`,
+         (KeHoachID, NguoiBaoCaoID, LoaiVuongMac, MoTaChiTiet, NgayPhatSinh, MucDo)
+         VALUES (?, ?, ?, ?, ?, ?)`,
         [
           keHoachId,
+          nguoiBaoCaoId,
           loaiVuongMac,
           moTaVuongMac,
           ngayCapNhat,
@@ -3000,7 +3072,7 @@ app.post('/kehoach/them-tiendo/:keHoachId', createUploadMiddleware('TIENDO'), as
             file.originalname,
             'KHAC',
             `/Uploads/TIENDO/${tienDoId}/${file.filename}`,
-            req.user?.userId || null,
+            nguoiBaoCaoId,
             ''
           ]
         );
@@ -3063,6 +3135,32 @@ app.get('/nhaThauList', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Đã xảy ra lỗi khi lấy danh sách nhà thầu'
+    });
+  }
+});
+app.get('/goiThau/:goiThauId/nhaThauList', async (req, res) => {
+  try {
+    const goiThauId = req.params.goiThauId;
+    
+    // Lấy danh sách nhà thầu tham gia gói thầu cùng với thông tin chi tiết từ bảng nhathau
+    const [results] = await pool.query(`
+      SELECT nt.*, gnt.VaiTro, gnt.ParentId 
+      FROM goithau_nhathau gnt
+      JOIN nhathau nt ON gnt.NhaThauID = nt.NhaThauID
+      WHERE gnt.GoiThau_ID = ?
+      ORDER BY nt.TenNhaThau ASC
+    `, [goiThauId]);
+    
+    res.json({
+      success: true,
+      data: results
+    });
+    
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách nhà thầu của gói thầu:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Đã xảy ra lỗi khi lấy danh sách nhà thầu của gói thầu'
     });
   }
 });
@@ -4334,107 +4432,168 @@ app.post('/duan/tao-moi', createUploadMiddleware('DUAN'), async (req, res) => {
     });
   }
 });
-app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res) => {
-  let transaction;
+app.post('/goithau/tao-moi', createTempUploadMiddleware('GOITHAU'), async (req, res) => {
   try {
-    transaction = await pool.getConnection();
-    await transaction.beginTransaction();
-
-    // Lấy dữ liệu từ body
-    const { body, files } = req;
     const {
-      TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
-      ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-      NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID,
-      LoaiHinh_ID, ThuocTinhValues
-    } = body;
+      TenGoiThau,
+      DuAn_ID,
+      GiaTriHĐ,
+      Km_BatDau,
+      Km_KetThuc,
+      ToaDo_BatDau_X,
+      ToaDo_BatDau_Y,
+      ToaDo_KetThuc_X,
+      ToaDo_KetThuc_Y,
+      NgayKhoiCong,
+      NgayHoanThanh,
+      TrangThai,
+      NhaThauID,
+      LoaiHinh_ID,
+      ThuocTinhValues
+    } = req.body;
 
-    // 1. Xử lý file KML
-    let kmlFilePath = null;
-    const kmlFile = files?.find(f => path.extname(f.originalname).toLowerCase() === '.kml');
+    // Start transaction
+    await pool.query('START TRANSACTION');
 
-    if (kmlFile) {
-      // Di chuyển file KML từ thư mục TEMP sang thư mục chính thức
-      const kmlFolder = path.join(__dirname, 'Uploads', 'GOITHAU', 'KML');
-      if (!fs.existsSync(kmlFolder)) {
-        fs.mkdirSync(kmlFolder, { recursive: true });
-      }
-
-      const newKmlPath = path.join(kmlFolder, kmlFile.filename);
-      fs.renameSync(kmlFile.path, newKmlPath);
-      
-      kmlFilePath = `/Uploads/GOITHAU/KML/${kmlFile.filename}`;
-      console.log('Đã lưu file KML tại:', kmlFilePath); // Log kiểm tra
-    }
-
-    // 2. Thêm gói thầu vào database
-    const [goiThauResult] = await transaction.query(
+    // 1. Insert main tender package info (không có PathData trước)
+    const [goiThauResult] = await pool.query(
       `INSERT INTO goithau (
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, PathData
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
-        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID, kmlFilePath
+        NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
       ]
     );
 
     const GoiThau_ID = goiThauResult.insertId;
 
-    // 3. Xử lý các file không phải KML
-    const otherFiles = files?.filter(f => f !== kmlFile) || [];
+    // 2. Di chuyển tất cả file từ temp folder sang folder chính thức theo GoiThau_ID
+    let pathData = null;
     const taiLieuResults = [];
+    
+    if (req.files && req.files.length > 0) {
+      // Di chuyển tất cả file từ temp sang folder chính thức
+      const movedFiles = moveFilesToFinalDestination(req.files, 'GOITHAU', GoiThau_ID);
+      
+      // Xử lý từng file
+      for (const file of movedFiles) {
+        const ext = path.extname(file.originalname).toLowerCase();
+        
+        // Xử lý file KML đặc biệt
+        if (ext === '.kml') {
+          try {
+            pathData = `/uploads/GOITHAU/${GoiThau_ID}/${file.filename}`;
+            
+            // Cập nhật PathData trong database
+            await pool.query(
+              'UPDATE goithau SET PathData = ? WHERE GoiThau_ID = ?',
+              [pathData, GoiThau_ID]
+            );
+            
+            logger.info(`KML file saved to: ${pathData}`);
+          } catch (error) {
+            console.error('Lỗi xử lý KML ở back-end:', error);
+            // Vẫn tiếp tục xử lý dù KML lỗi
+          }
+        } else {
+          // Xử lý các file khác (không phải KML)
+          try {
+            const [fileResult] = await pool.query(
+              `INSERT INTO tailieu (
+                LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
+                DuongDan, NguoiUpload, MoTa
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+              [
+                'GOITHAU',
+                GoiThau_ID,
+                file.originalname,
+                'KHAC',
+                `/uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
+                req.user?.userId || null,
+                ''
+              ]
+            );
 
-    if (otherFiles.length > 0) {
-      const finalFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
-      if (!fs.existsSync(finalFolder)) {
-        fs.mkdirSync(finalFolder, { recursive: true });
+            taiLieuResults.push({
+              taiLieuID: fileResult.insertId,
+              tenTaiLieu: file.originalname,
+              duongDan: `/uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
+            });
+          } catch (error) {
+            console.error('Lỗi lưu thông tin tài liệu:', error);
+          }
+        }
       }
+    }
 
-      for (const file of otherFiles) {
-        const finalPath = path.join(finalFolder, file.filename);
-        fs.renameSync(file.path, finalPath);
+    // 3. Insert contractors into goithau_nhathau table
+    // Xử lý danh sách nhà thầu từ frontend (bao gồm nhà thầu chính và phụ)
+    let nhaThauData = [];
+    try {
+      console.log('=== DEBUG NhaThauData ===');
+      console.log('req.body.NhaThauData:', req.body.NhaThauData);
+      console.log('req.body.NhaThauID:', req.body.NhaThauID);
+      console.log('Type of NhaThauData:', typeof req.body.NhaThauData);
+      
+      if (req.body.NhaThauData) {
+        nhaThauData = JSON.parse(req.body.NhaThauData);
+        console.log('Parsed NhaThauData:', nhaThauData);
+      } else if (NhaThauID) {
+        // Fallback cho trường hợp cũ - chỉ có 1 nhà thầu chính
+        nhaThauData = [{ NhaThauID: NhaThauID, VaiTro: 'Nhà thầu chính', ParentId: null }];
+        console.log('Fallback NhaThauData:', nhaThauData);
+      }
+    } catch (error) {
+      console.error('Lỗi parse NhaThauData:', error);
+      if (NhaThauID) {
+        nhaThauData = [{ NhaThauID: NhaThauID, VaiTro: 'Nhà thầu chính', ParentId: null }];
+      }
+    }
 
-        const [fileResult] = await transaction.query(
-          `INSERT INTO tailieu (
-            LoaiDoiTuong, DoiTuongID, TenTaiLieu, LoaiTaiLieu,
-            DuongDan, NguoiUpload, MoTa
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            'GOITHAU', GoiThau_ID, file.originalname,
-            path.extname(file.originalname).substring(1).toUpperCase(),
-            `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
-            req.user?.userId || null, ''
-          ]
+    console.log('Final NhaThauData to insert:', nhaThauData);
+    console.log('Number of contractors to insert:', nhaThauData.length);
+
+    // Thêm tất cả nhà thầu vào bảng goithau_nhathau
+    let insertCount = 0;
+    for (const nhaThau of nhaThauData) {
+      console.log(`Inserting contractor ${insertCount + 1}:`, {
+        GoiThau_ID,
+        NhaThauID: nhaThau.NhaThauID,
+        VaiTro: nhaThau.VaiTro,
+        ParentId: nhaThau.ParentId
+      });
+      
+      try {
+        const result = await pool.query(
+          'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro, ParentId) VALUES (?, ?, ?, ?)',
+          [GoiThau_ID, nhaThau.NhaThauID, nhaThau.VaiTro, nhaThau.ParentId]
         );
-
-        taiLieuResults.push({
-          taiLieuID: fileResult.insertId,
-          tenTaiLieu: file.originalname,
-          duongDan: `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
-        });
+        
+        console.log(`Insert result ${insertCount + 1}:`, result);
+        insertCount++;
+      } catch (insertError) {
+        console.error(`Error inserting contractor ${insertCount + 1}:`, insertError);
+        throw insertError;
       }
     }
+    
+    console.log(`Total contractors inserted: ${insertCount}`);
 
-    // 4. Các xử lý khác (nhà thầu, loại hình, thuộc tính)
-    if (NhaThauID) {
-      await transaction.query(
-        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
-        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
-      );
-    }
-
+    // 4. Link tender package to its type
     if (LoaiHinh_ID) {
-      await transaction.query(
+      await pool.query(
         'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, "goithau", ?)',
         [GoiThau_ID, LoaiHinh_ID]
       );
 
+      // 5. Insert attribute values if provided
       if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
         for (const [ThuocTinh_ID, GiaTri] of Object.entries(ThuocTinhValues)) {
-          await transaction.query(
+          await pool.query(
             `INSERT INTO giatrithuoctinh 
             (ThuocTinh_ID, DoiTuong_ID, LoaiDoiTuong, GiaTri)
             VALUES (?, ?, "goithau", ?)`,
@@ -4444,50 +4603,43 @@ app.post('/goithau/tao-moi', createUploadMiddleware('GOITHAU'), async (req, res)
       }
     }
 
-    await transaction.commit();
+    // Commit transaction
+    await pool.query('COMMIT');
+
     res.json({
       success: true,
-      message: 'Tạo gói thầu thành công',
+      message: 'Tạo gói thầu mới thành công',
       data: {
         GoiThau_ID,
-        kmlFilePath,
-        taiLieu: taiLieuResults
+        LoaiHinh_ID,
+        ThuocTinhValues,
+        taiLieu: taiLieuResults,
+        kmlPath: pathData
       }
     });
 
   } catch (error) {
-    if (transaction) await transaction.rollback();
+    await pool.query('ROLLBACK');
     
-    // Xóa các file đã upload nếu có lỗi
-    if (req.files?.length) {
+    // Clean up uploaded files if error occurs
+    if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
         try {
           if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         } catch (err) {
-          console.error('Lỗi khi xóa file tạm:', err);
+          console.error('Error deleting file:', err);
         }
       });
     }
 
-    console.error('Lỗi khi tạo gói thầu:', error);
+    console.error('Error creating tender package:', error);
     res.status(500).json({
       success: false,
       message: 'Lỗi hệ thống khi tạo gói thầu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
-  } finally {
-    if (transaction) transaction.release();
   }
 });
-
-// 3. Cấu hình phục vụ file tĩnh
-app.use('/Uploads', express.static(path.join(__dirname, 'Uploads'), {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.kml')) {
-      res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml');
-    }
-  }
-}));
 app.delete('/goithau/xoa/:GoiThau_ID', async (req, res) => {
   try {
     const { GoiThau_ID } = req.params;
@@ -4713,7 +4865,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
 
     // 7. Xử lý file tải lên mới
     if (req.files && req.files.length > 0) {
-      const newFolder = path.join(__dirname, 'Uploads', 'GOITHAU', String(GoiThau_ID));
+      const newFolder = path.join(__dirname, 'uploads', 'GOITHAU', String(GoiThau_ID));
       if (!fs.existsSync(newFolder)) {
         fs.mkdirSync(newFolder, { recursive: true });
       }
@@ -4732,7 +4884,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
             GoiThau_ID,
             file.originalname,
             'KHAC',
-            `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
+            `/uploads/GOITHAU/${GoiThau_ID}/${file.filename}`,
             req.user?.userId || null,
             ''
           ]
@@ -4741,7 +4893,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
         taiLieuResults.push({
           taiLieuID: fileResult.insertId,
           tenTaiLieu: file.originalname,
-          duongDan: `/Uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
+          duongDan: `/uploads/GOITHAU/${GoiThau_ID}/${file.filename}`
         });
       }
     }
@@ -5313,11 +5465,32 @@ app.post('/kehoach/tao-moi', createUploadMiddleware('KEHOACH'), async (req, res)
       [GoiThauID, NhaThauID]
     );
 
-    // 3. Nếu chưa tồn tại thì thêm vào bảng goithau_nhathau với vai trò "Nhà thầu phụ"
+    // 3. Nếu chưa tồn tại thì thêm vào bảng goithau_nhathau
+    // Kiểm tra xem nhà thầu này có phải là nhà thầu chính không (ParentId = null)
+    // Nếu không thì tìm nhà thầu chính để làm ParentId
     if (existingRows.length === 0) {
+      // Tìm nhà thầu chính đầu tiên trong gói thầu này (ParentId = null)
+      const [mainContractorRows] = await pool.query(
+        'SELECT NhaThauID FROM goithau_nhathau WHERE GoiThau_ID = ? AND ParentId IS NULL LIMIT 1',
+        [GoiThauID]
+      );
+
+      let parentId = null;
+      let vaiTro = 'Nhà thầu phụ';
+
+      // Nếu có nhà thầu chính, thì nhà thầu mới sẽ là nhà thầu phụ
+      if (mainContractorRows.length > 0) {
+        parentId = mainContractorRows[0].NhaThauID;
+        vaiTro = 'Nhà thầu phụ';
+      } else {
+        // Nếu chưa có nhà thầu chính nào, thì nhà thầu này sẽ là nhà thầu chính
+        parentId = null;
+        vaiTro = 'Nhà thầu chính';
+      }
+
       await pool.query(
-        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
-        [GoiThauID, NhaThauID, 'Nhà thầu phụ']
+        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro, ParentId) VALUES (?, ?, ?, ?)',
+        [GoiThauID, NhaThauID, vaiTro, parentId]
       );
     }
 
@@ -5600,7 +5773,8 @@ app.post('/vuongmac/tao-moi', async (req, res) => {
       NgayPhatSinh,
       NgayKetThuc,
       MucDo,
-      BienPhapXuLy
+      BienPhapXuLy,
+      nguoiBaoCaoId
     } = req.body;
 
     // Validate required fields
@@ -5968,3 +6142,4 @@ module.exports = {
   logger,
   createUploadMiddleware
 };
+
