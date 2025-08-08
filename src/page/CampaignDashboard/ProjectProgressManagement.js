@@ -414,8 +414,171 @@ const ProjectProgressManagement = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      {/* Cards (Mobile) */}
+      <div className="md:hidden space-y-4 px-4 mb-4">
+        {currentItems.map((item, index) => (
+          <div key={item.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {/* Header Card */}
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-500">#{((currentPage - 1) * itemsPerPage + index + 1)}</span>
+                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                    {item.contractorType}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {/* Pin icon */}
+                  <button 
+                    className="p-1 hover:bg-gray-200 rounded transition-colors" 
+                    title="Ghim"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Xử lý logic ghim
+                    }}
+                  >
+                    <img src={pin} alt="Pin" className="w-4 h-4" />
+                  </button>
+
+                  {/* Toggle menu */}
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleActionMenu(item.id);
+                      }}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                      title="Thêm thao tác"
+                    >
+                      <FaEllipsisH className="w-4 h-4" />
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {openActionMenus[item.id] && (
+                      <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div className="py-1">
+                          <button
+                            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActionMenu(item.id);
+                            }}
+                          >
+                            <img src={attachment} alt="Attachment" className="w-4 h-4 mr-2" />
+                            Đính kèm
+                          </button>
+                          <button
+                            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActionMenu(item.id);
+                            }}
+                          >
+                            <img src={edit} alt="Edit" className="w-4 h-4 mr-2" />
+                            Chỉnh sửa
+                          </button>
+                          <button
+                            className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleActionMenu(item.id);
+                            }}
+                          >
+                            <img src={trash} alt="Delete" className="w-4 h-4 mr-2" />
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Card */}
+            <div className="px-4 py-3 space-y-3">
+              {/* Tên gói thầu */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tên gói thầu</label>
+                <p className="text-sm text-gray-900 mt-1">{item.packageName}</p>
+              </div>
+
+              {/* Tên nhà thầu */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tên nhà thầu</label>
+                <p className="text-sm text-gray-900 mt-1">{item.contractorName}</p>
+              </div>
+
+              {/* Loại nhà thầu */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Loại nhà thầu</label>
+                <div className="mt-1">
+                  {renderContractorTypeBadge(item.contractorType, item.mainContractorOf)}
+                </div>
+              </div>
+
+              {/* Số lượng kế hoạch */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Số lượng kế hoạch</label>
+                <div className="mt-1">
+                  <button
+                    onClick={() => openPlanModal(item)}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors cursor-pointer"
+                    title="Xem danh sách kế hoạch"
+                  >
+                    {item.planCount} kế hoạch
+                  </button>
+                </div>
+              </div>
+
+              {/* Tiến độ */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tiến độ</label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Hoàn thành:</span>
+                    {renderPercentBadge(item.completedPercent, 'completed')}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Chậm tiến độ:</span>
+                    {renderPercentBadge(item.delayedPercent, 'delayed')}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Đang làm:</span>
+                    {renderPercentBadge(item.inProgressPercent, 'inProgress')}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pagination (Mobile) */}
+      <div className="md:hidden bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+        <div className="flex-1 flex justify-between">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            Trước
+          </button>
+          <span className="px-4 py-2 text-sm text-gray-700">
+            Trang {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+          >
+            Sau
+          </button>
+        </div>
+      </div>
+
+      {/* Table (Desktop) */}
+      <div className="hidden md:block bg-white shadow-sm rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -562,7 +725,7 @@ const ProjectProgressManagement = () => {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination (Desktop) */}
         <div className="bg-white px-4 md:px-6 py-3 flex items-center justify-between border-t border-gray-200">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
