@@ -24,6 +24,7 @@ import ConstructorProgress from './page/ConstructorProgress/ConstructorProgress'
 import { useState } from 'react';
 import AccountSetting from './page/AccountSetting/AccountSetting';
 import ContractorDashboard from './page/CampaignDashboard/CampaignDashboard';
+import ProjectProgressManagement from './page/CampaignDashboard/ProjectProgressManagement';
 // Tạo một layout chứa sidebar
 const LayoutWithSidebar = ({ children }) => {
   return (
@@ -315,10 +316,17 @@ function App() {
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />
-          <Route path='/constructor-progress' element={
+          <Route path='/contractor-progress' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
-                <ConstructorProgress />
+                <ProjectProgressManagement />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
+          <Route path='/project-progress-management' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <ProjectProgressManagement />
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />

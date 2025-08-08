@@ -617,7 +617,7 @@ app.get('/nhaThauFullList', async (req, res) => {
       });
     }
 
-    // 2. Lấy thông tin gói thầu, hạng mục và kế hoạch cho từng nhà thầu
+    // 2. Lấy thông tin gói thầu, hạng mục, kế hoạch và dự án cho từng nhà thầu
     const result = await Promise.all(nhaThauList.map(async (nhaThau) => {
       const nhaThauId = nhaThau.NhaThauID;
 
@@ -633,7 +633,18 @@ app.get('/nhaThauFullList', async (req, res) => {
         WHERE gn.NhaThauID = ?
       `, [nhaThauId]);
 
-      // 2.2. Lấy danh sách hạng mục tham gia
+      // 2.2. Lấy danh sách dự án tham gia (distinct để loại bỏ trùng lặp)
+      const [duAnList] = await pool.query(`
+        SELECT DISTINCT
+          d.*
+        FROM duan d
+        JOIN goithau g ON d.DuAnID = g.DuAn_ID
+        JOIN goithau_nhathau gn ON g.GoiThau_ID = gn.GoiThau_ID
+        WHERE gn.NhaThauID = ?
+        ORDER BY d.TenDuAn ASC
+      `, [nhaThauId]);
+
+      // 2.3. Lấy danh sách hạng mục tham gia
       const [hangMucList] = await pool.query(`
         SELECT 
           hm.*,
@@ -647,7 +658,7 @@ app.get('/nhaThauFullList', async (req, res) => {
         )
       `, [nhaThauId]);
 
-      // 2.3. Lấy danh sách kế hoạch tham gia
+      // 2.4. Lấy danh sách kế hoạch tham gia
       const [keHoachList] = await pool.query(`
         SELECT 
           kh.*,
@@ -661,14 +672,16 @@ app.get('/nhaThauFullList', async (req, res) => {
         WHERE kh.NhaThauID = ?
       `, [nhaThauId]);
 
-      // 2.4. Thống kê tổng quan
+      // 2.5. Thống kê tổng quan
       const [thongKe] = await pool.query(`
         SELECT 
           COUNT(DISTINCT g.GoiThau_ID) AS tongGoiThau,
+          COUNT(DISTINCT d.DuAnID) AS tongDuAn,
           COUNT(DISTINCT hm.HangMucID) AS tongHangMuc,
           COUNT(DISTINCT kh.KeHoachID) AS tongKeHoach
         FROM goithau_nhathau gn
         LEFT JOIN goithau g ON gn.GoiThau_ID = g.GoiThau_ID
+        LEFT JOIN duan d ON g.DuAn_ID = d.DuAnID
         LEFT JOIN hangmuc hm ON g.GoiThau_ID = hm.GoiThauID
         LEFT JOIN quanlykehoach kh ON (hm.HangMucID = kh.HangMucID AND kh.NhaThauID = ?)
         WHERE gn.NhaThauID = ?
@@ -677,6 +690,7 @@ app.get('/nhaThauFullList', async (req, res) => {
       return {
         ...nhaThau,
         thongKe: thongKe[0],
+        danhSachDuAn: duAnList, // Thêm danh sách dự án vào kết quả
         danhSachGoiThau: goiThauList,
         danhSachHangMuc: hangMucList,
         danhSachKeHoach: keHoachList

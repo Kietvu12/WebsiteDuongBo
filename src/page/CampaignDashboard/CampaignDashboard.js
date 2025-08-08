@@ -17,7 +17,8 @@ import {
   FaFileContract,
   FaCalendarAlt,
   FaClipboardList,
-  FaSearch
+  FaSearch,
+  FaTimes
 } from 'react-icons/fa';
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
@@ -41,6 +42,12 @@ const ContractorDashboard = () => {
   const { logout, user} = useProject();
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarRef = useRef(null);
+  
+  // State cho modal hiển thị dữ liệu
+  const [showDataModal, setShowDataModal] = useState(false);
+  const [modalDataType, setModalDataType] = useState(''); // 'duAn', 'goiThau', 'hangMuc', 'keHoach'
+  const [modalData, setModalData] = useState([]);
+  const [selectedContractor, setSelectedContractor] = useState(null);
   const mergedProvinces = [
     "Thành phố Hà Nội",
     "Thành phố Huế",
@@ -90,7 +97,7 @@ const ContractorDashboard = () => {
                     emailCount: 1,
                     metrics: {
                       duAn: {
-                        value: contractor.thongKe?.tongGoiThau || 0,
+                        value: contractor.danhSachDuAn?.length || 0,
                         timeframe: "Tổng số dự án"
                       },
                       goiThau: {
@@ -161,8 +168,201 @@ const ContractorDashboard = () => {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  const renderMetric = (metricData, label) => (
-    <div className="text-center p-1 sm:p-2">
+  // Hàm xử lý khi bấm vào tab dữ liệu
+  const handleDataTabClick = (contractor, dataType) => {
+    setSelectedContractor(contractor);
+    setModalDataType(dataType);
+    
+    let data = [];
+    switch (dataType) {
+      case 'duAn':
+        data = contractor.danhSachDuAn || [];
+        break;
+      case 'goiThau':
+        data = contractor.danhSachGoiThau || [];
+        break;
+      case 'hangMuc':
+        data = contractor.danhSachHangMuc || [];
+        break;
+      case 'keHoach':
+        data = contractor.danhSachKeHoach || [];
+        break;
+      default:
+        data = [];
+    }
+    
+    setModalData(data);
+    setShowDataModal(true);
+  };
+
+  // Hàm đóng modal
+  const closeDataModal = () => {
+    setShowDataModal(false);
+    setModalData([]);
+    setSelectedContractor(null);
+    setModalDataType('');
+  };
+
+  // Hàm lấy tiêu đề modal
+  const getModalTitle = () => {
+    if (!selectedContractor) return '';
+    
+    const titles = {
+      'duAn': 'Danh sách dự án',
+      'goiThau': 'Danh sách gói thầu', 
+      'hangMuc': 'Danh sách hạng mục',
+      'keHoach': 'Danh sách kế hoạch'
+    };
+    
+    return `${titles[modalDataType]} - ${selectedContractor.TenNhaThau}`;
+  };
+
+  // Hàm render header cho bảng dữ liệu
+  const renderTableHeaders = () => {
+    switch (modalDataType) {
+      case 'duAn':
+        return (
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên dự án</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tỉnh thành</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chủ đầu tư</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày khởi công</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiến độ (%)</th>
+          </tr>
+        );
+      case 'goiThau':
+        return (
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên gói thầu</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Km bắt đầu</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Km kết thúc</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày khởi công</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tiến độ (%)</th>
+          </tr>
+        );
+      case 'hangMuc':
+        return (
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên hạng mục</th>
+
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gói thầu</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dự án</th>
+          </tr>
+        );
+      case 'keHoach':
+        return (
+          <tr className="bg-gray-50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên công tác</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khối lượng</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đơn vị</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày bắt đầu</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày kết thúc</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hạng mục</th>
+          </tr>
+        );
+      default:
+        return null;
+    }
+  };
+
+  // Hàm render dữ liệu cho bảng
+  const renderTableData = () => {
+    return modalData.map((item, index) => {
+      switch (modalDataType) {
+        case 'duAn':
+          return (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+              <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={item.TenDuAn}>
+                {item.TenDuAn}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.TinhThanh}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.ChuDauTu}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">
+                {item.NgayKhoiCong ? new Date(item.NgayKhoiCong).toLocaleDateString('vi-VN') : '-'}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  item.TrangThai === 'Đang chuẩn bị' ? 'bg-yellow-100 text-yellow-800' :
+                  item.TrangThai === 'Đang thi công' ? 'bg-blue-100 text-blue-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {item.TrangThai}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.PhanTramHoanThanh}%</td>
+            </tr>
+          );
+        case 'goiThau':
+          return (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+              <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={item.TenGoiThau}>
+                {item.TenGoiThau}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.Km_BatDau}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.Km_KetThuc}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">
+                {item.NgayKhoiCong ? new Date(item.NgayKhoiCong).toLocaleDateString('vi-VN') : '-'}
+              </td>
+              <td className="px-4 py-3 text-sm">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  item.TrangThai === 'Đang chuẩn bị' ? 'bg-yellow-100 text-yellow-800' :
+                  item.TrangThai === 'Đang thi công' ? 'bg-blue-100 text-blue-800' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {item.TrangThai}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.PhanTramHoanThanh}%</td>
+            </tr>
+          );
+        case 'hangMuc':
+          return (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+              <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={item.TenHangMuc}>
+                {item.TenHangMuc}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={item.TenGoiThau}>
+                {item.TenGoiThau}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={item.TenDuAn}>
+                {item.TenDuAn}
+              </td>
+            </tr>
+          );
+        case 'keHoach':
+          return (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+              <td className="px-4 py-3 text-sm text-gray-900 max-w-xs truncate" title={item.TenCongTac}>
+                {item.TenCongTac}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.KhoiLuongKeHoach?.toLocaleString()}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">{item.DonViTinh}</td>
+              <td className="px-4 py-3 text-sm text-gray-700">
+                {item.NgayBatDau ? new Date(item.NgayBatDau).toLocaleDateString('vi-VN') : '-'}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700">
+                {item.NgayKetThuc ? new Date(item.NgayKetThuc).toLocaleDateString('vi-VN') : '-'}
+              </td>
+              <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={item.TenHangMuc}>
+                {item.TenHangMuc}
+              </td>
+            </tr>
+          );
+        default:
+          return null;
+      }
+    });
+  };
+
+  // Hàm render một metric có thể click để mở modal dữ liệu
+  const renderMetric = (contractor, metricData, label, dataType) => (
+    <div 
+      className="text-center p-1 sm:p-2 cursor-pointer hover:bg-gray-50 rounded transition-colors duration-200"
+      onClick={() => handleDataTabClick(contractor, dataType)}
+      title={`Xem ${label.toLowerCase()} của ${contractor.TenNhaThau || 'nhà thầu'}`}
+    >
       <div className="font-bold text-lg sm:text-xl text-gray-900">{metricData.value}</div>
       <div className="text-xs sm:text-sm text-gray-700 capitalize">{label}</div>
       <div className="text-xs text-gray-500 hidden sm:block">{metricData.timeframe}</div>
@@ -221,7 +421,7 @@ const ContractorDashboard = () => {
         emailCount: 1,
         metrics: {
           duAn: {
-            value: contractor.thongKe?.tongGoiThau || 0,
+            value: contractor.danhSachDuAn?.length || 0,
             timeframe: "Tổng số dự án"
           },
           goiThau: {
@@ -508,10 +708,10 @@ const ContractorDashboard = () => {
                   {/* Metrics Section with borders */}
                   <div className="border-t border-b border-gray-200 py-2 sm:py-4 mb-2 sm:mb-4">
                     <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-200">
-                      {renderMetric(contractor.metrics.duAn, 'Dự án')}
-                      {renderMetric(contractor.metrics.goiThau, 'Gói thầu')}
-                      {renderMetric(contractor.metrics.hangMuc, 'Hạng mục')}
-                      {renderMetric(contractor.metrics.keHoach, 'Kế hoạch')}
+                      {renderMetric(contractor, contractor.metrics.duAn, 'Dự án', 'duAn')}
+                      {renderMetric(contractor, contractor.metrics.goiThau, 'Gói thầu', 'goiThau')}
+                      {renderMetric(contractor, contractor.metrics.hangMuc, 'Hạng mục', 'hangMuc')}
+                      {renderMetric(contractor, contractor.metrics.keHoach, 'Kế hoạch', 'keHoach')}
                     </div>
                   </div>
                   {/* Status & Actions Section */}
@@ -655,6 +855,60 @@ const ContractorDashboard = () => {
             <div className="flex justify-end gap-2 mt-4">
               <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 bg-gray-200 rounded">Hủy</button>
               <button onClick={handleConfirmDelete} className="px-4 py-2 bg-red-600 text-white rounded">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal hiển thị dữ liệu */}
+      {showDataModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900">{getModalTitle()}</h3>
+              <button
+                onClick={closeDataModal}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {modalData.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-400 text-lg mb-2">Không có dữ liệu</div>
+                  <div className="text-gray-500 text-sm">Chưa có {modalDataType === 'duAn' ? 'dự án' : 
+                    modalDataType === 'goiThau' ? 'gói thầu' : 
+                    modalDataType === 'hangMuc' ? 'hạng mục' : 'kế hoạch'} nào</div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      {renderTableHeaders()}
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {renderTableData()}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+              <div className="text-sm text-gray-600">
+                Tổng cộng: <span className="font-semibold">{modalData.length}</span> bản ghi
+              </div>
+              <button
+                onClick={closeDataModal}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>

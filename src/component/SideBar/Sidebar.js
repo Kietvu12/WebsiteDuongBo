@@ -279,7 +279,8 @@ const Sidebar = () => {
                 label: 'Nhà thầu thi công',
                 submenu: [
                   { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') },
-                  { label: 'Quản lý danh sách nhà thầu', onClick: () => handleSimpleNavigation('/contractor-dashboard') }
+                  { label: 'Quản lý danh sách nhà thầu', onClick: () => handleSimpleNavigation('/contractor-dashboard') },
+                  { label: 'Quản lý tiến độ dự án', onClick: () => handleSimpleNavigation('/project-progress-management') }
                 ],
               },
               {
