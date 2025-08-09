@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Test Route</name>
+    <Placemark>
+      <name>Đường Bắc Nam Test</name>
+      <styleUrl>#lineStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>
+            104.8670,21.7056,0
+            105.0166,21.5962,0
+            105.3774,21.3628,0
+            105.5942,21.0285,0
+            105.6875,20.7633,0
+            105.8780,20.5382,0
+            105.9902,20.3547,0
+            106.0241,20.1840,0
+            106.0234,20.0700,0
+            105.8919,19.9000,0
+            105.7710,19.7600,0
+            105.6016,19.6000,0
+            105.4973,19.4600,0
+            105.3760,19.3400,0
+            105.2911,19.2443,0
+            105.2360,19.2013,0
+            105.2297,19.8079,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>

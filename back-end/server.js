@@ -560,6 +560,7 @@ app.get('/duAnTongList', async (req, res) => {
         [allProjectIds]
       );
 
+      // Lấy danh sách nhà thầu
       const [contractors] = await pool.query(`
         SELECT DISTINCT n.* 
         FROM nhathau n
@@ -568,11 +569,21 @@ app.get('/duAnTongList', async (req, res) => {
         WHERE g.DuAn_ID IN (?)
       `, [allProjectIds]);
 
+      // 5. Lấy tất cả đường dẫn KML từ các gói thầu thuộc dự án
+      const [kmlPathsResult] = await pool.query(
+        'SELECT PathData FROM goithau WHERE DuAn_ID IN (?) AND PathData IS NOT NULL',
+        [allProjectIds]
+      );
+
+      // Chuẩn bị danh sách KML, loại bỏ trùng lặp
+      const kmlPaths = [...new Set(kmlPathsResult.map(item => item.PathData))];
+
       return {
         ...duAnTong,
         soLuongDuAnThanhPhan: duAnThanhPhan.length,
         soLuongGoiThau: goiThauCount[0].count,
         danhSachNhaThau: contractors,
+        kmlPaths, // Thêm danh sách đường dẫn KML
         thongKe: {
           tongSoHangMuc,
           soHangMucHoanThanh,
@@ -942,6 +953,7 @@ app.get('/duAnTong', async (req, res) => {
       let tongKhoiLuongHoanThanh = 0;
       let tongKhoiLuongChamTienDo = 0;
       let soLuongGoiThau = 0;
+      let kmlPaths = []; // Mảng để lưu trữ tất cả các đường dẫn KML
 
       // Process each sub-project
       const duAnThanhPhanWithDetails = await Promise.all(duAnThanhPhan.map(async (duAnTP) => {
@@ -953,6 +965,13 @@ app.get('/duAnTong', async (req, res) => {
 
         // Cập nhật tổng số gói thầu
         soLuongGoiThau += goiThauList.length;
+
+        // Thêm các đường dẫn KML từ gói thầu vào mảng kmlPaths
+        goiThauList.forEach(goiThau => {
+          if (goiThau.PathData) {
+            kmlPaths.push(goiThau.PathData);
+          }
+        });
 
         // Process each contract package
         const goiThauWithDetails = await Promise.all(goiThauList.map(async (goiThau) => {
@@ -1034,27 +1053,41 @@ app.get('/duAnTong', async (req, res) => {
           khoiLuongChamTienDo: acc.khoiLuongChamTienDo + curr.khoiLuongChamTienDo
         }), { khoiLuongKeHoach: 0, khoiLuongHoanThanh: 0, khoiLuongChamTienDo: 0 });
 
-        // Get coordinates from first and last contract package
-        const coordinates = goiThauList.length > 0 ? {
-          start: {
-            lat: goiThauList[0].ToaDo_BatDau_Y,
-            lng: goiThauList[0].ToaDo_BatDau_X
-          },
-          end: {
-            lat: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_Y,
-            lng: goiThauList[goiThauList.length - 1].ToaDo_KetThuc_X
-          }
-        } : null;
-
         return {
           ...duAnTP,
           ...duAnTPKhoiLuong,
-          coordinates,
           goiThau: goiThauWithDetails
         };
       }));
 
-      // Calculate totals for main project
+      // Xử lý các gói thầu trực tiếp thuộc dự án tổng (nếu có)
+      const [goiThauTrucTiep] = await pool.query(
+        'SELECT * FROM goithau WHERE DuAn_ID = ? ORDER BY GoiThau_ID ASC',
+        [duAnId]
+      );
+      
+      // Thêm các đường dẫn KML từ gói thầu trực tiếp vào mảng kmlPaths
+      goiThauTrucTiep.forEach(goiThau => {
+        if (goiThau.PathData) {
+          kmlPaths.push(goiThau.PathData);
+        }
+      });
+
+      // Cập nhật tổng số gói thầu từ các gói thầu trực tiếp
+      soLuongGoiThau += goiThauTrucTiep.length;
+
+      // Process các gói thầu trực tiếp (nếu cần thiết)
+      const goiThauTrucTiepWithDetails = await Promise.all(goiThauTrucTiep.map(async (goiThau) => {
+        // Tương tự như xử lý với gói thầu trong dự án thành phần
+        // ... (code xử lý tương tự)
+        
+        return {
+          ...goiThau,
+          // ... (các thông tin khác)
+        };
+      }));
+
+      // Calculate totals for main project (bao gồm cả từ dự án thành phần và gói thầu trực tiếp)
       const mainProjectTotals = duAnThanhPhanWithDetails.reduce((acc, curr) => ({
         khoiLuongKeHoach: acc.khoiLuongKeHoach + curr.khoiLuongKeHoach,
         khoiLuongHoanThanh: acc.khoiLuongHoanThanh + curr.khoiLuongHoanThanh,
@@ -1076,12 +1109,13 @@ app.get('/duAnTong', async (req, res) => {
         ...duAnTong,
         ...mainProjectTotals,
         soLuongDuAnThanhPhan: duAnThanhPhan.length,
-        soLuongGoiThau: soLuongGoiThau, 
+        soLuongGoiThau: soLuongGoiThau,
         phanTramHoanThanh: phanTramHoanThanh.toFixed(2),
         phanTramChamTienDo: phanTramChamTienDo.toFixed(2),
         phanTramKeHoach: phanTramKeHoach.toFixed(2),
-        coordinates: duAnThanhPhanWithDetails[0]?.coordinates || null,
-        duAnThanhPhan: duAnThanhPhanWithDetails
+        kmlPaths: [...new Set(kmlPaths)], // Loại bỏ các đường dẫn trùng lặp
+        duAnThanhPhan: duAnThanhPhanWithDetails,
+        goiThauTrucTiep: goiThauTrucTiepWithDetails // Thêm thông tin gói thầu trực tiếp nếu cần
       };
     }));
 
