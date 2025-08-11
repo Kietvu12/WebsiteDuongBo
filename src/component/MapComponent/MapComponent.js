@@ -86,7 +86,12 @@ const MapController = ({ allRoutes }) => {
       try {
         const validCoords = allRoutes
           .flat()
-          .filter((coord) => Array.isArray(coord) && coord.length === 2);
+          .filter((coord) =>
+            Array.isArray(coord) &&
+            coord.length === 2 &&
+            typeof coord[0] === 'number' && isFinite(coord[0]) &&
+            typeof coord[1] === 'number' && isFinite(coord[1])
+          );
 
         if (validCoords.length > 0) {
           const bounds = L.latLngBounds(validCoords);
@@ -243,228 +248,229 @@ const MapComponent = ({ projects = [] }) => {
     return isNaN(num) ? null : num;
   };
 
-  useEffect(() => {
-    const checkKmlExists = async (kmlUrl) => {
-      try {
-        const response = await fetch(kmlUrl, { method: "HEAD" });
-        return response.ok;
-      } catch (error) {
-        return false;
-      }
-    };
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "";
+  const resolveKmlUrl = (kmlPath) => {
+    if (!kmlPath) return null;
+    if (/^https?:\/\//i.test(kmlPath)) return kmlPath;
+    const rawBase = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    const baseNoSlash = rawBase.replace(/\/$/, "");
+    const base = baseNoSlash.replace(/\/api$/, "");
+    const path = kmlPath.startsWith("/") ? kmlPath : `/${kmlPath}`;
+    return `${base}${path}`;
+  };
 
+  const isValidLat = (lat) => typeof lat === 'number' && isFinite(lat) && lat >= -90 && lat <= 90;
+  const isValidLng = (lng) => typeof lng === 'number' && isFinite(lng) && lng >= -180 && lng <= 180;
+  const toLatLngPoint = (coord) => {
+    if (!Array.isArray(coord) || coord.length < 2) return null;
+    const lng = parseFloat(coord[0]);
+    const lat = parseFloat(coord[1]);
+    if (!isValidLat(lat) || !isValidLng(lng)) return null;
+    return [lat, lng];
+  };
+  const sanitizeSegment = (segment) => {
+    if (!Array.isArray(segment)) return [];
+    const cleaned = segment
+      .map(toLatLngPoint)
+      .filter((pt) => Array.isArray(pt) && pt.length === 2);
+    // Ensure at least 2 points
+    return cleaned.length >= 2 ? cleaned : [];
+  };
+  const parseKmlToPaths = async (kmlUrl) => {
+    try {
+      console.log("[KML] Fetching:", kmlUrl);
+      const res = await fetch(kmlUrl);
+      if (!res.ok) return null;
+      const kmlText = await res.text();
+      console.log("[KML] Loaded:", kmlUrl, "bytes:", kmlText.length);
+      const kmlDom = new DOMParser().parseFromString(kmlText, "text/xml");
+      const geoJsonData = kml(kmlDom);
+      let segments = [];
+
+      (geoJsonData.features || []).forEach((feature) => {
+        const geom = feature.geometry;
+        if (!geom) return;
+        switch (geom.type) {
+          case "LineString":
+            segments.push(sanitizeSegment(geom.coordinates));
+            break;
+          case "MultiLineString":
+            geom.coordinates.forEach((line) => segments.push(sanitizeSegment(line)));
+            break;
+          case "Polygon":
+            if (Array.isArray(geom.coordinates?.[0])) {
+              segments.push(sanitizeSegment(geom.coordinates[0]));
+            }
+            break;
+          case "MultiPolygon":
+            geom.coordinates.forEach((poly) => {
+              if (Array.isArray(poly?.[0])) {
+                segments.push(sanitizeSegment(poly[0]));
+              }
+            });
+            break;
+          default:
+            break;
+        }
+      });
+
+      // Remove empty segments
+      segments = segments.filter((seg) => Array.isArray(seg) && seg.length >= 2);
+
+      return segments.length > 0 ? segments : null;
+    } catch (e) {
+      console.warn("parseKmlToPaths error:", e.message);
+      return null;
+    }
+  };
+
+  const getStartEndFromSegments = (segments) => {
+    if (!segments || segments.length === 0) return { start: null, end: null };
+    // Find first non-empty segment
+    const firstSeg = segments.find((seg) => Array.isArray(seg) && seg.length >= 1) || [];
+    // Find last non-empty segment
+    const lastSeg = [...segments].reverse().find((seg) => Array.isArray(seg) && seg.length >= 1) || [];
+    const start = firstSeg.length > 0 ? firstSeg[0] : null;
+    const end = lastSeg.length > 0 ? lastSeg[lastSeg.length - 1] : null;
+    return { start, end };
+  };
+
+  useEffect(() => {
     const fetchRoutes = async () => {
       setLoadingRoutes(true);
       setRouteErrors([]);
       const newRoutes = [];
       const errors = [];
 
-      //console.log("projects: ", projects);
-
       for (const project of projects) {
         try {
           const statusColor = getStatusColor(project.TrangThai);
 
-          // Kiểm tra KML cho dự án chính
-          const projectKmlUrl = `${window.location.origin}/dadb/kml/project-${project.DuAnID}.kml`;
-          const hasProjectKml = await checkKmlExists(projectKmlUrl);
+          // View: Dự án cha -> đọc KML trong kmlPaths và vẽ Polyline
+          if (Array.isArray(project.kmlPaths)) {
+            for (let idx = 0; idx < project.kmlPaths.length; idx++) {
+              const kmlPath = project.kmlPaths[idx];
+              if (!kmlPath) continue;
+              const url = resolveKmlUrl(kmlPath);
+              console.log("[KML][Project] DuAnID:", project.DuAnID, "path:", kmlPath, "url:", url);
+              const segments = await parseKmlToPaths(url);
+              if (!segments) continue;
+              const { start, end } = getStartEndFromSegments(segments);
 
-          // Xử lý dự án thành phần
-          if (project.duAnThanhPhan?.length > 0) {
-            for (const subProject of project.duAnThanhPhan) {
-              if (
-                subProject?.coordinates?.start &&
-                subProject?.coordinates?.end
-              ) {
-                const startLat = parseCoordinate(
-                  subProject.coordinates.start.lat
-                );
-                const startLng = parseCoordinate(
-                  subProject.coordinates.start.lng
-                );
-                const endLat = parseCoordinate(subProject.coordinates.end.lat);
-                const endLng = parseCoordinate(subProject.coordinates.end.lng);
-
-                const statusColorSub = getStatusColor(subProject.TrangThai);
-
-                if (
-                  [startLat, startLng, endLat, endLng].every((c) => c !== null)
-                ) {
-                  const startPos = [startLat, startLng];
-                  const endPos = [endLat, endLng];
-                  let path = [startPos, endPos];
-
-                  // Kiểm tra KML cho dự án thành phần
-                  const subProjectKmlUrl = `${window.location.origin}/dadb/kml/subProject-${subProject.DuAnID}.kml`;
-                  const hasSubProjectKml = await checkKmlExists(
-                    subProjectKmlUrl
-                  );
-
-                  // Chỉ lấy path từ OSRM nếu không có KML
-                  if (!hasSubProjectKml) {
-                    try {
-                      const response = await axios.get(
-                        `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
-                        {
-                          params: { overview: "full", geometries: "geojson" },
-                          timeout: 10000,
-                        }
-                      );
-
-                      if (response.data?.routes?.[0]?.geometry?.coordinates) {
-                        path = response.data.routes[0].geometry.coordinates.map(
-                          (coord) => [coord[1], coord[0]]
-                        );
-                      }
-                    } catch (error) {
-                      console.warn(
-                        `Không thể lấy tuyến đường chi tiết cho dự án thành phần ${subProject.TenDuAn}:`,
-                        error.message
-                      );
-                    }
-                  }
-
-                  const routeId = `subproject-${subProject.DuAnID}`;
-                  newRoutes.push({
-                    id: routeId,
-                    parentId: project.DuAnID,
-                    name: subProject.TenDuAn,
-                    start: startPos,
-                    end: endPos,
-                    path: hasSubProjectKml ? null : path,
-                    projectData: subProject,
-                    parentProject: project,
-                    color: statusColorSub,
-                    parentProjectName: project.TenDuAn,
-                    status: subProject.TrangThai || project.TrangThai,
-                    kmlFile: hasSubProjectKml ? subProjectKmlUrl : null,
-                  });
-                }
-              }
-
-              if (subProject.goiThau?.length > 0) {
-                for (const goiThau of subProject.goiThau) {
-                  const startLat = parseCoordinate(goiThau.ToaDo_BatDau_Y);
-                  const startLng = parseCoordinate(goiThau.ToaDo_BatDau_X);
-                  const endLat = parseCoordinate(goiThau.ToaDo_KetThuc_Y);
-                  const endLng = parseCoordinate(goiThau.ToaDo_KetThuc_X);
-
-                  if (
-                    [startLat, startLng, endLat, endLng].every(
-                      (c) => c !== null
-                    )
-                  ) {
-                    const startPos = [startLat, startLng];
-                    const endPos = [endLat, endLng];
-                    let path = [startPos, endPos];
-
-                    const statusColorGoiThau = getStatusColor(
-                      goiThau.TrangThai
-                    );
-
-                    // Kiểm tra KML cho gói thầu
-                    const goiThauKmlUrl = `${window.location.origin}/dadb/kml/goithau-${goiThau.GoiThau_ID}.kml`;
-                    const hasGoiThauKml = await checkKmlExists(goiThauKmlUrl);
-
-                    if (!hasGoiThauKml) {
-                      try {
-                        const response = await axios.get(
-                          `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
-                          {
-                            params: { overview: "full", geometries: "geojson" },
-                            timeout: 10000,
-                          }
-                        );
-
-                        if (response.data?.routes?.[0]?.geometry?.coordinates) {
-                          path =
-                            response.data.routes[0].geometry.coordinates.map(
-                              (coord) => [coord[1], coord[0]]
-                            );
-                        }
-                      } catch (error) {
-                        console.warn(
-                          `Không thể lấy tuyến đường cho gói thầu ${goiThau.TenGoiThau}:`,
-                          error.message
-                        );
-                      }
-                    }
-
-                    const routeId = `goithau-${goiThau.GoiThau_ID}`;
-                    newRoutes.push({
-                      id: routeId,
-                      parentId: subProject.DuAnID,
-                      name: goiThau.TenGoiThau,
-                      start: startPos,
-                      end: endPos,
-                      path: hasGoiThauKml ? null : path,
-                      projectData: goiThau,
-                      parentProject: subProject,
-                      color: statusColorGoiThau,
-                      parentProjectName: subProject.TenDuAn,
-                      status:
-                        goiThau.TrangThai ||
-                        subProject.TrangThai ||
-                        project.TrangThai,
-                      kmlFile: hasGoiThauKml ? goiThauKmlUrl : null,
-                    });
-                  }
-                }
-              }
-            }
-          }
-
-          // Xử lý dự án chính
-          if (project.coordinates?.start && project.coordinates?.end) {
-            const startLat = parseCoordinate(project.coordinates.start.lat);
-            const startLng = parseCoordinate(project.coordinates.start.lng);
-            const endLat = parseCoordinate(project.coordinates.end.lat);
-            const endLng = parseCoordinate(project.coordinates.end.lng);
-
-            if ([startLat, startLng, endLat, endLng].every((c) => c !== null)) {
-              const startPos = [startLat, startLng];
-              const endPos = [endLat, endLng];
-              let path = [startPos, endPos];
-
-              // Chỉ lấy path từ OSRM nếu không có KML
-              if (!hasProjectKml) {
-                try {
-                  const response = await axios.get(
-                    `https://router.project-osrm.org/route/v1/driving/${startLng},${startLat};${endLng},${endLat}`,
-                    {
-                      params: { overview: "full", geometries: "geojson" },
-                      timeout: 10000,
-                    }
-                  );
-
-                  if (response.data?.routes?.[0]?.geometry?.coordinates) {
-                    path = response.data.routes[0].geometry.coordinates.map(
-                      (coord) => [coord[1], coord[0]]
-                    );
-                  }
-                } catch (error) {
-                  console.warn(
-                    `Không thể lấy tuyến đường chi tiết cho dự án ${project.TenDuAn}:`,
-                    error.message
-                  );
-                }
-              }
-
-              const routeId = `project-${project.DuAnID}`;
               newRoutes.push({
-                id: routeId,
+                id: `project-${project.DuAnID}-kml-${idx}`,
+                routeType: "project",
                 parentId: project.DuAnID,
                 name: project.TenDuAn,
-                start: startPos,
-                end: endPos,
-                path: hasProjectKml ? null : path,
+                start,
+                end,
+                path: segments,
                 projectData: project,
                 parentProject: project,
                 color: statusColor,
                 parentProjectName: project.TenDuAn,
                 status: project.TrangThai,
-                kmlFile: hasProjectKml ? projectKmlUrl : null,
+                kmlFile: null,
               });
+            }
+          }
+
+          // View: Gói thầu trực tiếp thuộc dự án cha
+          if (Array.isArray(project.danhSachGoiThauTrucTiep)) {
+            for (const goiThau of project.danhSachGoiThauTrucTiep) {
+              const startLat = parseCoordinate(goiThau.ToaDo_BatDau_Y);
+              const startLng = parseCoordinate(goiThau.ToaDo_BatDau_X);
+              const endLat = parseCoordinate(goiThau.ToaDo_KetThuc_Y);
+              const endLng = parseCoordinate(goiThau.ToaDo_KetThuc_X);
+
+              const startPos =
+                [startLat, startLng].every((c) => c !== null) ? [startLat, startLng] : null;
+              const endPos =
+                [endLat, endLng].every((c) => c !== null) ? [endLat, endLng] : null;
+
+              // Ưu tiên đọc KML nếu có PathData
+              const kmlUrl = resolveKmlUrl(goiThau.PathData);
+              if (kmlUrl) {
+                console.log("[KML][GoiThau-Direct] ID:", goiThau.GoiThau_ID, "path:", goiThau.PathData, "url:", kmlUrl);
+              }
+              const kmlSegments = kmlUrl ? await parseKmlToPaths(kmlUrl) : null;
+              if (!kmlSegments) continue; // Chỉ hiển thị theo KML
+              const se = getStartEndFromSegments(kmlSegments);
+
+              newRoutes.push({
+                id: `goithau-${goiThau.GoiThau_ID}`,
+                routeType: "goithau",
+                isFromSubProject: false,
+                    parentId: project.DuAnID,
+                name: goiThau.TenGoiThau,
+                start: se.start,
+                end: se.end,
+                path: kmlSegments,
+                projectData: goiThau,
+                    parentProject: project,
+                color: getStatusColor(goiThau.TrangThai || project.TrangThai),
+                    parentProjectName: project.TenDuAn,
+                status: goiThau.TrangThai || project.TrangThai,
+                kmlFile: null,
+                  });
+                }
+              }
+
+          // View: Dự án thành phần -> lấy PathData của gói thầu thuộc dự án thành phần
+          const subProjects = Array.isArray(project.danhSachDuAnThanhPhan)
+            ? project.danhSachDuAnThanhPhan
+            : Array.isArray(project.duAnThanhPhan)
+            ? project.duAnThanhPhan
+            : [];
+          if (subProjects.length > 0) {
+            for (const subProject of subProjects) {
+              const subGoiThauList = Array.isArray(subProject.danhSachGoiThau)
+                ? subProject.danhSachGoiThau
+                : Array.isArray(subProject.goiThau)
+                ? subProject.goiThau
+                : [];
+              if (subGoiThauList.length > 0) {
+                for (const goiThau of subGoiThauList) {
+                  const startLat = parseCoordinate(goiThau.ToaDo_BatDau_Y);
+                  const startLng = parseCoordinate(goiThau.ToaDo_BatDau_X);
+                  const endLat = parseCoordinate(goiThau.ToaDo_KetThuc_Y);
+                  const endLng = parseCoordinate(goiThau.ToaDo_KetThuc_X);
+
+                  const startPos =
+                    [startLat, startLng].every((c) => c !== null) ? [startLat, startLng] : null;
+                  const endPos =
+                    [endLat, endLng].every((c) => c !== null) ? [endLat, endLng] : null;
+
+                  // Ưu tiên đọc KML nếu có PathData
+                  const kmlUrl2 = resolveKmlUrl(goiThau.PathData);
+                  if (kmlUrl2) {
+                    console.log("[KML][GoiThau-Sub] ID:", goiThau.GoiThau_ID, "path:", goiThau.PathData, "url:", kmlUrl2);
+                  }
+                  const kmlSegments2 = kmlUrl2 ? await parseKmlToPaths(kmlUrl2) : null;
+                  if (!kmlSegments2) continue; // Chỉ hiển thị theo KML
+                  const se2 = getStartEndFromSegments(kmlSegments2);
+
+                  newRoutes.push({
+                    id: `goithau-${goiThau.GoiThau_ID}`,
+                    routeType: "goithau",
+                    isFromSubProject: true,
+                      parentId: subProject.DuAnID,
+                      name: goiThau.TenGoiThau,
+                    start: se2.start,
+                    end: se2.end,
+                    path: kmlSegments2,
+                      projectData: goiThau,
+                      parentProject: subProject,
+                    color: getStatusColor(
+                      goiThau.TrangThai || subProject.TrangThai || project.TrangThai
+                    ),
+                      parentProjectName: subProject.TenDuAn,
+                      status:
+                      goiThau.TrangThai || subProject.TrangThai || project.TrangThai,
+                    kmlFile: null,
+                    });
+                  }
+                }
             }
           }
         } catch (error) {
@@ -497,13 +503,25 @@ const MapComponent = ({ projects = [] }) => {
   };
 
   const calculateDistance = (path) => {
-    if (!path || path.length < 2) return 0;
+    if (!path) return 0;
 
+    // Hỗ trợ cả mảng điểm hoặc mảng segment
+    const segments = Array.isArray(path?.[0]?.[0]) ? path : [path];
     let distance = 0;
-    for (let i = 1; i < path.length; i++) {
-      const [lat1, lng1] = path[i - 1];
-      const [lat2, lng2] = path[i];
-      distance += calculateHaversineDistance(lat1, lng1, lat2, lng2);
+    for (const seg of segments) {
+      if (!Array.isArray(seg) || seg.length < 2) continue;
+      for (let i = 1; i < seg.length; i++) {
+        const [lat1, lng1] = seg[i - 1] || [];
+        const [lat2, lng2] = seg[i] || [];
+        if (
+          typeof lat1 === 'number' && isFinite(lat1) &&
+          typeof lng1 === 'number' && isFinite(lng1) &&
+          typeof lat2 === 'number' && isFinite(lat2) &&
+          typeof lng2 === 'number' && isFinite(lng2)
+        ) {
+          distance += calculateHaversineDistance(lat1, lng1, lat2, lng2);
+        }
+      }
     }
     return (distance / 1000).toFixed(2); // Convert to km
   };
@@ -529,7 +547,6 @@ const MapComponent = ({ projects = [] }) => {
   };
 
   const filteredRoutes = routes.filter((route) => {
-    console.log("route: ", route);
     // Bộ lọc trạng thái dự án
     const statusMatch =
       selectedProjectType === "all"
@@ -539,24 +556,23 @@ const MapComponent = ({ projects = [] }) => {
         : selectedProjectType === "in-progress"
         ? route.status === "Đang triển khai"
         : selectedProjectType === "planned"
-        ? route.status.includes("Dự kiến") ||
-          route.status.includes("chờ khởi công")
+        ? route.status?.includes("Dự kiến") || route.status?.includes("chờ khởi công")
         : selectedProjectType === "delayed"
-        ? route.status.includes("chậm tiến độ") ||
-          route.status === "Chậm tiến độ"
+        ? route.status?.includes("chậm tiến độ") || route.status === "Chậm tiến độ"
         : true;
 
-    // Bộ lọc theo cha/con/goi thau
-    const viewModeMatch =
-      viewMode === "all"
-        ? true
-        : viewMode === "parent"
-        ? route.id?.includes("project-") && !route.id?.includes("subproject-")
-        : viewMode === "sub"
-        ? route.id?.includes("subproject-")
-        : viewMode === "goithau"
-        ? route.id?.startsWith("goithau-")
-        : true;
+    // Bộ lọc theo view: parent | sub | goithau
+    let viewModeMatch = true;
+    if (viewMode === "parent") {
+      // Dự án tổng: hiển thị tất cả KML từ kmlPaths của dự án tổng
+      viewModeMatch = route.routeType === "project";
+    } else if (viewMode === "sub") {
+      // Dự án thành phần: chỉ hiển thị các KML thuộc gói thầu của dự án thành phần
+      viewModeMatch = route.routeType === "goithau" && route.isFromSubProject === true;
+    } else if (viewMode === "goithau") {
+      // Gói thầu: hiển thị toàn bộ KML của gói thầu (trực tiếp và thuộc dự án thành phần)
+      viewModeMatch = route.routeType === "goithau";
+    }
 
     return statusMatch && viewModeMatch;
   });
@@ -693,7 +709,18 @@ const MapComponent = ({ projects = [] }) => {
             )}
 
             <MapController
-              allRoutes={filteredRoutes.map((route) => route.path)}
+              allRoutes={filteredRoutes.flatMap((route) => {
+                const p = route.path;
+                if (!p) return [];
+                const segments = Array.isArray(p?.[0]?.[0]) ? p : [p];
+                return segments.flat().filter(
+                  (pt) =>
+                    Array.isArray(pt) &&
+                    pt.length === 2 &&
+                    typeof pt[0] === 'number' && isFinite(pt[0]) &&
+                    typeof pt[1] === 'number' && isFinite(pt[1])
+                );
+              })}
             />
 
             <MapFitBoundsController
@@ -715,71 +742,82 @@ const MapComponent = ({ projects = [] }) => {
                       onClick={() => handlePolylineClick(route)}
                       onBoundsAvailable={handleBoundsFromChild}
                     />
-                  ) : (
+                  ) : (() => {
+                    const p = route.path;
+                    if (!p) return null;
+                    const segments = Array.isArray(p?.[0]?.[0]) ? p : [p];
+                    return (
+                      <>
+                        {segments
+                          .filter((seg) => Array.isArray(seg) && seg.length >= 2 && seg.every(pt => Array.isArray(pt) && pt.length === 2 && pt.every(Number.isFinite)))
+                          .map((seg, idx) => (
                     <Polyline
-                      key={`${route.id}-${viewMode}`}
-                      positions={route.path}
+                              key={`${route.id}-${viewMode}-${idx}`}
+                              positions={seg}
                       color={route.color}
                       weight={4}
-                      eventHandlers={{
-                        click: () => handlePolylineClick(route),
-                      }}
+                              eventHandlers={{ click: () => handlePolylineClick(route) }}
                     />
+                          ))}
+                      </>
+                    );
+                  })()}
+
+                  {false && Array.isArray(route.start) && route.start.length === 2 && (
+                    <ZoomAwareMarker position={route.start} color={route.color}>
+                      <Popup>
+                        <div className="marker-popup">
+                          <h3>{route.name}</h3>
+                          <div className="popup-section">
+                            <strong>Trạng thái:</strong>
+                            <span style={{ color: getStatusColor(route.status) }}>
+                              {route.status}
+                            </span>
+                          </div>
+                          {route.parentProjectName && (
+                            <div className="popup-section">
+                              <strong>Thuộc dự án:</strong>
+                              <p>{route.parentProjectName}</p>
+                            </div>
+                          )}
+                          <div className="popup-section">
+                            <strong>Điểm bắt đầu:</strong>
+                            <p>
+                              {formatCoordinate(route.start[0])}, {formatCoordinate(route.start[1])}
+                            </p>
+                          </div>
+                        </div>
+                      </Popup>
+                    </ZoomAwareMarker>
                   )}
 
-                  <ZoomAwareMarker position={route.start} color={route.color}>
-                    <Popup>
-                      <div className="marker-popup">
-                        <h3>{route.name}</h3>
-                        <div className="popup-section">
-                          <strong>Trạng thái:</strong>
-                          <span style={{ color: getStatusColor(route.status) }}>
-                            {route.status}
-                          </span>
-                        </div>
-                        {route.parentProjectName && (
+                  {false && Array.isArray(route.end) && route.end.length === 2 && (
+                    <ZoomAwareMarker position={route.end} color={route.color}>
+                      <Popup>
+                        <div className="marker-popup">
+                          <h3>{route.name}</h3>
                           <div className="popup-section">
-                            <strong>Thuộc dự án:</strong>
-                            <p>{route.parentProjectName}</p>
+                            <strong>Trạng thái:</strong>
+                            <span style={{ color: getStatusColor(route.status) }}>
+                              {route.status}
+                            </span>
                           </div>
-                        )}
-                        <div className="popup-section">
-                          <strong>Điểm bắt đầu:</strong>
-                          <p>
-                            {formatCoordinate(route.start[0])},{" "}
-                            {formatCoordinate(route.start[1])}
-                          </p>
-                        </div>
-                      </div>
-                    </Popup>
-                  </ZoomAwareMarker>
-
-                  <ZoomAwareMarker position={route.end} color={route.color}>
-                    <Popup>
-                      <div className="marker-popup">
-                        <h3>{route.name}</h3>
-                        <div className="popup-section">
-                          <strong>Trạng thái:</strong>
-                          <span style={{ color: getStatusColor(route.status) }}>
-                            {route.status}
-                          </span>
-                        </div>
-                        {route.parentProjectName && (
+                          {route.parentProjectName && (
+                            <div className="popup-section">
+                              <strong>Thuộc dự án:</strong>
+                              <p>{route.parentProjectName}</p>
+                            </div>
+                          )}
                           <div className="popup-section">
-                            <strong>Thuộc dự án:</strong>
-                            <p>{route.parentProjectName}</p>
+                            <strong>Điểm kết thúc:</strong>
+                            <p>
+                              {formatCoordinate(route.end[0])}, {formatCoordinate(route.end[1])}
+                            </p>
                           </div>
-                        )}
-                        <div className="popup-section">
-                          <strong>Điểm kết thúc:</strong>
-                          <p>
-                            {formatCoordinate(route.end[0])},{" "}
-                            {formatCoordinate(route.end[1])}
-                          </p>
                         </div>
-                      </div>
-                    </Popup>
-                  </ZoomAwareMarker>
+                      </Popup>
+                    </ZoomAwareMarker>
+                  )}
                 </React.Fragment>
               );
             })}

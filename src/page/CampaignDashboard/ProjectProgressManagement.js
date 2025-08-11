@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   FaChevronLeft, 
   FaSearch, 
@@ -20,6 +20,8 @@ import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
 import edit from "../../assets/img/edit.png"
+import { useProject } from '../../contexts/ProjectContext';
+
 
 const ProjectProgressManagement = () => {
   const [searchProject, setSearchProject] = useState('');
@@ -27,6 +29,25 @@ const ProjectProgressManagement = () => {
   const [searchContractor, setSearchContractor] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [project, setProject] = useState(null);
+  const [status, setStatus] = useState('all');
+  const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const searchInputRef = useRef(null);
+  const { logout, user} = useProject();
+  useEffect(() => {
+    const savedSearchTerm = localStorage.getItem('lastSearchTerm');
+    const savedProjectId = localStorage.getItem('lastSelectedProjectId');
+    
+    if (savedSearchTerm) setSearchTerm(savedSearchTerm);
+    if (savedProjectId) setSelectedProjectId(savedProjectId);
+  }, []);
+  
   
   // State cho pop-up kế hoạch
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -222,7 +243,105 @@ const ProjectProgressManagement = () => {
       inProgressPercent: 65
     }
   ];
-
+  const fetchProjects = async () => {
+    setIsLoadingProjects(true);
+    try {
+      let url = `${API_BASE_URL}/duAnList`;
+      
+      // Thêm params nếu là nhà thầu
+      if (user?.PhanQuyenID === 9) {
+        url += `?nhaThauID=${user.NhaThauID}`;
+      }
+  
+      const response = await fetch(url);
+      const data = await response.json();
+  
+      if (data.success) {
+        setProjects(data.data);
+        if (data.data.length === 0 && user?.PhanQuyenID === 9) {
+          alert('Tài khoản nhà thầu chưa được giao dự án nào');
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi tải dự án:', error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (user) fetchProjects();
+  }, [user?.PhanQuyenID, user?.NhaThauID]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+  
+        if (selectedProjectId) {
+          const response = await axios.get(`${API_BASE_URL}/hangMuc/${selectedProjectId}/detail`);
+          setProject(response.data.data.duAnTong);
+          
+          // Lưu state vào localStorage khi có thay đổi
+          localStorage.setItem('lastSelectedProjectId', selectedProjectId);
+          localStorage.setItem('lastSearchTerm', searchTerm);
+        }
+  
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+      }
+    };
+  
+    fetchData();
+  }, [selectedProjectId, navigate]);
+  
+  useEffect(() => {
+    // Nếu đang hiển thị gợi ý và có searchTerm, lọc danh sách
+    if (showSuggestions) {
+      if (searchTerm.trim() === '') {
+        // Nếu ô tìm kiếm trống, hiển thị tất cả dự án
+        setFilteredProjects(projects);
+      } else {
+        // Nếu có từ khóa tìm kiếm, lọc theo từ khóa
+        const filtered = projects.filter(project =>
+          project.TenDuAn.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredProjects(filtered);
+      }
+    } else {
+      setFilteredProjects([]);
+    }
+  }, [searchTerm, projects, showSuggestions]);
+  
+  // Event handlers
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setShowSuggestions(true);
+  };
+  
+  const handleProjectSelect = (project) => {
+    setSearchTerm(project.TenDuAn);
+    setSelectedProjectId(project.DuAnID);
+    setShowSuggestions(false);
+    
+    // Lưu vào localStorage khi chọn dự án
+    localStorage.setItem('lastSearchTerm', project.TenDuAn);
+    localStorage.setItem('lastSelectedProjectId', project.DuAnID);
+  };
+  
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (filteredProjects.length > 0) {
+      handleProjectSelect(filteredProjects[0]);
+    }
+  };
+  
+  const handleInputFocus = () => {
+    setShowSuggestions(true);
+    // Hiển thị tất cả dự án khi focus vào ô tìm kiếm
+    setFilteredProjects(projects);
+  };
   // Tính toán phân trang
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;

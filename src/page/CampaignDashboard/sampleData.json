@@ -1,670 +1,670 @@
 {
   "success": true,
-  "data": [
-       {
-      "NhaThauID": 21,
-      "TenNhaThau": "Công ty TNHH Tập đoàn Sơn Hải",
-      "Loai": "Nhà thầu chính",
-      "MaSoThue": "3100196175",
-      "DiaChiTruSo": "Số 117, Hữu Nghị, Phường Nam Lý, Thành phố Đồng Hới, Tỉnh Quảng Bình, Việt Nam",
-      "SoDienThoai": null,
-      "Email": null,
-      "NguoiDaiDien": "Nguyễn Thanh Hải",
-      "ChucVuNguoiDaiDien": "Giám đốc",
-      "GiayPhepKinhDoanh": null,
-      "NgayCap": null,
-      "NoiCap": null,
-      "GhiChu": null,
-      "thongKe": {
-        "tongGoiThau": 1,
-        "tongDuAn": 1,
-        "tongHangMuc": 7,
-        "tongKeHoach": 36
+  "data": {
+    "duAn": {
+      "duAnId": 192,
+      "tenDuAn": "Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025",
+      "isDuAnTong": true
+    },
+    "projectIdsScope": [
+      192,
+      238
+    ],
+    "danhSachGoiThau": [
+      {
+        "goiThauId": 69,
+        "tenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
+        "duAnId": 238,
+        "nhaThau": [
+          {
+            "nhaThauId": 3,
+            "tenNhaThau": "CÔNG TY CỔ PHẦN VINACONEX",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          },
+          {
+            "nhaThauId": 4,
+            "tenNhaThau": "CÔNG TY CỔ PHẦN THIẾT BỊ VÀ XÂY LẮP CƠ ĐIỆN VIMECO",
+            "roleSummary": {
+              "isMainContractor": false,
+              "roles": [
+                "Nhà thầu phụ"
+              ],
+              "parents": [
+                {
+                  "parentNhaThauId": 3,
+                  "tenNhaThauCha": "CÔNG TY CỔ PHẦN VINACONEX"
+                }
+              ]
+            },
+            "tongSoKeHoach": 1,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 1,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 100,
+            "keHoach": [
+              {
+                "keHoachId": 108,
+                "hangMucId": 52,
+                "tenCongTac": "e1232",
+                "khoiLuongKeHoach": 121212,
+                "donViTinh": "eqe",
+                "ngayBatDau": "2025-08-05T00:00:00.000Z",
+                "ngayKetThuc": "2029-06-12T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 0,
+                "phanTramHoanThanh": 0,
+                "trangThai": "DANG_LAM"
+              }
+            ]
+          },
+          {
+            "nhaThauId": 21,
+            "tenNhaThau": "Công ty TNHH Tập đoàn Sơn Hải",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 36,
+            "soKeHoachHoanThanh": 10,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 26,
+            "phanTramHoanThanh": 27.78,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 72.22,
+            "keHoach": [
+              {
+                "keHoachId": 71,
+                "hangMucId": 52,
+                "tenCongTac": "Đào nền đường",
+                "khoiLuongKeHoach": 5741830,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 5655761,
+                "phanTramHoanThanh": 98.5,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 72,
+                "hangMucId": 52,
+                "tenCongTac": "Đào vận chuyển bãi thải",
+                "khoiLuongKeHoach": 495258,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 465002,
+                "phanTramHoanThanh": 93.89,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 73,
+                "hangMucId": 52,
+                "tenCongTac": "Đào, vận chuyển bãi trữ",
+                "khoiLuongKeHoach": 2126310,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 2123288,
+                "phanTramHoanThanh": 99.86,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 74,
+                "hangMucId": 52,
+                "tenCongTac": "Đắp nền đường",
+                "khoiLuongKeHoach": 2980070,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 2647430,
+                "phanTramHoanThanh": 88.84,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 75,
+                "hangMucId": 52,
+                "tenCongTac": "nền đường K90",
+                "khoiLuongKeHoach": 310624,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 290237,
+                "phanTramHoanThanh": 93.44,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 76,
+                "hangMucId": 52,
+                "tenCongTac": "nền đường K95",
+                "khoiLuongKeHoach": 2329830,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 2319114,
+                "phanTramHoanThanh": 99.54,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 77,
+                "hangMucId": 52,
+                "tenCongTac": "nền đường K98",
+                "khoiLuongKeHoach": 128870,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 127000,
+                "phanTramHoanThanh": 98.55,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 78,
+                "hangMucId": 52,
+                "tenCongTac": "VL dạng hạt",
+                "khoiLuongKeHoach": 210744,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 201706,
+                "phanTramHoanThanh": 95.71,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 79,
+                "hangMucId": 53,
+                "tenCongTac": "Cấp phối đá dăm loại 1, loại 2",
+                "khoiLuongKeHoach": 213620,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 184609,
+                "phanTramHoanThanh": 86.42,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 80,
+                "hangMucId": 53,
+                "tenCongTac": "Cấp phối đá dăm gia cố xi măng",
+                "khoiLuongKeHoach": 74577,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 74884,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 81,
+                "hangMucId": 53,
+                "tenCongTac": "Hỗn hợp BTN rỗng C25 dày 10cm",
+                "khoiLuongKeHoach": 457433,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 455601,
+                "phanTramHoanThanh": 99.6,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 82,
+                "hangMucId": 53,
+                "tenCongTac": "BTN chặt 19 dày 6cm",
+                "khoiLuongKeHoach": 478444,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 363994,
+                "phanTramHoanThanh": 76.08,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 83,
+                "hangMucId": 53,
+                "tenCongTac": "BTN chặt 16 dày 6cm",
+                "khoiLuongKeHoach": 479656,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 365808,
+                "phanTramHoanThanh": 76.26,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 84,
+                "hangMucId": 54,
+                "tenCongTac": "Lan can tôn lượn sóng loại 2 sóng",
+                "khoiLuongKeHoach": 52249,
+                "donViTinh": "md",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 41523,
+                "phanTramHoanThanh": 79.47,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 85,
+                "hangMucId": 54,
+                "tenCongTac": "Lan can tôn lượn sóng loại 3 sóng",
+                "khoiLuongKeHoach": 14700,
+                "donViTinh": "md",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 10283,
+                "phanTramHoanThanh": 69.95,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 86,
+                "hangMucId": 54,
+                "tenCongTac": "Hàng rào bảo vệ loại 1",
+                "khoiLuongKeHoach": 28520,
+                "donViTinh": "md",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 22475,
+                "phanTramHoanThanh": 78.8,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 87,
+                "hangMucId": 54,
+                "tenCongTac": "Hàng rào bảo vệ loại 2 (hàng rào lưới thép gai)",
+                "khoiLuongKeHoach": 38875,
+                "donViTinh": "md",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 37628,
+                "phanTramHoanThanh": 96.79,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 88,
+                "hangMucId": 55,
+                "tenCongTac": "đã và đang thi công",
+                "khoiLuongKeHoach": 272,
+                "donViTinh": "cống",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 272,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 89,
+                "hangMucId": 56,
+                "tenCongTac": "đã hoàn thành",
+                "khoiLuongKeHoach": 19,
+                "donViTinh": "HCDS",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 19,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 90,
+                "hangMucId": 57,
+                "tenCongTac": "đã và đang thi công",
+                "khoiLuongKeHoach": 15,
+                "donViTinh": "cầu",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 15,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 91,
+                "hangMucId": 57,
+                "tenCongTac": "Cọc khoan nhồi",
+                "khoiLuongKeHoach": 669,
+                "donViTinh": "cọc",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 669,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 92,
+                "hangMucId": 57,
+                "tenCongTac": "Sản xuất dầm Super T",
+                "khoiLuongKeHoach": 457,
+                "donViTinh": "dầm",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 445,
+                "phanTramHoanThanh": 97.37,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 93,
+                "hangMucId": 57,
+                "tenCongTac": "Hoàn thành sản xuất dầm I",
+                "khoiLuongKeHoach": 55,
+                "donViTinh": "dầm",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 55,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 94,
+                "hangMucId": 57,
+                "tenCongTac": "Dầm bản lắp ghép 24m",
+                "khoiLuongKeHoach": 68,
+                "donViTinh": "dầm",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 68,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 95,
+                "hangMucId": 57,
+                "tenCongTac": "Dầm bản rỗng",
+                "khoiLuongKeHoach": 105,
+                "donViTinh": "phiến",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 105,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 96,
+                "hangMucId": 58,
+                "tenCongTac": "Gia cố mái",
+                "khoiLuongKeHoach": 15483,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 8228,
+                "phanTramHoanThanh": 53.14,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 97,
+                "hangMucId": 58,
+                "tenCongTac": "Đào hầm",
+                "khoiLuongKeHoach": 1556,
+                "donViTinh": "m",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 1544,
+                "phanTramHoanThanh": 99.23,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 98,
+                "hangMucId": 58,
+                "tenCongTac": "nhánh trái hầm",
+                "khoiLuongKeHoach": 716,
+                "donViTinh": "m",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 704,
+                "phanTramHoanThanh": 98.32,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 99,
+                "hangMucId": 58,
+                "tenCongTac": "nhánh phải",
+                "khoiLuongKeHoach": 840,
+                "donViTinh": "m",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 840,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 100,
+                "hangMucId": 58,
+                "tenCongTac": "Đào đất, đá cửa hầm",
+                "khoiLuongKeHoach": 577504,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 521448,
+                "phanTramHoanThanh": 90.29,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 101,
+                "hangMucId": 58,
+                "tenCongTac": "Neo đá, neo dẫn trước",
+                "khoiLuongKeHoach": 56833,
+                "donViTinh": "bộ",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 53924,
+                "phanTramHoanThanh": 94.88,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 102,
+                "hangMucId": 58,
+                "tenCongTac": "Cọc khoan nhồi tường chắn cửa Nam",
+                "khoiLuongKeHoach": 117,
+                "donViTinh": "cọc",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 28,
+                "phanTramHoanThanh": 23.93,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 103,
+                "hangMucId": 58,
+                "tenCongTac": "BT dầm mũ, dầm neo, dầm chân 30MPa",
+                "khoiLuongKeHoach": 1803,
+                "donViTinh": "m3",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 320,
+                "phanTramHoanThanh": 17.75,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 104,
+                "hangMucId": 58,
+                "tenCongTac": "Bê tông phun",
+                "khoiLuongKeHoach": 65940,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 66096,
+                "phanTramHoanThanh": 100,
+                "trangThai": "HOAN_THANH"
+              },
+              {
+                "keHoachId": 105,
+                "hangMucId": 58,
+                "tenCongTac": "Lưới thép",
+                "khoiLuongKeHoach": 94623,
+                "donViTinh": "m2",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 94432,
+                "phanTramHoanThanh": 99.8,
+                "trangThai": "DANG_LAM"
+              },
+              {
+                "keHoachId": 106,
+                "hangMucId": 58,
+                "tenCongTac": "Khung chống đỡ bằng thép",
+                "khoiLuongKeHoach": 2277,
+                "donViTinh": "tấn",
+                "ngayBatDau": "2023-02-22T00:00:00.000Z",
+                "ngayKetThuc": "2025-12-08T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 2242,
+                "phanTramHoanThanh": 98.46,
+                "trangThai": "DANG_LAM"
+              }
+            ]
+          },
+          {
+            "nhaThauId": 23,
+            "tenNhaThau": "Công ty CP 484",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 1,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 1,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 100,
+            "keHoach": [
+              {
+                "keHoachId": 107,
+                "hangMucId": 52,
+                "tenCongTac": "131232",
+                "khoiLuongKeHoach": 31231,
+                "donViTinh": "cm",
+                "ngayBatDau": "2025-08-05T00:00:00.000Z",
+                "ngayKetThuc": "2027-11-11T00:00:00.000Z",
+                "tongKhoiLuongThucHien": 0,
+                "phanTramHoanThanh": 0,
+                "trangThai": "DANG_LAM"
+              }
+            ]
+          },
+          {
+            "nhaThauId": 24,
+            "tenNhaThau": "Công ty CP Xây lắp 368",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          },
+          {
+            "nhaThauId": 25,
+            "tenNhaThau": "Công ty CP 479 Hòa Bình",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          }
+        ]
       },
-      "danhSachDuAn": [
-        {
-          "DuAnID": 238,
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025",
-          "TinhThanh": "Hà Tĩnh, Quảng Bình",
-          "ChuDauTu": "6",
-          "NgayKhoiCong": "2023-01-01T00:00:00.000Z",
-          "TrangThai": "Đang chuẩn bị",
-          "NguonVon": "Ngân sách",
-          "TongChieuDai": 55.34,
-          "KeHoachHoanThanh": "2025-06-30T00:00:00.000Z",
-          "MoTaChung": "Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025, đoạn Vũng Áng - Bùng, tổng chiều dài 55,34 km, đi qua tỉnh Hà Tĩnh và Quảng Bình, tổng mức đầu tư 12.548 tỷ đồng, khởi công ngày 01/01/2023, kế hoạch hoàn thành ngày 30/06/2025.",
-          "ParentID": 192,
-          "PhanTramHoanThanh": "95.03",
-          "PhanTramChamTienDo": "4.97",
-          "PhanTramKeHoach": "100.00",
-          "ThoiGianCapNhatGanNhat": "2025-08-08T02:02:21.000Z"
-        }
-      ],
-      "danhSachGoiThau": [
-        {
-          "GoiThau_ID": 69,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "DuAn_ID": 238,
-          "GiaTriHĐ": null,
-          "Km_BatDau": "568+200",
-          "Km_KetThuc": "600+700",
-          "ToaDo_BatDau_X": "105.892380",
-          "ToaDo_BatDau_Y": "18.342070",
-          "ToaDo_KetThuc_X": "106.716040",
-          "ToaDo_KetThuc_Y": "17.204520",
-          "NgayKhoiCong": "2023-02-22T00:00:00.000Z",
-          "NgayHoanThanh": "2025-12-08T00:00:00.000Z",
-          "TrangThai": "Đang thi công",
-          "NhaThauID": 21,
-          "PhanTramHoanThanh": 0.84,
-          "PhanTramDangLam": 94.19,
-          "PhanTramChamTienDo": 0,
-          "PhanTramKeHoach": 4.97,
-          "ThoiGianCapNhatGanNhat": "2025-08-08T02:02:22.000Z",
-          "PathData": "/uploads/GOITHAU/69/1754473910797-18817342.kml",
-          "VaiTro": "Nhà thầu chính",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        }
-      ],
-      "danhSachHangMuc": [
-        {
-          "GoiThauID": 69,
-          "HangMucID": 52,
-          "TenHangMuc": "Phần đường",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 53,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 54,
-          "TenHangMuc": "ATGT",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 55,
-          "TenHangMuc": "Phần cống, HCDS",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 56,
-          "TenHangMuc": "Hầm chui dân sinh",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 57,
-          "TenHangMuc": "Phần cầu",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "GoiThauID": 69,
-          "HangMucID": 58,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "LoaiHangMuc": null,
-          "TieuDeChiTiet": null,
-          "MayMocThietBi": null,
-          "NhanLucThiCong": null,
-          "ThoiGianHoanThanh": null,
-          "GhiChu": null,
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        }
-      ],
-      "danhSachKeHoach": [
-        {
-          "KeHoachID": 71,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "Đào nền đường",
-          "KhoiLuongKeHoach": 5741830,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 72,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "Đào vận chuyển bãi thải",
-          "KhoiLuongKeHoach": 495258,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 73,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "Đào, vận chuyển bãi trữ",
-          "KhoiLuongKeHoach": 2126310,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 74,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "Đắp nền đường",
-          "KhoiLuongKeHoach": 2980070,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 75,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "nền đường K90",
-          "KhoiLuongKeHoach": 310624,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 76,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "nền đường K95",
-          "KhoiLuongKeHoach": 2329830,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 77,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "nền đường K98",
-          "KhoiLuongKeHoach": 128870,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 78,
-          "HangMucID": 52,
-          "NhaThauID": 21,
-          "TenCongTac": "VL dạng hạt",
-          "KhoiLuongKeHoach": 210744,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần đường",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 79,
-          "HangMucID": 53,
-          "NhaThauID": 21,
-          "TenCongTac": "Cấp phối đá dăm loại 1, loại 2",
-          "KhoiLuongKeHoach": 213620,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 80,
-          "HangMucID": 53,
-          "NhaThauID": 21,
-          "TenCongTac": "Cấp phối đá dăm gia cố xi măng",
-          "KhoiLuongKeHoach": 74577,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 81,
-          "HangMucID": 53,
-          "NhaThauID": 21,
-          "TenCongTac": "Hỗn hợp BTN rỗng C25 dày 10cm",
-          "KhoiLuongKeHoach": 457433,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 82,
-          "HangMucID": 53,
-          "NhaThauID": 21,
-          "TenCongTac": "BTN chặt 19 dày 6cm",
-          "KhoiLuongKeHoach": 478444,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 83,
-          "HangMucID": 53,
-          "NhaThauID": 21,
-          "TenCongTac": "BTN chặt 16 dày 6cm",
-          "KhoiLuongKeHoach": 479656,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Cấp phối đá dăm",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 84,
-          "HangMucID": 54,
-          "NhaThauID": 21,
-          "TenCongTac": "Lan can tôn lượn sóng loại 2 sóng",
-          "KhoiLuongKeHoach": 52249,
-          "DonViTinh": "md",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "ATGT",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 85,
-          "HangMucID": 54,
-          "NhaThauID": 21,
-          "TenCongTac": "Lan can tôn lượn sóng loại 3 sóng",
-          "KhoiLuongKeHoach": 14700,
-          "DonViTinh": "md",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "ATGT",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 86,
-          "HangMucID": 54,
-          "NhaThauID": 21,
-          "TenCongTac": "Hàng rào bảo vệ loại 1",
-          "KhoiLuongKeHoach": 28520,
-          "DonViTinh": "md",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "ATGT",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 87,
-          "HangMucID": 54,
-          "NhaThauID": 21,
-          "TenCongTac": "Hàng rào bảo vệ loại 2 (hàng rào lưới thép gai)",
-          "KhoiLuongKeHoach": 38875,
-          "DonViTinh": "md",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "ATGT",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 88,
-          "HangMucID": 55,
-          "NhaThauID": 21,
-          "TenCongTac": "đã và đang thi công",
-          "KhoiLuongKeHoach": 272,
-          "DonViTinh": "cống",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cống, HCDS",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 89,
-          "HangMucID": 56,
-          "NhaThauID": 21,
-          "TenCongTac": "đã hoàn thành",
-          "KhoiLuongKeHoach": 19,
-          "DonViTinh": "HCDS",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm chui dân sinh",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 90,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "đã và đang thi công",
-          "KhoiLuongKeHoach": 15,
-          "DonViTinh": "cầu",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 91,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "Cọc khoan nhồi",
-          "KhoiLuongKeHoach": 669,
-          "DonViTinh": "cọc",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 92,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "Sản xuất dầm Super T",
-          "KhoiLuongKeHoach": 457,
-          "DonViTinh": "dầm",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 93,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "Hoàn thành sản xuất dầm I",
-          "KhoiLuongKeHoach": 55,
-          "DonViTinh": "dầm",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 94,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "Dầm bản lắp ghép 24m",
-          "KhoiLuongKeHoach": 68,
-          "DonViTinh": "dầm",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 95,
-          "HangMucID": 57,
-          "NhaThauID": 21,
-          "TenCongTac": "Dầm bản rỗng",
-          "KhoiLuongKeHoach": 105,
-          "DonViTinh": "phiến",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Phần cầu",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 96,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Gia cố mái",
-          "KhoiLuongKeHoach": 15483,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 97,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Đào hầm",
-          "KhoiLuongKeHoach": 1556,
-          "DonViTinh": "m",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 98,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "nhánh trái hầm",
-          "KhoiLuongKeHoach": 716,
-          "DonViTinh": "m",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 99,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "nhánh phải",
-          "KhoiLuongKeHoach": 840,
-          "DonViTinh": "m",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 100,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Đào đất, đá cửa hầm",
-          "KhoiLuongKeHoach": 577504,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 101,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Neo đá, neo dẫn trước",
-          "KhoiLuongKeHoach": 56833,
-          "DonViTinh": "bộ",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 102,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Cọc khoan nhồi tường chắn cửa Nam",
-          "KhoiLuongKeHoach": 117,
-          "DonViTinh": "cọc",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 103,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "BT dầm mũ, dầm neo, dầm chân 30MPa",
-          "KhoiLuongKeHoach": 1803,
-          "DonViTinh": "m3",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 104,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Bê tông phun",
-          "KhoiLuongKeHoach": 65940,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 105,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Lưới thép",
-          "KhoiLuongKeHoach": 94623,
-          "DonViTinh": "m2",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        },
-        {
-          "KeHoachID": 106,
-          "HangMucID": 58,
-          "NhaThauID": 21,
-          "TenCongTac": "Khung chống đỡ bằng thép",
-          "KhoiLuongKeHoach": 2277,
-          "DonViTinh": "tấn",
-          "NgayBatDau": "2023-02-22T00:00:00.000Z",
-          "NgayKetThuc": "2025-12-08T00:00:00.000Z",
-          "GhiChu": null,
-          "TenHangMuc": "Hầm Đèo Bụt",
-          "TenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
-          "TenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025"
-        }
-      ]
-    }
-  ]
+      {
+        "goiThauId": 70,
+        "tenGoiThau": "Gói thầu XL02 (Km600+700 - Km624+228,79)",
+        "duAnId": 238,
+        "nhaThau": [
+          {
+            "nhaThauId": 24,
+            "tenNhaThau": "Công ty CP Xây lắp 368",
+            "roleSummary": {
+              "isMainContractor": false,
+              "roles": [
+                "Nhà thầu phụ"
+              ],
+              "parents": [
+                {
+                  "parentNhaThauId": 26,
+                  "tenNhaThauCha": "Công ty CP Đầu tư và Xây dựng giao thông Phương Thành"
+                }
+              ]
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          },
+          {
+            "nhaThauId": 26,
+            "tenNhaThau": "Công ty CP Đầu tư và Xây dựng giao thông Phương Thành",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          },
+          {
+            "nhaThauId": 27,
+            "tenNhaThau": "Công ty CP Lizen",
+            "roleSummary": {
+              "isMainContractor": true,
+              "roles": [
+                "Nhà thầu chính"
+              ],
+              "parents": []
+            },
+            "tongSoKeHoach": 0,
+            "soKeHoachHoanThanh": 0,
+            "soKeHoachChamTienDo": 0,
+            "soKeHoachDangLam": 0,
+            "phanTramHoanThanh": 0,
+            "phanTramChamTienDo": 0,
+            "phanTramDangLam": 0,
+            "keHoach": []
+          }
+        ]
+      }
+    ]
+  }
 }

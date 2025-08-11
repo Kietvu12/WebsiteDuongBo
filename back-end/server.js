@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
@@ -411,6 +410,157 @@ app.post('/api/nhathau', async (req, res) => {
     connection.release();
   }
 });
+
+// API: Trả về dữ liệu theo cấp: Dự án -> Gói thầu -> Hạng mục -> Kế hoạch (kèm tiến độ và vai trò nhà thầu)
+app.get('/duAn/:duAnId/ke-hoach-nested', async (req, res) => {
+  const duAnId = parseInt(req.params.duAnId, 10);
+  if (!Number.isFinite(duAnId)) {
+    return res.status(400).json({ success: false, message: 'duAnId không hợp lệ' });
+  }
+
+  try {
+    // Phạm vi dự án
+    const [duAnRows] = await pool.query(
+      'SELECT DuAnID, ParentID, TenDuAn FROM duan WHERE DuAnID = ?',
+      [duAnId]
+    );
+    if (duAnRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy dự án' });
+    }
+    const currentDuAn = duAnRows[0];
+    let projectIds = [duAnId];
+    if (currentDuAn.ParentID === null) {
+      const [children] = await pool.query(
+        'SELECT DuAnID FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
+        [duAnId]
+      );
+      projectIds = [duAnId, ...children.map((r) => r.DuAnID)];
+    }
+
+    // Danh sách gói thầu trong phạm vi
+    const [goiThauList] = await pool.query(
+      `SELECT GoiThau_ID, TenGoiThau, DuAn_ID
+       FROM goithau
+       WHERE DuAn_ID IN (?)
+       ORDER BY GoiThau_ID ASC`,
+      [projectIds]
+    );
+
+    const today = new Date();
+    const danhSachGoiThau = await Promise.all(
+      goiThauList.map(async (gt) => {
+        // Hạng mục thuộc gói thầu
+        const [hangMucList] = await pool.query(
+          `SELECT HangMucID, TenHangMuc, LoaiHangMuc
+           FROM hangmuc
+           WHERE GoiThauID = ?
+           ORDER BY HangMucID ASC`,
+          [gt.GoiThau_ID]
+        );
+
+        // Vai trò nhà thầu trong gói thầu
+        const [roles] = await pool.query(
+          `SELECT gn.NhaThauID, gn.VaiTro, gn.ParentId, ntCha.TenNhaThau AS TenNhaThauCha
+           FROM goithau_nhathau gn
+           LEFT JOIN nhathau ntCha ON ntCha.NhaThauID = gn.ParentId
+           WHERE gn.GoiThau_ID = ?`,
+          [gt.GoiThau_ID]
+        );
+
+        const hangMucWithPlans = await Promise.all(
+          hangMucList.map(async (hm) => {
+            // Kế hoạch thuộc hạng mục này (tính tổng khối lượng thực hiện)
+            const [keHoachRows] = await pool.query(
+              `SELECT 
+                 kh.KeHoachID,
+                 kh.HangMucID,
+                 kh.NhaThauID,
+                 kh.TenCongTac,
+                 kh.KhoiLuongKeHoach,
+                 kh.DonViTinh,
+                 kh.NgayBatDau,
+                 kh.NgayKetThuc,
+                 n.TenNhaThau,
+                 COALESCE(SUM(td.KhoiLuongThucHien), 0) AS TongKhoiLuongThucHien
+               FROM quanlykehoach kh
+               LEFT JOIN tiendothuchien td ON td.KeHoachID = kh.KeHoachID
+               LEFT JOIN nhathau n ON n.NhaThauID = kh.NhaThauID
+               WHERE kh.HangMucID = ?
+               GROUP BY 
+                 kh.KeHoachID, kh.HangMucID, kh.NhaThauID, kh.TenCongTac, 
+                 kh.KhoiLuongKeHoach, kh.DonViTinh, kh.NgayBatDau, kh.NgayKetThuc, n.TenNhaThau
+               ORDER BY kh.KeHoachID ASC`,
+              [hm.HangMucID]
+            );
+
+            const keHoach = keHoachRows.map((row) => {
+              const khoiLuongKeHoach = Number(row.KhoiLuongKeHoach) || 0;
+              const khoiLuongThucHien = Number(row.TongKhoiLuongThucHien) || 0;
+              const percent = khoiLuongKeHoach > 0 ? Math.min(100, (khoiLuongThucHien / khoiLuongKeHoach) * 100) : 0;
+              let trangThai = 'DANG_LAM';
+              const ngayKetThuc = row.NgayKetThuc ? new Date(row.NgayKetThuc) : null;
+              if (percent >= 100 - 1e-6) trangThai = 'HOAN_THANH';
+              else if (ngayKetThuc && today > ngayKetThuc) trangThai = 'CHAM_TIEN_DO';
+
+              // Vai trò nhà thầu ở gói thầu này (nếu có)
+              const roleForC = roles.filter((r) => r.NhaThauID === row.NhaThauID);
+              const roleNames = [...new Set(roleForC.map((r) => r.VaiTro).filter(Boolean))];
+              const parents = roleForC
+                .filter((r) => r.ParentId)
+                .map((r) => ({ parentNhaThauId: r.ParentId, tenNhaThauCha: r.TenNhaThauCha }))
+                .filter((v, i, a) => a.findIndex((x) => x.parentNhaThauId === v.parentNhaThauId) === i);
+
+              return {
+                keHoachId: row.KeHoachID,
+                tenCongTac: row.TenCongTac,
+                khoiLuongKeHoach,
+                donViTinh: row.DonViTinh,
+                ngayBatDau: row.NgayBatDau,
+                ngayKetThuc: row.NgayKetThuc,
+                tongKhoiLuongThucHien: khoiLuongThucHien,
+                phanTramHoanThanh: Number(percent.toFixed(2)),
+                trangThai,
+                nhaThau: row.NhaThauID
+                  ? {
+                      nhaThauId: row.NhaThauID,
+                      tenNhaThau: row.TenNhaThau,
+                      roleSummary: { roles: roleNames, parents }
+                    }
+                  : null
+              };
+            });
+
+            return {
+              hangMucId: hm.HangMucID,
+              tenHangMuc: hm.TenHangMuc,
+              loaiHangMuc: hm.LoaiHangMuc,
+              keHoach
+            };
+          })
+        );
+
+        return {
+          goiThauId: gt.GoiThau_ID,
+          tenGoiThau: gt.TenGoiThau,
+          duAnId: gt.DuAn_ID,
+          hangMuc: hangMucWithPlans
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        duAn: { duAnId: currentDuAn.DuAnID, tenDuAn: currentDuAn.TenDuAn, isDuAnTong: currentDuAn.ParentID === null },
+        projectIdsScope: projectIds,
+        danhSachGoiThau: danhSachGoiThau
+      }
+    });
+  } catch (err) {
+    console.error('Lỗi API ke-hoach-nested:', err);
+    return res.status(500).json({ success: false, message: 'Lỗi hệ thống' });
+  }
+});
 app.post('/capNhatTienDoTatCa', async (req, res) => {
   try {
     // Lấy tất cả dự án tổng
@@ -482,8 +632,26 @@ app.post('/goiThau/capNhatPhanTramTatCa', async (req, res) => {
 });
 app.get('/duAnTongList', async (req, res) => {
   try {
+    // 1. Lấy danh sách dự án tổng (ParentID IS NULL) với đầy đủ thông tin
     const [duAnTongList] = await pool.query(
-      'SELECT * FROM duan WHERE ParentID IS NULL'
+      `SELECT 
+        DuAnID, 
+        TenDuAn, 
+        TinhThanh, 
+        ChuDauTu,
+        NgayKhoiCong,
+        TrangThai,
+        NguonVon,
+        TongChieuDai,
+        KeHoachHoanThanh,
+        MoTaChung,
+        PhanTramHoanThanh,
+        PhanTramChamTienDo,
+        PhanTramKeHoach,
+        ThoiGianCapNhatGanNhat
+       FROM duan 
+       WHERE ParentID IS NULL 
+       ORDER BY DuAnID ASC`
     );
 
     if (duAnTongList.length === 0) {
@@ -493,19 +661,30 @@ app.get('/duAnTongList', async (req, res) => {
       });
     }
 
+    // 2. Xử lý từng dự án tổng
     const result = await Promise.all(duAnTongList.map(async (duAnTong) => {
       const duAnId = duAnTong.DuAnID;
       
-      // Lấy tất cả dự án thành phần
+      // 2.1. Lấy các dự án thành phần (con của dự án tổng này)
       const [duAnThanhPhan] = await pool.query(
-        'SELECT * FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC', 
+        `SELECT 
+          DuAnID, 
+          TenDuAn, 
+          TinhThanh,
+          TrangThai,
+          PhanTramHoanThanh,
+          PhanTramChamTienDo,
+          PhanTramKeHoach
+         FROM duan 
+         WHERE ParentID = ? 
+         ORDER BY DuAnID ASC`, 
         [duAnId]
       );
 
       // Danh sách tất cả ID dự án (chính + thành phần)
       const allProjectIds = [duAnId, ...duAnThanhPhan.map(d => d.DuAnID)];
 
-      // 1. Lấy tất cả hạng mục với trạng thái
+      // 2.2. Thống kê hạng mục cho toàn bộ dự án (tổng + thành phần)
       const [allHangMuc] = await pool.query(`
         SELECT 
           hm.HangMucID,
@@ -530,7 +709,7 @@ app.get('/duAnTongList', async (req, res) => {
         WHERE gt.DuAn_ID IN (?)
       `, [allProjectIds]);
 
-      // 2. Tính toán số lượng hạng mục theo trạng thái
+      // Tính toán số lượng hạng mục theo trạng thái
       let soHangMucHoanThanh = 0;
       let soHangMucChamTienDo = 0;
       let soHangMucKeHoach = 0;
@@ -543,7 +722,7 @@ app.get('/duAnTongList', async (req, res) => {
 
       const tongSoHangMuc = allHangMuc.length;
 
-      // 3. Tính phần trăm theo yêu cầu
+      // Tính phần trăm theo yêu cầu
       const phanTramHoanThanh = tongSoHangMuc > 0 
         ? (soHangMucHoanThanh / tongSoHangMuc) * 100 
         : 0;
@@ -554,7 +733,7 @@ app.get('/duAnTongList', async (req, res) => {
       
       const phanTramKeHoach = 100 - phanTramHoanThanh - phanTramChamTienDo;
 
-      // 4. Lấy thông tin khác (gói thầu, nhà thầu...)
+      // 2.3. Lấy thông tin khác (gói thầu, nhà thầu...)
       const [goiThauCount] = await pool.query(
         'SELECT COUNT(*) as count FROM goithau WHERE DuAn_ID IN (?)',
         [allProjectIds]
@@ -562,14 +741,20 @@ app.get('/duAnTongList', async (req, res) => {
 
       // Lấy danh sách nhà thầu
       const [contractors] = await pool.query(`
-        SELECT DISTINCT n.* 
+        SELECT DISTINCT 
+          n.NhaThauID,
+          n.TenNhaThau,
+          n.MaSoThue,
+          n.DiaChiTruSo,
+          n.SoDienThoai,
+          n.Email
         FROM nhathau n
         JOIN goithau_nhathau gn ON n.NhaThauID = gn.NhaThauID
         JOIN goithau g ON gn.GoiThau_ID = g.GoiThau_ID
         WHERE g.DuAn_ID IN (?)
       `, [allProjectIds]);
 
-      // 5. Lấy tất cả đường dẫn KML từ các gói thầu thuộc dự án
+      // 2.4. Lấy tất cả đường dẫn KML từ các gói thầu thuộc dự án
       const [kmlPathsResult] = await pool.query(
         'SELECT PathData FROM goithau WHERE DuAn_ID IN (?) AND PathData IS NOT NULL',
         [allProjectIds]
@@ -578,12 +763,62 @@ app.get('/duAnTongList', async (req, res) => {
       // Chuẩn bị danh sách KML, loại bỏ trùng lặp
       const kmlPaths = [...new Set(kmlPathsResult.map(item => item.PathData))];
 
+      // 2.5. Lấy các gói thầu TRỰC TIẾP thuộc dự án tổng (nếu cần)
+      const [goiThauTrucTiep] = await pool.query(
+        `SELECT 
+          GoiThau_ID,
+          TenGoiThau,
+          GiaTriHĐ,
+          Km_BatDau,
+          Km_KetThuc,
+          ToaDo_BatDau_X,
+          ToaDo_BatDau_Y,
+          ToaDo_KetThuc_X,
+          ToaDo_KetThuc_Y,
+          NgayKhoiCong,
+          NgayHoanThanh,
+          TrangThai,
+          PhanTramHoanThanh,
+          PhanTramDangLam,
+          PhanTramChamTienDo,
+          PhanTramKeHoach,
+          PathData
+         FROM goithau 
+         WHERE DuAn_ID = ? 
+         ORDER BY GoiThau_ID ASC`,
+        [duAnId]
+      );
+
+      // Xử lý chi tiết các gói thầu trực tiếp
+      const goiThauTrucTiepWithDetails = await Promise.all(goiThauTrucTiep.map(async (goiThau) => {
+        const [nhaThauList] = await pool.query(
+          `SELECT 
+            n.NhaThauID,
+            n.TenNhaThau,
+            n.MaSoThue,
+            n.DiaChiTruSo,
+            n.SoDienThoai,
+            n.Email
+           FROM nhathau n
+           JOIN goithau_nhathau gn ON n.NhaThauID = gn.NhaThauID
+           WHERE gn.GoiThau_ID = ?`,
+          [goiThau.GoiThau_ID]
+        );
+
+        return {
+          ...goiThau,
+          danhSachNhaThau: nhaThauList,
+          kmlPath: goiThau.PathData || null
+        };
+      }));
+
       return {
         ...duAnTong,
         soLuongDuAnThanhPhan: duAnThanhPhan.length,
+        danhSachGoiThauTrucTiep: goiThauTrucTiepWithDetails,
         soLuongGoiThau: goiThauCount[0].count,
         danhSachNhaThau: contractors,
-        kmlPaths, // Thêm danh sách đường dẫn KML
+        kmlPaths, // Danh sách đường dẫn KML
         thongKe: {
           tongSoHangMuc,
           soHangMucHoanThanh,
@@ -926,7 +1161,7 @@ app.delete('/nhaThau/:id', async (req, res) => {
     connection.release();
   }
 });
-app.get('/duAnTong', async (req, res) => {
+app.get('/duAnTongList', async (req, res) => {
   try {
     const [duAnTongList] = await pool.query(
       'SELECT * FROM duan WHERE ParentID IS NULL'
@@ -2249,6 +2484,190 @@ app.get('/duAn/:duAnId/detail', async (req, res) => {
       success: false,
       message: 'Lỗi hệ thống khi truy vấn dữ liệu',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// API: Tổng hợp kế hoạch theo nhà thầu trong phạm vi 1 dự án (hỗ trợ 3 trường hợp dự án)
+app.get('/duAn/:duAnId/ke-hoach-theo-nha-thau', async (req, res) => {
+  const duAnId = parseInt(req.params.duAnId, 10);
+  if (!Number.isFinite(duAnId)) {
+    return res.status(400).json({ success: false, message: 'duAnId không hợp lệ' });
+  }
+
+  try {
+    // 1) Xác định danh sách DuAnID trong phạm vi
+    const [duAnRows] = await pool.query(
+      'SELECT DuAnID, ParentID, TenDuAn FROM duan WHERE DuAnID = ?',
+      [duAnId]
+    );
+    if (duAnRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy dự án' });
+    }
+    const currentDuAn = duAnRows[0];
+
+    let projectIds = [duAnId];
+    if (currentDuAn.ParentID === null) {
+      // Dự án tổng: gom cả gói thầu trực tiếp (case 2) và dự án thành phần (case 1)
+      const [children] = await pool.query(
+        'SELECT DuAnID FROM duan WHERE ParentID = ? ORDER BY DuAnID ASC',
+        [duAnId]
+      );
+      const childIds = children.map((r) => r.DuAnID);
+      projectIds = [duAnId, ...childIds];
+    }
+
+    // 2) Lấy danh sách gói thầu trong phạm vi dự án
+    const [goiThauList] = await pool.query(
+      `SELECT GoiThau_ID, TenGoiThau, DuAn_ID
+       FROM goithau
+       WHERE DuAn_ID IN (?)
+       ORDER BY GoiThau_ID ASC`,
+      [projectIds]
+    );
+
+    // 3) Duyệt từng gói thầu -> gom kế hoạch theo nhà thầu
+    const today = new Date();
+    const danhSachGoiThau = await Promise.all(
+      goiThauList.map(async (gt) => {
+        // Lấy tất cả nhà thầu tham gia gói thầu (dù có kế hoạch hay không)
+        const [allContractors] = await pool.query(
+          `SELECT 
+             gn.NhaThauID, 
+             gn.VaiTro, 
+             gn.ParentId, 
+             n.TenNhaThau,
+             ntCha.TenNhaThau AS TenNhaThauCha
+           FROM goithau_nhathau gn
+           JOIN nhathau n ON n.NhaThauID = gn.NhaThauID
+           LEFT JOIN nhathau ntCha ON ntCha.NhaThauID = gn.ParentId
+           WHERE gn.GoiThau_ID = ?`,
+          [gt.GoiThau_ID]
+        );
+
+        // Lấy kế hoạch của gói thầu này
+        const [keHoachRows] = await pool.query(
+          `SELECT 
+             kh.KeHoachID,
+             kh.HangMucID,
+             kh.NhaThauID,
+             kh.TenCongTac,
+             kh.KhoiLuongKeHoach,
+             kh.DonViTinh,
+             kh.NgayBatDau,
+             kh.NgayKetThuc,
+             n.TenNhaThau,
+             COALESCE(SUM(td.KhoiLuongThucHien), 0) AS TongKhoiLuongThucHien
+           FROM quanlykehoach kh
+           JOIN hangmuc hm ON kh.HangMucID = hm.HangMucID
+           JOIN goithau g ON hm.GoiThauID = g.GoiThau_ID
+           LEFT JOIN tiendothuchien td ON td.KeHoachID = kh.KeHoachID
+           LEFT JOIN nhathau n ON n.NhaThauID = kh.NhaThauID
+           WHERE g.GoiThau_ID = ?
+           GROUP BY 
+             kh.KeHoachID, kh.HangMucID, kh.NhaThauID, kh.TenCongTac, 
+             kh.KhoiLuongKeHoach, kh.DonViTinh, kh.NgayBatDau, kh.NgayKetThuc, n.TenNhaThau
+           ORDER BY kh.KeHoachID ASC`,
+          [gt.GoiThau_ID]
+        );
+
+        // Tạo map để nhóm kế hoạch theo nhà thầu
+        const keHoachByContractor = new Map();
+        for (const row of keHoachRows) {
+          const contractorId = row.NhaThauID || 0;
+          if (!keHoachByContractor.has(contractorId)) {
+            keHoachByContractor.set(contractorId, []);
+          }
+          
+          const khoiLuongKeHoach = Number(row.KhoiLuongKeHoach) || 0;
+          const khoiLuongThucHien = Number(row.TongKhoiLuongThucHien) || 0;
+          const percent = khoiLuongKeHoach > 0 ? Math.min(100, (khoiLuongThucHien / khoiLuongKeHoach) * 100) : 0;
+
+          let trangThai = 'CHUA_LAM';
+          const ngayKetThuc = row.NgayKetThuc ? new Date(row.NgayKetThuc) : null;
+          if (percent >= 100 - 1e-6) trangThai = 'HOAN_THANH';
+          else if (ngayKetThuc && today > ngayKetThuc) trangThai = 'CHAM_TIEN_DO';
+          else trangThai = 'DANG_LAM';
+
+          keHoachByContractor.get(contractorId).push({
+            keHoachId: row.KeHoachID,
+            hangMucId: row.HangMucID,
+            tenCongTac: row.TenCongTac,
+            khoiLuongKeHoach,
+            donViTinh: row.DonViTinh,
+            ngayBatDau: row.NgayBatDau,
+            ngayKetThuc: row.NgayKetThuc,
+            tongKhoiLuongThucHien: khoiLuongThucHien,
+            phanTramHoanThanh: Number(percent.toFixed(2)),
+            trangThai
+          });
+        }
+
+        // Xử lý từng nhà thầu trong gói thầu
+        const contractors = allContractors.map((contractor) => {
+          const keHoachList = keHoachByContractor.get(contractor.NhaThauID) || [];
+          
+          // Tính thống kê
+          const tongSoKeHoach = keHoachList.length;
+          const soKeHoachHoanThanh = keHoachList.filter(k => k.trangThai === 'HOAN_THANH').length;
+          const soKeHoachChamTienDo = keHoachList.filter(k => k.trangThai === 'CHAM_TIEN_DO').length;
+          const soKeHoachDangLam = keHoachList.filter(k => k.trangThai === 'DANG_LAM').length;
+
+          // Xác định vai trò
+          const rolesForC = allContractors.filter((r) => r.NhaThauID === contractor.NhaThauID);
+          const roleNames = [...new Set(rolesForC.map((r) => r.VaiTro).filter(Boolean))];
+          const isMain = roleNames.includes('Nhà thầu chính');
+          const parents = rolesForC
+            .filter((r) => r.ParentId)
+            .map((r) => ({ parentNhaThauId: r.ParentId, tenNhaThauCha: r.TenNhaThauCha }))
+            .filter((v, i, a) => a.findIndex((x) => x.parentNhaThauId === v.parentNhaThauId) === i);
+
+          return {
+            nhaThauId: contractor.NhaThauID,
+            tenNhaThau: contractor.TenNhaThau || 'Chưa xác định',
+            roleSummary: { 
+              isMainContractor: isMain, 
+              roles: roleNames, 
+              parents 
+            },
+            tongSoKeHoach,
+            soKeHoachHoanThanh,
+            soKeHoachChamTienDo,
+            soKeHoachDangLam,
+            phanTramHoanThanh: Number(((tongSoKeHoach > 0 ? (soKeHoachHoanThanh / tongSoKeHoach) * 100 : 0)).toFixed(2)),
+            phanTramChamTienDo: Number(((tongSoKeHoach > 0 ? (soKeHoachChamTienDo / tongSoKeHoach) * 100 : 0)).toFixed(2)),
+            phanTramDangLam: Number(((tongSoKeHoach > 0 ? (soKeHoachDangLam / tongSoKeHoach) * 100 : 0)).toFixed(2)),
+            keHoach: keHoachList
+          };
+        });
+
+        return {
+          goiThauId: gt.GoiThau_ID,
+          tenGoiThau: gt.TenGoiThau,
+          duAnId: gt.DuAn_ID,
+          nhaThau: contractors
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        duAn: { 
+          duAnId: currentDuAn.DuAnID, 
+          tenDuAn: currentDuAn.TenDuAn, 
+          isDuAnTong: currentDuAn.ParentID === null 
+        },
+        projectIdsScope: projectIds,
+        danhSachGoiThau: danhSachGoiThau
+      }
+    });
+  } catch (err) {
+    console.error('Lỗi API ke-hoach-theo-nha-thau:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi hệ thống', 
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined 
     });
   }
 });
