@@ -18,7 +18,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     TenGoiThau: goiThau?.TenGoiThau || '',
     DuAn_ID: projectId,
-    GiaTriHĐ: goiThau?.GiaTriHĐ || '',
+    GiaTriHD: goiThau?.GiaTriHD || '',
     Km_BatDau: goiThau?.Km_BatDau || '',
     Km_KetThuc: goiThau?.Km_KetThuc || '',
     ToaDo_BatDau_X: goiThau?.ToaDo_BatDau_X || '',
@@ -291,7 +291,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
 
     // Kiểm tra các trường cơ bản
     const requiredFields = [
-      'TenGoiThau', 'GiaTriHĐ', 'Km_BatDau', 'Km_KetThuc', 
+      'TenGoiThau', 'GiaTriHD', 'Km_BatDau', 'Km_KetThuc', 
       'ToaDo_BatDau_X', 'ToaDo_BatDau_Y', 'ToaDo_KetThuc_X', 'ToaDo_KetThuc_Y',
       'NgayKhoiCong', 'NgayHoanThanh', 'LoaiHinh_ID'
     ];
@@ -706,7 +706,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
       const formDataToSend = new FormData();
       formDataToSend.append('TenGoiThau', formData.TenGoiThau);
       formDataToSend.append('DuAn_ID', formData.DuAn_ID);
-      formDataToSend.append('GiaTriHĐ', formData.GiaTriHĐ);
+      formDataToSend.append('GiaTriHD', formData.GiaTriHD);
       formDataToSend.append('Km_BatDau', formData.Km_BatDau);
       formDataToSend.append('Km_KetThuc', formData.Km_KetThuc);
       formDataToSend.append('ToaDo_BatDau_X', formData.ToaDo_BatDau_X);
@@ -795,7 +795,7 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
         setFormData({
           TenGoiThau: '',
           DuAn_ID: projectId,
-          GiaTriHĐ: '',
+          GiaTriHD: '',
           Km_BatDau: '',
           Km_KetThuc: '',
           ToaDo_BatDau_X: '',
@@ -869,16 +869,16 @@ const AddNewPackage = ({ isEdit, projectId, goiThau, onClose, onSuccess }) => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Giá trị hợp đồng (VND)</label>
                 <input
-                  type="number"
-                  name="GiaTriHĐ"
+                  type="text"
+                  name="GiaTriHD"
                   className={`w-full px-3 py-2 border rounded-md text-sm ${
-                    requiredFieldsError.GiaTriHĐ ? 'border-red-500' : 'border-gray-300'
+                    requiredFieldsError.GiaTriHD ? 'border-red-500' : 'border-gray-300'
                   }`}
-                  value={formData.GiaTriHĐ}
+                  value={formData.GiaTriHD}
                   onChange={handleInputChange}
                 />
-                {requiredFieldsError.GiaTriHĐ && (
-                  <p className="mt-1 text-xs text-red-600">{requiredFieldsError.GiaTriHĐ}</p>
+                {requiredFieldsError.GiaTriHD && (
+                  <p className="mt-1 text-xs text-red-600">{requiredFieldsError.GiaTriHD}</p>
                 )}
               </div>
 

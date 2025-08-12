@@ -506,14 +506,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
               <div className="ml-4 border-l border-gray-200 min-w-0">
                 <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                   <h3 className="text-xs font-bold text-gray-600">Danh sách gói thầu</h3>
-                  <button
-                    onClick={() => handleReportClick('packages', 'Báo cáo tổng quan gói thầu')}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    title="Báo cáo thông minh"
-                  >
-                    <FaChartLine className="text-xs" />
-                    Báo cáo thông minh
-                  </button>
+                 
                 </div>
                 {filteredPackages.map((pkg) => (
                   <div key={pkg.goiThauId}>

@@ -4904,7 +4904,7 @@ app.post('/goithau/tao-moi', createTempUploadMiddleware('GOITHAU'), async (req, 
     const {
       TenGoiThau,
       DuAn_ID,
-      GiaTriHĐ,
+      GiaTriHD,
       Km_BatDau,
       Km_KetThuc,
       ToaDo_BatDau_X,
@@ -4930,7 +4930,7 @@ app.post('/goithau/tao-moi', createTempUploadMiddleware('GOITHAU'), async (req, 
         NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        TenGoiThau, DuAn_ID, GiaTriHĐ, Km_BatDau, Km_KetThuc,
+        TenGoiThau, DuAn_ID, GiaTriHD, Km_BatDau, Km_KetThuc,
         ToaDo_BatDau_X, ToaDo_BatDau_Y, ToaDo_KetThuc_X, ToaDo_KetThuc_Y,
         NgayKhoiCong, NgayHoanThanh, TrangThai, NhaThauID
       ]
@@ -5203,7 +5203,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
     const {
       TenGoiThau,
       DuAn_ID,
-      GiaTriHĐ,
+      GiaTriHD,
       Km_BatDau,
       Km_KetThuc,
       ToaDo_BatDau_X,
@@ -5213,7 +5213,8 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
       NgayKhoiCong,
       NgayHoanThanh,
       TrangThai,
-      NhaThauID,
+      NhaThauID, // Nhà thầu chính (cũ, để backward compatibility)
+      NhaThauData, // Danh sách nhà thầu mới (bao gồm cả chính và phụ)
       LoaiHinh_ID,
       ThuocTinhValues,
       TaiLieuXoa // Danh sách ID tài liệu cần xóa
@@ -5249,12 +5250,12 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
       `UPDATE goithau SET
         TenGoiThau = ?, DuAn_ID = ?, GiaTriHĐ = ?, Km_BatDau = ?, Km_KetThuc = ?,
         ToaDo_BatDau_X = ?, ToaDo_BatDau_Y = ?, ToaDo_KetThuc_X = ?, ToaDo_KetThuc_Y = ?,
-        NgayKhoiCong = ?, NgayHoanThanh = ?, TrangThai = ?, NhaThauID = ?
+        NgayKhoiCong = ?, NgayHoanThanh = ?, TrangThai = ?
       WHERE GoiThau_ID = ?`,
       [
         TenGoiThau || existingGoiThau[0].TenGoiThau,
         DuAn_ID || existingGoiThau[0].DuAn_ID,
-        GiaTriHĐ || existingGoiThau[0].GiaTriHĐ,
+        GiaTriHD || existingGoiThau[0].GiaTriHD,
         Km_BatDau || existingGoiThau[0].Km_BatDau,
         Km_KetThuc || existingGoiThau[0].Km_KetThuc,
         ToaDo_BatDau_X || existingGoiThau[0].ToaDo_BatDau_X,
@@ -5264,36 +5265,56 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
         NgayKhoiCong || existingGoiThau[0].NgayKhoiCong,
         NgayHoanThanh || existingGoiThau[0].NgayHoanThanh,
         TrangThai || existingGoiThau[0].TrangThai,
-        NhaThauID || existingGoiThau[0].NhaThauID,
         GoiThau_ID
       ]
     );
 
-    // 3. Cập nhật liên kết nhà thầu
-    if (NhaThauID) {
+    // 3. Cập nhật liên kết nhà thầu (hỗ trợ cả cách cũ và mới)
+    await pool.query(
+      'DELETE FROM goithau_nhathau WHERE GoiThau_ID = ?',
+      [GoiThau_ID]
+    );
+
+    let nhaThauData = [];
+    try {
+      if (NhaThauData) {
+        // Xử lý danh sách nhà thầu mới (bao gồm cả chính và phụ)
+        nhaThauData = JSON.parse(NhaThauData);
+      } else if (NhaThauID) {
+        // Fallback cho cách cũ - chỉ nhà thầu chính
+        nhaThauData = [{ NhaThauID: NhaThauID, VaiTro: 'Nhà thầu chính', ParentId: null }];
+      }
+    } catch (error) {
+      console.error('Lỗi parse NhaThauData:', error);
+      if (NhaThauID) {
+        nhaThauData = [{ NhaThauID: NhaThauID, VaiTro: 'Nhà thầu chính', ParentId: null }];
+      }
+    }
+
+    // Thêm tất cả nhà thầu vào bảng goithau_nhathau
+    for (const nhaThau of nhaThauData) {
       await pool.query(
-        'DELETE FROM goithau_nhathau WHERE GoiThau_ID = ?',
-        [GoiThau_ID]
-      );
-      await pool.query(
-        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro) VALUES (?, ?, ?)',
-        [GoiThau_ID, NhaThauID, 'Nhà thầu chính']
+        'INSERT INTO goithau_nhathau (GoiThau_ID, NhaThauID, VaiTro, ParentId) VALUES (?, ?, ?, ?)',
+        [GoiThau_ID, nhaThau.NhaThauID, nhaThau.VaiTro || 'Nhà thầu phụ', nhaThau.ParentId || null]
       );
     }
 
     // 4. Cập nhật liên kết loại hình
-    if (LoaiHinh_ID) {
+    if (LoaiHinh_ID !== undefined) {
       await pool.query(
         'DELETE FROM doituongloaihinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
         ['goithau', GoiThau_ID]
       );
-      await pool.query(
-        'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, ?, ?)',
-        [GoiThau_ID, 'goithau', LoaiHinh_ID]
-      );
+      
+      if (LoaiHinh_ID) { // Chỉ thêm nếu có LoaiHinh_ID
+        await pool.query(
+          'INSERT INTO doituongloaihinh (DoiTuong_ID, LoaiDoiTuong, LoaiHinh_ID) VALUES (?, ?, ?)',
+          [GoiThau_ID, 'goithau', LoaiHinh_ID]
+        );
+      }
     }
 
-    // 5. Cập nhật thuộc tính
+    // 5. Cập nhật thuộc tính (phần này giữ nguyên)
     if (ThuocTinhValues && typeof ThuocTinhValues === 'object') {
       await pool.query(
         'DELETE FROM giatrithuoctinh WHERE LoaiDoiTuong = ? AND DoiTuong_ID = ?',
@@ -5309,7 +5330,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
       }
     }
 
-    // 6. Xóa tài liệu nếu có TaiLieuXoa
+    // 6. Xử lý tài liệu (phần này giữ nguyên)
     const taiLieuResults = [];
     if (TaiLieuXoa && Array.isArray(TaiLieuXoa) && TaiLieuXoa.length > 0) {
       for (const taiLieuID of TaiLieuXoa) {
@@ -5330,7 +5351,7 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
       }
     }
 
-    // 7. Xử lý file tải lên mới
+    // 7. Xử lý file tải lên mới (phần này giữ nguyên)
     if (req.files && req.files.length > 0) {
       const newFolder = path.join(__dirname, 'uploads', 'GOITHAU', String(GoiThau_ID));
       if (!fs.existsSync(newFolder)) {
@@ -5375,7 +5396,8 @@ app.put('/goithau/sua/:GoiThau_ID', createUploadMiddleware('GOITHAU'), async (re
         GoiThau_ID,
         LoaiHinh_ID,
         ThuocTinhValues,
-        taiLieu: taiLieuResults
+        taiLieu: taiLieuResults,
+        nhaThau: nhaThauData // Trả về danh sách nhà thầu đã cập nhật
       }
     });
 
