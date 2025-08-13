@@ -77,6 +77,7 @@ function App() {
       try {
         await fetch(`${API_BASE_URL}/capNhatTienDoTatCa`, { method: 'POST' });
         await fetch(`${API_BASE_URL}/goiThau/capNhatPhanTramTatCa`, { method: 'POST' });
+        await fetch(`${API_BASE_URL}/cap-nhat-tien-do-tat-ca-nha-thau`, { method: 'POST' });
         console.log('Đã cập nhật thành công lúc: ', new Date().toLocaleTimeString());
       } catch (error) {
         console.error('Lỗi khi cập nhật:', error);

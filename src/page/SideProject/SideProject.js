@@ -45,9 +45,9 @@ const useClickOutside = (ref, callback) => {
 const SideProject = () => {
     const ProgressPieChart = ({ project }) => {
       const data = [
-        { name: 'Hoàn thành', value: parseFloat(project.phanTramHoanThanh || 0), color: '#16A34A' },
-        { name: 'Chậm tiến độ', value: parseFloat(project.phanTramChamTienDo || 0), color: '#CA8A04' },
-        { name: 'Đang làm', value: parseFloat(project.phanTramKeHoach || 0), color: '#2563EB' },
+        { name: 'Hoàn thành', value: parseFloat(project?.thongKe?.phanTramHoanThanh || 0), color: '#16A34A' },
+        { name: 'Chậm tiến độ', value: parseFloat(project?.thongKe?.phanTramChamTienDo || 0), color: '#CA8A04' },
+        { name: 'Đang làm', value: parseFloat(project?.thongKe?.phanTramKeHoach || 0), color: '#2563EB' },
       ];
   
       return (
@@ -1064,7 +1064,7 @@ const SideProject = () => {
                                       className="text-gray-600 cursor-pointer"
                                       onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
                                     >
-                                      Đang làm: <strong className="text-blue-600">{project.phanTramKeHoach ?? '0'}%</strong>
+                                      Đang làm: <strong className="text-blue-600">{project?.thongKe?.phanTramKeHoach ?? '0'}%</strong>
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -1073,7 +1073,7 @@ const SideProject = () => {
                                       className="text-gray-600 cursor-pointer"
                                       onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
                                     >
-                                      Hoàn thành: <strong className="text-green-600">{project.phanTramHoanThanh ?? '0'}%</strong>
+                                      Hoàn thành: <strong className="text-green-600">{project?.thongKe?.phanTramHoanThanh ?? '0'}%</strong>
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -1082,7 +1082,7 @@ const SideProject = () => {
                                       className="text-gray-600 cursor-pointer"
                                       onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
                                     >
-                                      Chậm tiến độ: <strong className="text-yellow-600">{project.phanTramChamTienDo ?? '0'}%</strong>
+                                      Chậm tiến độ: <strong className="text-yellow-600">{project?.thongKe?.phanTramChamTienDo ?? '0'}%</strong>
                                     </span>
                                   </div>
                                 </div>

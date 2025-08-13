@@ -28,13 +28,13 @@ const ContractorInfo = ({ data, ps, pe }) => {
   
 
   return (
-    <div className="bg-white rounded-lg mt-2 overflow-hidden shadow-sm">
-      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center">
+    <div className="bg-white rounded-lg mt-2 overflow-hidden shadow-sm h-full flex flex-col">
+      <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center flex-shrink-0">
         <FaUsers className="text-gray-500 mr-2" size={14} />
         <h2 className="text-lg font-semibold text-gray-800">NHÀ THẦU CHÍNH</h2>
       </div>
       
-      <div className="p-4">
+      <div className="p-4 overflow-y-auto flex-1">
         {/* Thông tin cơ bản - sử dụng flex với label cố định */}
         <div className="space-y-3">
           <div className="flex">

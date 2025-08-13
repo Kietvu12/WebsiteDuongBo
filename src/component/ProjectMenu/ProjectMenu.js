@@ -78,7 +78,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     }
 
     const searchLower = searchTerm.toLowerCase();
-    
+
     return combinedPackages.map(pkg => {
       // Lọc hạng mục trong gói thầu
       const filteredWorkItems = pkg.danhSachHangMuc?.map(workItem => {
@@ -177,10 +177,10 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
 
   useEffect(() => {
     if (!projectData || restoredRef.current) return;
-  
+
     const last = localStorage.getItem('lastSelectedPlan');
     if (!last) return;
-  
+
     const lastPlan = JSON.parse(last);
     const foundPlan = combinedPackages
       .flatMap(pkg =>
@@ -197,10 +197,10 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
         )
       )
       .find(plan => plan.keHoachId === lastPlan.keHoachId);
-  
+
     if (foundPlan) {
       restoredRef.current = true;
-  
+
       setExpandedItems(prev => ({
         ...prev,
         project: true,
@@ -213,7 +213,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
           [foundPlan.parent.workItemId]: true
         }
       }));
-  
+
       setSelectedItem({ ...foundPlan, type: 'plan' });
       if (onItemSelect) {
         onItemSelect(
@@ -278,7 +278,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   // Xử lý input từ người dùng qua API AI
   const handleProcessInput = async () => {
     const cleanedData = cleanInputText(reportData);
-    
+
     if (!cleanedData.trim()) {
       setApiError('Vui lòng nhập dữ liệu báo cáo!');
       return;
@@ -287,10 +287,10 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     setProcessingInput(true);
     setApiError(null);
     setApiResult(null);
-    
+
     try {
       console.log('Sending request with data:', { text: cleanedData });
-      
+
       const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/add_tien_do', {
         method: 'POST',
         headers: {
@@ -312,7 +312,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
 
       const data = await response.json();
       console.log('API Response data:', data);
-      
+
       if (data.project_info && Array.isArray(data.project_info)) {
         // Thêm các trường cần thiết cho việc chỉnh sửa
         const processedData = data.project_info.map((item, index) => ({
@@ -348,7 +348,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   const updateEditableData = (index, field, value) => {
     const newData = [...editableData];
     newData[index][field] = value;
-    
+
     // Tính toán lại tiến độ nếu thay đổi khối lượng
     if (field === 'khoi_luong_hoan_thanh' || field === 'khoi_luong_ke_hoach') {
       const khoiLuongHoanThanh = parseFloat(newData[index].khoi_luong_hoan_thanh) || 0;
@@ -356,9 +356,9 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       newData[index].tien_do = khoiLuongKeHoach > 0 ? 
         ((khoiLuongHoanThanh / khoiLuongKeHoach) * 100).toFixed(2) : 0;
     }
-    
+
     setEditableData(newData);
-    
+
     // Cập nhật apiResult để hiển thị
     setApiResult(prev => ({
       ...prev,
@@ -369,7 +369,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   // Gửi dữ liệu đã chỉnh sửa
   const handleReportSubmit = async () => {
     const selectedData = editableData.filter(item => item.selected);
-    
+
     if (selectedData.length === 0) {
       setApiError('Vui lòng chọn ít nhất một mục để gửi!');
       return;
@@ -377,7 +377,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
 
     setApiLoading(true);
     setApiError(null);
-    
+
     try {
       const submitData = {
         goiThauId: selectedGoiThauId, // Lấy từ state thay vì fix cứng
@@ -409,7 +409,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         alert('Gửi dữ liệu thành công!');
         handleReportCancel();
@@ -506,7 +506,14 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
               <div className="ml-4 border-l border-gray-200 min-w-0">
                 <div className="flex items-center justify-between px-4 py-1 bg-gray-50 border-b">
                   <h3 className="text-xs font-bold text-gray-600">Danh sách gói thầu</h3>
-                 
+                  {/* <button
+                    onClick={() => handleReportClick('packages', 'Báo cáo tổng quan gói thầu')}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    title="Báo cáo thông minh"
+                  >
+                    <FaChartLine className="text-xs" />
+                    Báo cáo thông minh
+                  </button> */}
                 </div>
                 {filteredPackages.map((pkg) => (
                   <div key={pkg.goiThauId}>
@@ -608,7 +615,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                         tenDuAn: projectData.tenDuAn || projectData.duAnTong?.tenDuAn,
                                         tenHangMuc: workItem.tenHangMuc
                                       };
-                                      
+
                                       handlePlanSelect(plan);
                                       onPlanSelect( 
                                         { ...plan, type: 'plan' },
@@ -669,7 +676,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                 <FaTimes />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -746,7 +753,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                         </div>
                       </div>
                     )}
-                  
+
                     {/* Bảng dữ liệu có thể chỉnh sửa */}
                     <div>
                       <div className="flex items-center justify-between mb-4">
@@ -949,7 +956,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={handleReportCancel}
