@@ -4,6 +4,7 @@ import {
   TileLayer,
   Polyline,
   Marker,
+  CircleMarker,
   Popup,
   useMap,
 } from "react-leaflet";
@@ -45,13 +46,20 @@ const ZoomAwareMarker = ({ position, color, children }) => {
     return () => map.off("zoomend", handleZoom);
   }, [map]);
 
-  const icon = createCustomIcon(color, zoom);
-  //const icon = new L.Icon.Default();
-
+  const radius = Math.max(8, Math.round(zoom * 1.4));
   return (
-    <Marker position={position} icon={icon}>
+    <CircleMarker
+      center={position}
+      radius={radius}
+      pathOptions={{
+        color: "#ffffff",
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 1,
+      }}
+    >
       {children}
-    </Marker>
+    </CircleMarker>
   );
 };
 
@@ -82,29 +90,38 @@ const MapController = ({ allRoutes }) => {
 
   useEffect(() => {
     // Xử lý fit bounds nếu có routes
-    if (allRoutes?.length > 0) {
-      try {
-        const validCoords = allRoutes
-          .flat()
-          .filter((coord) =>
+    try {
+      const validCoords = (allRoutes || [])
+        .flat()
+        .filter(
+          (coord) =>
             Array.isArray(coord) &&
             coord.length === 2 &&
             typeof coord[0] === 'number' && isFinite(coord[0]) &&
             typeof coord[1] === 'number' && isFinite(coord[1])
-          );
+        );
 
-        if (validCoords.length > 0) {
-          const bounds = L.latLngBounds(validCoords);
-          //map.fitBounds(bounds, { padding: [50, 50] });
-          map.flyToBounds(bounds, {
-            padding: [50, 50],
-            duration: 1, // Thời gian animation (giây)
-            easeLinearity: 0.25, // Độ mượt
-          });
+      if (validCoords.length > 0) {
+        const bounds = L.latLngBounds(validCoords);
+        map.flyToBounds(bounds, {
+          padding: [50, 50],
+          duration: 1,
+          easeLinearity: 0.25,
+        });
+      } else {
+        // Fallback: fit toàn bộ Việt Nam để tránh zoom vào chỗ trống
+        try {
+          const vnLayer = L.geoJSON(vietnamGeoJson);
+          const vnBounds = vnLayer.getBounds();
+          if (vnBounds.isValid()) {
+            map.fitBounds(vnBounds, { padding: [50, 50] });
+          }
+        } catch (_) {
+          // ignore
         }
-      } catch (error) {
-        console.error("Error setting map bounds:", error);
       }
+    } catch (error) {
+      console.error('Error setting map bounds:', error);
     }
 
     // Tạo mask layer cho Việt Nam
@@ -584,10 +601,8 @@ const MapComponent = ({ projects = [] }) => {
   const handleBoundsFromChild = (bounds) => {
     if (!bounds?.isValid()) return;
     boundsListRef.current.push(bounds);
-
-    if (boundsListRef.current.length === filteredRoutes.length) {
-      setFitTrigger((prev) => prev + 1); // ép controller re-render
-    }
+    // Luôn kích hoạt re-fit mỗi khi có bounds mới từ lớp con (KML/Polyline)
+    setFitTrigger((prev) => prev + 1);
   };
 
   // Reset lại khi filteredRoutes thay đổi
@@ -713,13 +728,23 @@ const MapComponent = ({ projects = [] }) => {
                 const p = route.path;
                 if (!p) return [];
                 const segments = Array.isArray(p?.[0]?.[0]) ? p : [p];
-                return segments.flat().filter(
-                  (pt) =>
-                    Array.isArray(pt) &&
-                    pt.length === 2 &&
-                    typeof pt[0] === 'number' && isFinite(pt[0]) &&
-                    typeof pt[1] === 'number' && isFinite(pt[1])
-                );
+                const points = segments
+                  .flat()
+                  .filter(
+                    (pt) =>
+                      Array.isArray(pt) &&
+                      pt.length === 2 &&
+                      typeof pt[0] === 'number' && isFinite(pt[0]) &&
+                      typeof pt[1] === 'number' && isFinite(pt[1])
+                  );
+                const extras = [];
+                if (Array.isArray(route.start) && route.start.length === 2) {
+                  extras.push(route.start);
+                }
+                if (Array.isArray(route.end) && route.end.length === 2) {
+                  extras.push(route.end);
+                }
+                return [...points, ...extras];
               })}
             />
 
@@ -763,7 +788,7 @@ const MapComponent = ({ projects = [] }) => {
                     );
                   })()}
 
-                  {false && Array.isArray(route.start) && route.start.length === 2 && (
+                  {Array.isArray(route.start) && route.start.length === 2 && (
                     <ZoomAwareMarker position={route.start} color={route.color}>
                       <Popup>
                         <div className="marker-popup">
@@ -791,7 +816,7 @@ const MapComponent = ({ projects = [] }) => {
                     </ZoomAwareMarker>
                   )}
 
-                  {false && Array.isArray(route.end) && route.end.length === 2 && (
+                  {Array.isArray(route.end) && route.end.length === 2 && (
                     <ZoomAwareMarker position={route.end} color={route.color}>
                       <Popup>
                         <div className="marker-popup">

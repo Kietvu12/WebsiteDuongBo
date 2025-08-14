@@ -276,11 +276,11 @@ const Sidebar = () => {
               {
                 key: 'requirements',
                 icon: requirementsIcon,
-                label: 'Nhà thầu thi công',
+                label: 'Quản lý nhà thầu',
                 submenu: [
                   { label: 'Thêm mới nhà thầu', onClick: () => handleSimpleNavigation('/add-new-contructor') },
-                  { label: 'Quản lý danh sách nhà thầu', onClick: () => handleSimpleNavigation('/contractor-dashboard') },
-                  { label: 'Quản lý tiến độ dự án', onClick: () => handleSimpleNavigation('/project-progress-management') }
+                  { label: 'Quản lý danh sách nhà thầu thi công', onClick: () => handleSimpleNavigation('/contractor-dashboard') },
+                  { label: 'Quản lý tiến độ các nhà thầu', onClick: () => handleSimpleNavigation('/project-progress-management') }
                 ],
               },
               {

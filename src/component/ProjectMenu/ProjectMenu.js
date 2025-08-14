@@ -41,6 +41,11 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
   const [editableData, setEditableData] = useState([]);
   const [processingInput, setProcessingInput] = useState(false);
   const [selectedGoiThauId, setSelectedGoiThauId] = useState(null);
+  // States cho nhà thầu
+  const [nhaThauList, setNhaThauList] = useState([]);
+  const [contractorSearchTerms, setContractorSearchTerms] = useState({});
+  const [showContractorDropdowns, setShowContractorDropdowns] = useState({});
+  const [fetchingContractors, setFetchingContractors] = useState(false);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
   // Fetch data from API
@@ -154,6 +159,45 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       }));
     }
   }, [searchTerm, filteredPackages, combinedPackages]);
+
+  // Fetch nhà thầu khi selectedGoiThauId thay đổi
+  useEffect(() => {
+    const fetchContractors = async () => {
+      if (!selectedGoiThauId) return;
+      
+      try {
+        setFetchingContractors(true);
+        const response = await axios.get(`${API_BASE_URL}/goiThau/${selectedGoiThauId}/nhaThauList`);
+        if (response.data.success) {
+          setNhaThauList(response.data.data);
+        } else {
+          console.error('Không thể tải danh sách nhà thầu');
+          setNhaThauList([]);
+        }
+      } catch (error) {
+        console.error('Error fetching contractors:', error);
+        setNhaThauList([]);
+      } finally {
+        setFetchingContractors(false);
+      }
+    };
+
+    fetchContractors();
+  }, [selectedGoiThauId, API_BASE_URL]);
+
+  // Đóng dropdown khi click ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.contractor-dropdown-table')) {
+        setShowContractorDropdowns({});
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (combinedPackages.length === 0 || Object.keys(expandedItems.packages).length > 0) return;
@@ -322,9 +366,15 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
           // Không set ngày từ reportDate, để trống để hiển thị --/--/----
           ngay_bat_dau: '', // Luôn để trống ban đầu
           ngay_ket_thuc: '', // Luôn để trống ban đầu
+          nha_thau_id: '', // Thêm trường nhà thầu
+          ten_nha_thau: '', // Tên nhà thầu hiển thị
           tien_do: item.khoi_luong_ke_hoach > 0 ? 
             ((item.khoi_luong_hoan_thanh / item.khoi_luong_ke_hoach) * 100).toFixed(2) : 0
         }));
+
+        // Reset search terms cho nhà thầu
+        setContractorSearchTerms({});
+        setShowContractorDropdowns({});
 
         setEditableData(processedData);
         setApiResult({
@@ -341,6 +391,79 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       setApiError(err.message || 'Đã xảy ra lỗi không xác định!');
     } finally {
       setProcessingInput(false);
+    }
+  };
+
+  // Các hàm helper cho nhà thầu
+  const getFilteredContractors = (searchTerm) => {
+    if (!searchTerm || !searchTerm.trim()) return nhaThauList;
+    
+    return nhaThauList.filter(contractor =>
+      contractor.TenNhaThau.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  const getContractorStatus = (contractor) => {
+    if (!contractor) return '';
+    
+    if (contractor.VaiTro === 'Nhà thầu chính') {
+      const subContractors = nhaThauList.filter(nt => nt.ParentId === contractor.NhaThauID);
+      const count = subContractors.length;
+      return count > 0 ? `${count} nhà thầu phụ` : 'Nhà thầu chính';
+    } else if (contractor.VaiTro === 'Nhà thầu phụ' && contractor.ParentId) {
+      const mainContractor = nhaThauList.find(nt => nt.NhaThauID === contractor.ParentId);
+      return mainContractor ? `Thầu phụ của ${mainContractor.TenNhaThau}` : 'Nhà thầu phụ';
+    }
+    return contractor.VaiTro || 'Không xác định';
+  };
+
+  const handleContractorSelect = (rowIndex, contractor) => {
+    const newData = [...editableData];
+    newData[rowIndex].nha_thau_id = contractor.NhaThauID;
+    newData[rowIndex].ten_nha_thau = contractor.TenNhaThau;
+    setEditableData(newData);
+
+    // Cập nhật search term cho hàng này
+    setContractorSearchTerms(prev => ({
+      ...prev,
+      [rowIndex]: contractor.TenNhaThau
+    }));
+
+    // Ẩn dropdown
+    setShowContractorDropdowns(prev => ({
+      ...prev,
+      [rowIndex]: false
+    }));
+
+    // Cập nhật apiResult
+    setApiResult(prev => ({
+      ...prev,
+      project_info: newData
+    }));
+  };
+
+  const handleContractorSearchChange = (rowIndex, value) => {
+    setContractorSearchTerms(prev => ({
+      ...prev,
+      [rowIndex]: value
+    }));
+    
+    setShowContractorDropdowns(prev => ({
+      ...prev,
+      [rowIndex]: true
+    }));
+
+    // Nếu xóa hết text, xóa luôn nhà thầu đã chọn
+    if (!value.trim()) {
+      const newData = [...editableData];
+      newData[rowIndex].nha_thau_id = '';
+      newData[rowIndex].ten_nha_thau = '';
+      setEditableData(newData);
+      
+      setApiResult(prev => ({
+        ...prev,
+        project_info: newData
+      }));
     }
   };
 
@@ -382,18 +505,20 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       const submitData = {
         goiThauId: selectedGoiThauId, // Lấy từ state thay vì fix cứng
         ngayCapNhat: reportDate,
-        duLieuTienDo: selectedData.map(item => ({
-          ten_hang_muc: item.ten_hang_muc,
-          ten_ke_hoach: item.ten_ke_hoach,
-          khoi_luong_hoan_thanh: parseFloat(item.khoi_luong_hoan_thanh) || 0,
-          khoi_luong_ke_hoach: parseFloat(item.khoi_luong_ke_hoach) || 0,
-          don_vi: item.don_vi,
-          // Chỉ gửi ngày nếu có giá trị hợp lệ (không rỗng và không phải --/--/----)
-          ...(item.ngay_bat_dau && item.ngay_bat_dau.trim() !== '' && item.ngay_bat_dau !== '--/--/----' && { ngay_bat_dau: item.ngay_bat_dau }),
-          ...(item.ngay_ket_thuc && item.ngay_ket_thuc.trim() !== '' && item.ngay_ket_thuc !== '--/--/----' && { ngay_ket_thuc: item.ngay_ket_thuc }),
-          vuong_mac: item.vuong_mac,
-          mo_ta_vuong_mac: item.mo_ta_vuong_mac
-        }))
+                  duLieuTienDo: selectedData.map(item => ({
+            ten_hang_muc: item.ten_hang_muc,
+            ten_ke_hoach: item.ten_ke_hoach,
+            khoi_luong_hoan_thanh: parseFloat(item.khoi_luong_hoan_thanh) || 0,
+            khoi_luong_ke_hoach: parseFloat(item.khoi_luong_ke_hoach) || 0,
+            don_vi: item.don_vi,
+            // Chỉ gửi ngày nếu có giá trị hợp lệ (không rỗng và không phải --/--/----)
+            ...(item.ngay_bat_dau && item.ngay_bat_dau.trim() !== '' && item.ngay_bat_dau !== '--/--/----' && { ngay_bat_dau: item.ngay_bat_dau }),
+            ...(item.ngay_ket_thuc && item.ngay_ket_thuc.trim() !== '' && item.ngay_ket_thuc !== '--/--/----' && { ngay_ket_thuc: item.ngay_ket_thuc }),
+            // Gửi nhà thầu nếu có
+            ...(item.nha_thau_id && { nha_thau_id: item.nha_thau_id }),
+            vuong_mac: item.vuong_mac,
+            mo_ta_vuong_mac: item.mo_ta_vuong_mac
+          }))
       };
 
       const response = await fetch(`${API_BASE_URL}/api/bao-cao-tien-do/batch`, {
@@ -433,6 +558,11 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
     setEditableData([]);
     setProcessingInput(false);
     setSelectedGoiThauId(null);
+    // Reset nhà thầu states
+    setNhaThauList([]);
+    setContractorSearchTerms({});
+    setShowContractorDropdowns({});
+    setFetchingContractors(false);
   };
 
   // Hàm loại bỏ xuống dòng và khoảng trống không cần thiết
@@ -666,7 +796,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
       {/* Form báo cáo thông minh */}
       {showReportForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold text-gray-800">{reportTitle}</h3>
               <button
@@ -677,7 +807,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-8">
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Ngày báo cáo
@@ -766,8 +896,8 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                         </span>
                       </div>
                       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
+                        <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                          <table className="w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                               <tr>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
@@ -791,14 +921,15 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                   </div>
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">STT</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Hạng mục</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Kế hoạch</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL kế hoạch</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">KL thực hiện</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Đơn vị</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Tiến độ (%)</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Ngày bắt đầu</th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Ngày kết thúc</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">Hạng mục</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">Kế hoạch</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">KL kế hoạch</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">KL thực hiện</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Đơn vị</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Tiến độ (%)</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">Nhà thầu</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Ngày bắt đầu</th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Ngày kết thúc</th>
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
@@ -815,7 +946,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                   <td className="px-4 py-3 whitespace-nowrap w-12">
                                     <div className="text-sm font-medium text-gray-900">{index + 1}</div>
                                   </td>
-                                  <td className="px-4 py-3 w-32">
+                                  <td className="px-4 py-3 w-48">
                                     <input
                                       type="text"
                                       value={item.ten_hang_muc}
@@ -823,7 +954,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       className="text-sm font-medium text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
                                     />
                                   </td>
-                                  <td className="px-4 py-3 w-40">
+                                  <td className="px-4 py-3 w-64">
                                     <textarea
                                       value={item.ten_ke_hoach}
                                       onChange={(e) => updateEditableData(index, 'ten_ke_hoach', e.target.value)}
@@ -832,7 +963,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       style={{ minHeight: '40px', maxHeight: '80px' }}
                                     />
                                   </td>
-                                  <td className="px-4 py-3 w-24">
+                                  <td className="px-4 py-3 w-28">
                                     <input
                                       type="number"
                                       value={item.khoi_luong_ke_hoach}
@@ -840,7 +971,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       className="text-sm font-semibold text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
                                     />
                                   </td>
-                                  <td className="px-4 py-3 w-24">
+                                  <td className="px-4 py-3 w-28">
                                     <input
                                       type="number"
                                       value={item.khoi_luong_hoan_thanh}
@@ -848,7 +979,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       className="text-sm font-semibold text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
                                     />
                                   </td>
-                                  <td className="px-4 py-3 w-20">
+                                  <td className="px-4 py-3 w-24">
                                     <input
                                       type="text"
                                       value={item.don_vi}
@@ -856,7 +987,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       className="text-sm font-medium text-gray-900 border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 w-full"
                                     />
                                   </td>
-                                  <td className="px-4 py-3 w-24">
+                                  <td className="px-4 py-3 w-28">
                                     <div className={`text-sm font-semibold px-2 py-1 rounded-full text-center ${
                                       parseFloat(item.tien_do) >= 100 ? 'bg-green-100 text-green-800' :
                                       parseFloat(item.tien_do) >= 80 ? 'bg-blue-100 text-blue-800' :
@@ -867,7 +998,59 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       {item.tien_do}%
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 w-28">
+                                  {/* Cột nhà thầu */}
+                                  <td className="px-4 py-3 w-56">
+                                    <div className="relative contractor-dropdown-table">
+                                      {fetchingContractors ? (
+                                        <div className="animate-pulse py-2 bg-gray-200 rounded-md"></div>
+                                      ) : (
+                                        <>
+                                          <input
+                                            type="text"
+                                            placeholder="Tìm kiếm nhà thầu..."
+                                            value={contractorSearchTerms[index] || ''}
+                                            onChange={(e) => handleContractorSearchChange(index, e.target.value)}
+                                            onFocus={() => setShowContractorDropdowns(prev => ({ ...prev, [index]: true }))}
+                                            className="w-full text-sm border-0 bg-transparent focus:ring-2 focus:ring-blue-500 rounded px-2 py-1"
+                                          />
+                                          
+                                          {/* Dropdown kết quả tìm kiếm */}
+                                          {showContractorDropdowns[index] && getFilteredContractors(contractorSearchTerms[index]).length > 0 && (
+                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                              {getFilteredContractors(contractorSearchTerms[index]).map(contractor => (
+                                                <div
+                                                  key={contractor.NhaThauID}
+                                                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                                  onClick={() => handleContractorSelect(index, contractor)}
+                                                >
+                                                  <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                      <div className="font-medium text-xs">{contractor.TenNhaThau}</div>
+                                                      <div className="text-xs text-gray-500">{getContractorStatus(contractor)}</div>
+                                                      {contractor.MaSoThue && (
+                                                        <div className="text-xs text-gray-400">MST: {contractor.MaSoThue}</div>
+                                                      )}
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 ml-2">
+                                                      {contractor.VaiTro === 'Nhà thầu chính' ? 'Chính' : 'Phụ'}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                          
+                                          {/* Thông báo không tìm thấy */}
+                                          {showContractorDropdowns[index] && contractorSearchTerms[index] && getFilteredContractors(contractorSearchTerms[index]).length === 0 && (
+                                            <div className="absolute z-50 w-full mt-1 text-xs text-gray-500 px-3 py-2 bg-gray-50 rounded-md border border-gray-200">
+                                              Không tìm thấy nhà thầu phù hợp
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 w-36">
                                     {item.ngay_bat_dau ? (
                                       <div className="flex items-center space-x-1">
                                         <input
@@ -894,7 +1077,7 @@ const ProjectMenu = ({ projectId, onItemSelect, onPlanSelect }) => {
                                       </div>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 w-28">
+                                  <td className="px-4 py-3 w-36">
                                     {item.ngay_ket_thuc ? (
                                       <div className="flex items-center space-x-1">
                                         <input
