@@ -7,8 +7,10 @@ import {
   FaCalendarAlt,
   FaCheckCircle,
   FaClock,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaRegBell
 } from 'react-icons/fa'
+
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
@@ -16,6 +18,7 @@ import edit from "../../assets/img/edit.png"
 import { useProject } from '../../contexts/ProjectContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+
 
 
 const ProjectProgressManagement = () => {
@@ -35,6 +38,22 @@ const ProjectProgressManagement = () => {
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const searchInputRef = useRef(null);
   const { logout, user } = useProject();
+  // Header user menu
+  const menuRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Đóng menu khi click ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+
   useEffect(() => {
     const savedSearchTerm = localStorage.getItem('lastSearchTerm');
     const savedProjectId = localStorage.getItem('lastSelectedProjectId');
@@ -360,17 +379,52 @@ const ProjectProgressManagement = () => {
   return (
     <div className="min-h-screen bg-gray-100" onClick={closeAllActionMenus}>
       {/* Header */}
-      <div className="bg-white shadow-sm px-4 md:px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Quay lại">
-            <FaChevronLeft className="w-5 h-5 text-gray-700" />
+      {/* Header (thay thế phần cũ bằng đoạn này) */}
+<div className="bg-white shadow-sm px-4 md:px-6 py-3 flex items-center justify-between">
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => navigate(-1)}
+      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+      aria-label="Quay lại"
+    >
+      <FaChevronLeft className="w-5 h-5 text-gray-700" />
+    </button>
+    <h1 className="text-lg md:text-xl font-semibold text-gray-900">Quản lý tiến độ dự án theo nhà thầu</h1>
+  </div>
+
+  <div className="flex items-center gap-4">
+    <span className="text-gray-600 hidden sm:inline">Thông báo</span>
+    <FaRegBell className="text-gray-600 w-5 h-5" />
+
+    <div className="relative inline-block" ref={menuRef}>
+      <button
+        className="bg-red-200 text-gray-800 w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center font-bold"
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowMenu(!showMenu);
+        }}
+        aria-label="Menu người dùng"
+      >
+        A
+      </button>
+
+      {showMenu && (
+        <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-50">
+          <button
+            className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+            onClick={() => {
+              if (logout) logout();
+              navigate('/login');
+            }}
+          >
+            Đăng xuất
           </button>
-          <h1 className="text-lg md:text-xl font-semibold text-gray-900">Quản lý tiến độ dự án theo nhà thầu</h1>
         </div>
-        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-          A
-        </div>
-      </div>
+      )}
+    </div>
+  </div>
+</div>
+
 
       {/* Search Section */}
       <div className="bg-white shadow-sm px-4 md:px-6 py-4 mb-4">

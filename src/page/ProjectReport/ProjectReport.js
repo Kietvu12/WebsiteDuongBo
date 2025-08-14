@@ -4,6 +4,11 @@ import { FaBold, FaItalic, FaUnderline, FaAlignLeft, FaAlignCenter, FaAlignRight
 import htmlDocx from 'html-docx-js/dist/html-docx';
 import { FaFileExport } from 'react-icons/fa';
 import axios from 'axios';
+import { FaArrowLeft, FaRegBell } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useProject } from '../../contexts/ProjectContext'; // nếu path khác, bạn sửa lại
+
+
 function ProjectReport() {
   const editorRef = useRef(null);
   const [isBold, setIsBold] = useState(false);
@@ -16,6 +21,22 @@ function ProjectReport() {
   const [duAnDetail, setDuAnDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+    const navigate = useNavigate();
+  const { logout } = useProject();
+  const menuRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+
+  // Đóng menu khi click ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   useEffect(() => {
     const fetchDuAnList = async () => {
@@ -148,6 +169,50 @@ function ProjectReport() {
   };
   return (
      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+      {/* --- HEADER (paste chỗ này) --- */}
+<div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
+  <div className="flex justify-between items-center gap-2">
+    {/* Nút back */}
+    <button
+      onClick={() => navigate(-1)}
+      className="p-1 hover:bg-gray-100 rounded text-gray-600"
+      aria-label="Quay lại"
+    >
+      <FaArrowLeft className="w-4 h-4" />
+    </button>
+
+    {/* Nhóm icon bên phải */}
+    <div className="flex items-center gap-3">
+      <span className="text-gray-500">Thông báo</span>
+      <FaRegBell className="text-gray-600" />
+      <div className="relative inline-block" ref={menuRef}>
+        <button
+          className="bg-red-200 text-gray-800 w-7 h-7 rounded-full flex items-center justify-center"
+          onClick={() => setShowMenu(!showMenu)}
+          aria-label="Menu người dùng"
+        >
+          R
+        </button>
+
+        {showMenu && (
+          <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+            <button
+              className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+              onClick={() => {
+                if (logout) logout();
+                navigate('/login');
+              }}
+            >
+              Đăng xuất
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+{/* --- END HEADER --- */}
+
       <div className="mb-4">
         <label htmlFor="duAnSelect" className="block mb-2 font-medium">
           Chọn dự án:

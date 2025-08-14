@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import AddNewAttribute from '../../component/AddNewAttribute/AddNewAtrribute';
-import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { FaChevronUp, FaChevronDown, FaPlus, FaTimes, FaRoad, FaCalendarAlt, FaInfoCircle, FaMapMarkerAlt, FaMoneyBillWave, FaCheckCircle, FaSpinner, FaChevronLeft, FaRegBell } from 'react-icons/fa';
 import axios from 'axios';
 
 const DocThongMinh = ({ onClose, setFormData, loaiHinhList = [],
@@ -377,6 +377,23 @@ const AddNewProject = () => {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdProjectId, setCreatedProjectId] = useState(null);
     const [showDocThongMinh, setShowDocThongMinh] = useState(false);
+
+// thêm ở phần hook trong AddNewProject
+const menuRef = useRef(null);
+const [showMenu, setShowMenu] = useState(false);
+
+// đóng menu khi click ngoài
+useEffect(() => {
+  const handleClickOutside = (e) => {
+    if (menuRef.current && !menuRef.current.contains(e.target)) {
+      setShowMenu(false);
+    }
+  };
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
+
     const [nhaThauList, setNhaThauList] = useState([]);
     const [fetchingContractors, setFetchingContractors] = useState(true);
     const [fetchError, setFetchError] = useState(null);
@@ -747,35 +764,83 @@ const AddNewProject = () => {
     <div className="bg-gray-50 min-h-screen">
         <div className="container justify-center item-center mx-auto p-2 max-w-screen-2xl text-base">
             {/* Header gọn */}
-            <div className="flex justify-between items-center mb-2">
-                <h1 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <FaRoad className="mr-1 text-blue-500" />
-                    Thêm dự án mới
-                </h1>
-                <button
-                    type="button"
-                    className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base hover:shadow transition-all"
-                    onClick={() => setShowDocThongMinh(true)}
-                >
-                    <span>Đọc thông minh</span>
-                    <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-base animate-pulse">
-                        AI
-                    </span>
-                </button>
+            <div className="bg-white shadow-sm px-4 md:px-6 py-3 flex items-center justify-between mb-4 rounded">
+  <div className="flex items-center gap-3">
+    <button
+      onClick={() => navigate(-1)}
+      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+      aria-label="Quay lại"
+    >
+      <FaChevronLeft className="w-5 h-5 text-gray-700" />
+    </button>
+    <h1 className="text-lg font-semibold text-gray-900 flex items-center">
+      <FaRoad className="mr-1 text-blue-500" />
+      Thêm dự án mới
+    </h1>
+  </div>
 
-                {showDocThongMinh && (
-                    <DocThongMinh
-                        onClose={() => setShowDocThongMinh(false)}
-                        formData={formData}
-                        setFormData={setFormData}
-                        loaiHinhList={loaiHinhList}
-                        setSelectedLoaiHinh={setSelectedLoaiHinh}
-                        setSelectedProvinces={setSelectedProvinces}
-                        setThuocTinhList={setThuocTinhList}
-                        thuocTinhList={thuocTinhList}
-                    />
-                )}
-            </div>
+  <div className="flex items-center gap-3">
+    {/* nút Đọc thông minh (AI) */}
+    <button
+      type="button"
+      className="flex items-center gap-1 px-2 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-base hover:shadow transition-all"
+      onClick={() => setShowDocThongMinh(true)}
+    >
+      <span>Đọc thông minh</span>
+      <span className="bg-white text-purple-600 font-bold px-1 py-0.5 rounded text-base animate-pulse">AI</span>
+    </button>
+
+    {/* thông báo */}
+    <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Thông báo">
+      <FaRegBell className="w-5 h-5 text-gray-600" />
+    </button>
+
+    {/* avatar + menu */}
+    <div className="relative inline-block" ref={menuRef}>
+      <button
+        className="bg-blue-500 text-white w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center font-bold"
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowMenu(!showMenu);
+        }}
+        aria-label="Menu người dùng"
+      >
+        A
+      </button>
+
+      {showMenu && (
+        <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-50">
+          <button
+            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
+            onClick={() => {
+              // nếu muốn thực hiện logout thực tế: gọi API hoặc context logout
+              // ví dụ: if (logout) logout(); 
+              // hoặc clear localStorage rồi chuyển trang
+              localStorage.clear();
+              navigate('/login');
+            }}
+          >
+            Đăng xuất
+          </button>
+        </div>
+      )}
+    </div>
+  </div>
+
+  {showDocThongMinh && (
+      <DocThongMinh
+        onClose={() => setShowDocThongMinh(false)}
+        formData={formData}
+        setFormData={setFormData}
+        loaiHinhList={loaiHinhList}
+        setSelectedLoaiHinh={setSelectedLoaiHinh}
+        setSelectedProvinces={setSelectedProvinces}
+        setThuocTinhList={setThuocTinhList}
+        thuocTinhList={thuocTinhList}
+      />
+  )}
+</div>
+
             <form onSubmit={onFinish} className="grid mt-6 md:mt-0 grid-cols-1 gap-2">
                 <div className="bg-white rounded p-2 border border-gray-200" style={{ boxShadow: '0 2px 4px rgba(240, 240, 240, 0.5)' }}>
                     <div className="flex items-center space-x-2">

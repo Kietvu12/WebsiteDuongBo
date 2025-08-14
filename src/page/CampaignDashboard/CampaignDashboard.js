@@ -25,6 +25,10 @@ import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
 import edit from "../../assets/img/edit.png"
 import { useProject } from '../../contexts/ProjectContext';
+import { useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaRegBell } from 'react-icons/fa';
+
+
 const ContractorDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('All');
@@ -32,7 +36,7 @@ const ContractorDashboard = () => {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [contractors, setContractors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(null); 
   const menuRef = useRef(null);
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   const [showEditModal, setShowEditModal] = useState(false);
@@ -42,6 +46,21 @@ const ContractorDashboard = () => {
   const { logout, user} = useProject();
   const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const avatarRef = useRef(null);
+
+  const navigate = useNavigate();
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const headerMenuRef = useRef(null);
+  
+  // Đóng menu khi click ngoài
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) {
+        setShowHeaderMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   // State cho modal hiển thị dữ liệu
   const [showDataModal, setShowDataModal] = useState(false);
@@ -516,34 +535,46 @@ const ContractorDashboard = () => {
     <div className="min-h-screen  bg-gray-200">
       <div className="w-full">
         {/* Header mới */}
-        <div className="bg-white shadow-sm px-2 py-2 sm:px-4 sm:py-3 mt-14 md:mt-0 flex flex-wrap items-center justify-between min-h-[48px]" style={{ maxWidth: '100%' }}>
-          {/* Bên trái: Nút back + tiêu đề */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            <button className="p-1 sm:p-2 rounded-full hover:bg-gray-100" onClick={() => window.history.back()}>
-              <FaChevronDown style={{ transform: 'rotate(90deg)' }} className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
-            </button>
-            <span className="text-base sm:text-lg font-semibold text-gray-900">Quản lý nhà thầu</span>
-          </div>
-          {/* Bên phải: Avatar + Dropdown */}
-          <div className="relative" ref={avatarRef}>
-            <div
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-pink-400 text-white font-bold text-base sm:text-lg cursor-pointer select-none"
-              onClick={() => setShowAvatarMenu((v) => !v)}
-              title="Tài khoản"
-            >
-              R
+        <div className="w-full bg-white shadow-md px-3 sm:px-4 py-2 sm:py-3 mt-3 md:mt-0">
+        <div className="flex justify-between items-center gap-2">
+          {/* Nút back */}
+          <button
+            onClick={() => navigate(-1)}
+            className="p-1 hover:bg-gray-100 rounded text-gray-600"
+            aria-label="Quay lại"
+          >
+            <FaArrowLeft className="w-4 h-4" />
+          </button>
+
+          {/* Nhóm icon bên phải */}
+          <div className="flex items-center gap-3">
+            <span className="text-gray-500">Thông báo</span>
+            <FaRegBell className="text-gray-600" />
+            <div className="relative inline-block" ref={headerMenuRef}>
+              <button
+                className="bg-red-200 text-gray-800 w-7 h-7 rounded-full flex items-center justify-center"
+                onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                aria-label="Menu người dùng"
+              >
+                R
+              </button>
+
+              {showHeaderMenu && (
+                <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
+                  <button
+                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100"
+                    onClick={() => {
+                      if (logout) logout();
+                      navigate('/login');
+                    }}
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              )}
             </div>
-            {showAvatarMenu && (
-              <div className="absolute right-0 mt-2 w-32 sm:w-36 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg"
-                  onClick={logout}
-                >
-                  Đăng xuất
-                </button>
-              </div>
-            )}
           </div>
+        </div>
         </div>
         {/* Search and Filter Bar */}
         <div className="bg-white shadow-sm px-2 py-2 sm:px-4 sm:py-3 mb-4" style={{ maxWidth: '100%' }}>
