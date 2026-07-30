@@ -10,8 +10,8 @@ import settingIcon from '../../assets/img/setting-icon.png';
 import backgroundSidebar from '../../assets/img/background_sidebar.png';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
-import { useParams} from 'react-router-dom';
-const Sidebar = () => {
+
+const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedProjectId } = useProject();
@@ -23,30 +23,41 @@ const Sidebar = () => {
     setting: false
   });
 
-  const isDashboard = ['/home', '/'].includes(location.pathname);
   const handleNavigation = (path) => {
-    if (path === '/home') {
-      return navigate('/home');
+    if (!path || path === '#') return;
+    if (path === '/home' || path === '/overview') {
+      return navigate(path);
     }
     const finalPath = selectedProjectId ? `${path}/${selectedProjectId}` : path;
     navigate(finalPath);
   };
+
   const handleDashboard = () => {
-    navigate('/home');
+    navigate('/overview');
   };
 
   const toggleMenu = (menu) => {
-    if (isDashboard && menu !== 'project') return;
+    if (isCollapsed) toggleSidebar(); 
     setOpenMenus(prev => ({
       ...prev,
       [menu]: !prev[menu]
     }));
   };
-  const isMenuItemDisabled = (menu) => {
-    return isDashboard && menu !== 'project';
-  };
+
+  const currentPath = location.pathname;
+  const isDashboard = ['/overview', '/'].includes(location.pathname);
+
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isCollapsed ? 'sidebar-collapsed' : ''}`}>
+      {/* Toggle button */}
+      <button className="sidebar-toggle" onClick={toggleSidebar} title={isCollapsed ? 'Mở rộng' : 'Thu gọn'}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
       <div className="sidebar-header" style={{ backgroundImage: `url(${backgroundSidebar})` }}>
         <div className="logo-container">
           <img src={logoSidebar} alt="Logo Bộ Xây Dựng" className="logo" />
@@ -56,6 +67,16 @@ const Sidebar = () => {
         </div>
       </div>
       
+      {/* Dashboard Top Menu Item */}
+      <div className="menu-section" style={{ paddingBottom: 0 }}>
+        <div className="menu-item" style={{ backgroundColor: isDashboard ? '#e9ecef' : 'transparent', fontWeight: isDashboard ? 700 : 600 }} onClick={handleDashboard}>
+          <svg style={{ marginRight: 10, color: '#0891b2' }} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <span style={{ color: isDashboard ? '#0891b2' : '#333' }}>Tổng quan</span>
+        </div>
+      </div>
+
       <div className="menu-section">
         <div className="menu-item" onClick={() => toggleMenu('project')}>
           <img src={projectIcon} width="20" alt="Project Icon" />
@@ -69,16 +90,14 @@ const Sidebar = () => {
         </div>
         
         <div className={`submenu ${openMenus.project ? 'open' : ''}`}>
-          <div className="submenu-item" onClick={handleDashboard}>Danh sách dự án</div>
+          <div className="submenu-item" onClick={() => handleNavigation('/home')}>Danh sách dự án</div>
           <div className="submenu-item">Thêm dự án mới</div>
           <div className="submenu-item">Phân loại dự án</div>
         </div>
       </div>
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('progress') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('progress') && toggleMenu('progress')}
-        >
+      
+      <div className="menu-section">
+        <div className="menu-item" onClick={() => toggleMenu('progress')}>
           <img src={progressIcon} width="20" alt="Progress Icon" />
           <span>Quản lý tiến độ</span>
           <img 
@@ -91,16 +110,12 @@ const Sidebar = () => {
         <div className={`submenu ${openMenus.progress ? 'open' : ''}`}>
           <div className="submenu-item" onClick={() => handleNavigation(`/work-items`)}>Hạng mục công việc</div>
           <div className="submenu-item" onClick={() => handleNavigation('/approvals')}>Đề xuất & phê duyệt</div>
-          {/* <div className="submenu-item" onClick={() => handleNavigation('/plan')}>Kế hoạch thi công</div> */}
           <div className="submenu-item" onClick={() => handleNavigation(`/project-progress`)}>Báo cáo tiến độ</div>
         </div>
       </div>
       
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('requirements') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('requirements') && toggleMenu('requirements')}
-        >
+      <div className="menu-section">
+        <div className="menu-item" onClick={() => toggleMenu('requirements')}>
           <img src={requirementsIcon} width="20" alt="Requirements Icon" />
           <span>Nhà thầu thi công</span>
           <img 
@@ -116,11 +131,8 @@ const Sidebar = () => {
         </div>
       </div>
       
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('report') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('report') && toggleMenu('report')}
-        >
+      <div className="menu-section">
+        <div className="menu-item" onClick={() => toggleMenu('report')}>
           <img src={reportIcon} width="20" alt="Report Icon" />
           <span>Báo cáo</span>
           <img 
@@ -137,11 +149,8 @@ const Sidebar = () => {
         </div>
       </div>
       
-      <div className={`menu-section ${isDashboard ? 'disabled' : ''}`}>
-        <div 
-          className={`menu-item ${isMenuItemDisabled('setting') ? 'disabled' : ''}`} 
-          onClick={() => !isMenuItemDisabled('setting') && toggleMenu('setting')}
-        >
+      <div className="menu-section">
+        <div className="menu-item" onClick={() => toggleMenu('setting')}>
           <img src={settingIcon} width="20" alt="Settings Icon" />
           <span>Cài đặt hệ thống</span>
           <img 

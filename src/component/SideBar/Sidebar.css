@@ -1,11 +1,55 @@
 .sidebar {
-  width: 300px;
+  width: 220px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   font-family: 'Arial', sans-serif;
   background-color: #f8f9fa;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  transition: width 0.3s ease;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* Collapsed state */
+.sidebar.sidebar-collapsed {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.sidebar.sidebar-collapsed .sidebar-header,
+.sidebar.sidebar-collapsed .menu-section,
+.sidebar.sidebar-collapsed .sidebar-footer {
+  display: none;
+}
+
+/* Toggle button */
+.sidebar-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.sidebar-toggle:hover {
+  background: rgba(255,255,255,0.35);
+}
+.sidebar-collapsed .sidebar-toggle {
+  display: none;
 }
 
 .sidebar-header {
@@ -53,7 +97,7 @@
 }
 
 .search-box {
-  width: 250px;
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;

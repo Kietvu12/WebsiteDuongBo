@@ -6,15 +6,18 @@ const app = express();
 const port = 5000;
 
 // Kết nối với MySQL
-const db = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '123456',
-  database: 'dulieuduongbo',
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  database: process.env.DB_NAME || 'dulieuduongbo',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
-}).promise();
+};
+if (process.env.DB_PASSWORD) {
+  dbConfig.password = process.env.DB_PASSWORD;
+}
+const db = mysql.createPool(dbConfig).promise();
 
 app.use(cors());
 app.use(express.json());
