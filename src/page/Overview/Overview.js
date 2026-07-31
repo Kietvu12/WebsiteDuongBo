@@ -3,6 +3,7 @@ import './Overview.css';
 import Chart from 'chart.js/auto';
 
 const Overview = () => {
+    const containerRef = useRef(null);
     const c1Ref = useRef(null);
     const c2Ref = useRef(null);
     const c4Ref = useRef(null);
@@ -11,10 +12,22 @@ const Overview = () => {
     const chartInstances = useRef({});
 
     useEffect(() => {
+        const getChartSizes = () => {
+            const w = containerRef.current?.clientWidth || window.innerWidth;
+            if (w < 480) return { chart: 7, tick: 7, sm: 7, md: 8, lg: 9, tiny: 7 };
+            if (w < 700) return { chart: 7, tick: 7, sm: 7, md: 8, lg: 9, tiny: 7 };
+            if (w < 900) return { chart: 8, tick: 8, sm: 8, md: 9, lg: 10, tiny: 7 };
+            if (w < 1100) return { chart: 9, tick: 8, sm: 8, md: 9, lg: 10, tiny: 8 };
+            if (w < 1300) return { chart: 9, tick: 9, sm: 9, md: 9, lg: 11, tiny: 8 };
+            return { chart: 10, tick: 9, sm: 9, md: 10, lg: 11, tiny: 8 };
+        };
+
+        const initCharts = () => {
+        const sizes = getChartSizes();
         // Constants
         const P='#2563eb',A='#f59e0b',D='#ef4444',S='#10b981',W='#f59e0b',PR='#8b5cf6';
         Chart.defaults.font.family="'Inter',system-ui,sans-serif";
-        Chart.defaults.font.size=10;
+        Chart.defaults.font.size=sizes.chart;
         Chart.defaults.color='#64748b';
         Chart.defaults.plugins.legend.display=false;
 
@@ -38,7 +51,7 @@ const Overview = () => {
                 options:{
                     responsive:true,maintainAspectRatio:false,layout:{padding:{top:16,bottom:16}},
                     scales:{
-                        x:{ticks:{font:{size:9},color:'#64748b',padding:14},grid:{display:false}},
+                        x:{ticks:{font:{size:sizes.tick},color:'#64748b',padding:14},grid:{display:false}},
                         y:{beginAtZero:true,max:100,ticks:{stepSize:25,callback:function(v){return v+'%'}},grid:{color:'#f1f5f9'}}
                     }
                 },
@@ -47,7 +60,7 @@ const Overview = () => {
                     chart.data.datasets.forEach(function(ds,di){
                         var meta=chart.getDatasetMeta(di);
                         meta.data.forEach(function(bar,i){
-                            ctx.save();ctx.font='600 9px Inter,sans-serif';ctx.textAlign='center';
+                            ctx.save();ctx.font=`600 ${sizes.sm}px Inter,sans-serif`;ctx.textAlign='center';
                             ctx.fillStyle=di===0?P:A;
                             ctx.fillText(ds.data[i]+'%',bar.x,bar.y-4);ctx.restore();
                         });
@@ -55,7 +68,7 @@ const Overview = () => {
                     var m0=chart.getDatasetMeta(0),m1=chart.getDatasetMeta(1);
                     m1.data.forEach(function(bar,i){
                         var diff=c1A[i]-c1P[i];
-                        ctx.save();ctx.font='700 9px Inter,sans-serif';ctx.fillStyle=D;ctx.textAlign='center';
+                        ctx.save();ctx.font=`700 ${sizes.sm}px Inter,sans-serif`;ctx.fillStyle=D;ctx.textAlign='center';
                         ctx.fillText(diff+'%',(m0.data[i].x+bar.x)/2,chart.chartArea.bottom+12);ctx.restore();
                     });
                 }}]
@@ -73,7 +86,7 @@ const Overview = () => {
                     chart.getDatasetMeta(0).data.forEach(function(arc,i){
                         var pct=ds.data[i];
                         var pos=arc.tooltipPosition();
-                        ctx.save();ctx.font='bold 11px Inter,sans-serif';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+                        ctx.save();ctx.font=`bold ${sizes.lg}px Inter,sans-serif`;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
                         ctx.fillText(pct+'%',pos.x,pos.y);ctx.restore();
                     });
                 }}]
@@ -94,10 +107,10 @@ const Overview = () => {
                 plugins:[{id:'sLbl',afterDatasetsDraw:function(chart){
                     var ctx=chart.ctx;
                     chart.getDatasetMeta(0).data.forEach(function(pt,i){
-                        if(sPlan[i]!==null && pt){ctx.save();ctx.font='500 9px Inter';ctx.fillStyle=P;ctx.textAlign='center';ctx.fillText(sPlan[i]+'%',pt.x,pt.y-8);ctx.restore();}
+                        if(sPlan[i]!==null && pt){ctx.save();ctx.font=`500 ${sizes.sm}px Inter`;ctx.fillStyle=P;ctx.textAlign='center';ctx.fillText(sPlan[i]+'%',pt.x,pt.y-8);ctx.restore();}
                     });
                     chart.getDatasetMeta(1).data.forEach(function(pt,i){
-                        if(sAct[i]!==null && pt){ctx.save();ctx.font='500 9px Inter';ctx.fillStyle=A;ctx.textAlign='center';ctx.fillText(sAct[i]+'%',pt.x,pt.y+12);ctx.restore();}
+                        if(sAct[i]!==null && pt){ctx.save();ctx.font=`500 ${sizes.sm}px Inter`;ctx.fillStyle=A;ctx.textAlign='center';ctx.fillText(sAct[i]+'%',pt.x,pt.y+12);ctx.restore();}
                     });
                     try {
                         var x=chart.scales.x.getPixelForValue(7);
@@ -108,7 +121,7 @@ const Overview = () => {
                         var bx=x+6,by=chart.chartArea.top+20;
                         ctx.fillRect(bx,by,58,40);ctx.strokeRect(bx,by,58,40);
                         
-                        ctx.font='600 9px Inter';ctx.textAlign='left';
+                        ctx.font=`600 ${sizes.sm}px Inter`;ctx.textAlign='left';
                         ctx.fillStyle=D;ctx.fillText('TẠI T7',bx+6,by+10);
                         ctx.fillText('KH: 62.4%',bx+6,by+20);
                         ctx.fillStyle=A;ctx.fillText('TT: 48.7%',bx+6,by+30);
@@ -130,7 +143,7 @@ const Overview = () => {
                         var pct=chart.data.datasets[0].data[i];
                         if (pct > 5) {
                             var pos=arc.tooltipPosition();
-                            ctx.save();ctx.font='bold 11px Inter';ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
+                            ctx.save();ctx.font=`bold ${sizes.lg}px Inter`;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';
                             ctx.fillText(pct+'%',pos.x,pos.y);ctx.restore();
                         }
                     });
@@ -157,16 +170,34 @@ const Overview = () => {
                 plugins:[{id:'gnLbl',afterDatasetsDraw:function(chart){
                     var ctx=chart.ctx;
                     chart.getDatasetMeta(0).data.forEach(function(bar,i){
-                        if(gnP[i]!==null && bar){ctx.save();ctx.font='500 8px Inter';ctx.fillStyle=P;ctx.textAlign='center';ctx.fillText((gnP[i]/1000).toFixed(1)+'K',bar.x,bar.y-4);ctx.restore();}
+                        if(gnP[i]!==null && bar){ctx.save();ctx.font=`500 ${sizes.tiny}px Inter`;ctx.fillStyle=P;ctx.textAlign='center';ctx.fillText((gnP[i]/1000).toFixed(1)+'K',bar.x,bar.y-4);ctx.restore();}
                     });
                     chart.getDatasetMeta(1).data.forEach(function(bar,i){
-                        if(gnA[i]!==null && bar){ctx.save();ctx.font='600 8px Inter';ctx.fillStyle=S;ctx.textAlign='center';ctx.fillText((gnA[i]/1000).toFixed(1)+'K',bar.x,bar.y-4);ctx.restore();}
+                        if(gnA[i]!==null && bar){ctx.save();ctx.font=`600 ${sizes.tiny}px Inter`;ctx.fillStyle=S;ctx.textAlign='center';ctx.fillText((gnA[i]/1000).toFixed(1)+'K',bar.x,bar.y-4);ctx.restore();}
                     });
                 }}]
             });
         }
 
+        };
+
+        initCharts();
+
+        let resizeTimer;
+        const scheduleInit = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(initCharts, 250);
+        };
+        window.addEventListener('resize', scheduleInit);
+        const ro = typeof ResizeObserver !== 'undefined'
+            ? new ResizeObserver(scheduleInit)
+            : null;
+        if (ro && containerRef.current) ro.observe(containerRef.current);
+
         return () => {
+            window.removeEventListener('resize', scheduleInit);
+            ro?.disconnect();
+            clearTimeout(resizeTimer);
              Object.values(chartInstances.current).forEach(c => c && c.destroy());
         };
     }, []);
@@ -208,7 +239,7 @@ const Overview = () => {
     };
 
     return (
-        <div className="dashboard-container">
+        <div className="dashboard-container" ref={containerRef}>
             <header className="hd">
                 <div className="hd-t">TỔNG QUAN HỆ THỐNG</div>
                 <div className="hd-r">
@@ -302,7 +333,7 @@ const Overview = () => {
                         <div className="cw c-split">
                             <div className="pie-w">
                                 <canvas ref={c5Ref}></canvas>
-                                <div className="dc"><div className="sub">TỔNG GIẢI NGÂN</div><div className="big" style={{fontSize:16}}>45.7K</div><div className="sub">TỶ ĐỒNG</div></div>
+                                <div className="dc dc-fund"><div className="sub">TỔNG GIẢI NGÂN</div><div className="big">45.7K</div><div className="sub">TỶ ĐỒNG</div></div>
                             </div>
                             <div className="leg-r">
                                 <div className="lg-i"><div className="ld b-bl"></div><div className="lg-t"><b>NS Trung ương</b> &nbsp; 40.5%<br/><span>18.5K tỷ</span></div></div>

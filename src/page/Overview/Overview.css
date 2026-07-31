@@ -2,11 +2,12 @@
 .dashboard-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100%;
   min-width: 0;
-  overflow: hidden;
   background: #f8fafc;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  container-type: inline-size;
+  container-name: overview;
 }
 
 /* HEADER */
@@ -23,7 +24,7 @@
   z-index: 10;
 }
 .hd-t {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: 0.2px;
@@ -38,8 +39,7 @@
 
 /* CONTENT AREA */
 .ct {
-  padding: 8px 16px;
-  overflow: hidden;
+  padding: 8px 16px 24px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -107,7 +107,7 @@
 }
 .kinfo { display: flex; flex-direction: column; justify-content: center; width: 100%; }
 .kl { font-size: 10px; font-weight: 700; color: #64748b; letter-spacing: 0.3px; margin-bottom: 2px; }
-.kv { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 4px; letter-spacing: -0.5px; }
+.kv { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1; margin-bottom: 4px; letter-spacing: -0.5px; }
 .kv .u { font-size: 11px; font-weight: 600; color: #94a3b8; margin-left: 2px; letter-spacing: 0; }
 .kch { font-size: 10px; color: #64748b; display: flex; align-items: center; gap: 4px; margin-left: -2px; }
 .tg { font-size: 10px; font-weight: 700; padding: 0; }
@@ -122,9 +122,9 @@
 .k-p { background: #faf5ff; color: #8b5cf6; }
 
 /* CHART GRID ROWS */
-.g3 { display: grid; grid-template-columns: 5fr 3fr 3.5fr; gap: 12px; margin-bottom: 12px; height: 215px; flex-shrink: 0; }
-.g3e { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; height: 215px; flex-shrink: 0; }
-.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: 165px; flex-shrink: 0; }
+.g3 { display: grid; grid-template-columns: 5fr 3fr 3.5fr; gap: 12px; margin-bottom: 12px; height: 205px; flex-shrink: 0; }
+.g3e { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; height: 205px; flex-shrink: 0; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 165px; flex-shrink: 0; }
 
 /* CHART CARD */
 .cd {
@@ -154,8 +154,9 @@
 .cw { position: relative; width: 100%; flex: 1; min-height: 0; overflow: hidden; }
 .cw canvas { width: 100% !important; height: 100% !important; }
 .dc { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
-.dc .big { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1; margin: 2px 0; }
+.dc .big { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1; margin: 2px 0; }
 .dc .sub { font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+.dc-fund .big { font-size: 15px; }
 
 /* SPLIT PIE/LEGEND */
 .c-split { display: flex; align-items: center; width: 100%; height: 100%; }
@@ -179,7 +180,7 @@
 .hbr-val { width: 15%; text-align: right; font-weight: 700; color: #ef4444; }
 
 /* TABLES (Charts 7, 8) */
-.tc { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; height: 100%; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.tc { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; min-height: 165px; display: flex; flex-direction: column; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
 .tch { padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; background: #fff; }
 .tct { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #0f172a; }
 .tct .n { color: #64748b; margin-right: 4px; }
@@ -197,3 +198,67 @@ table.custom-tb th.r, table.custom-tb td.r { text-align: right; }
 .b-s { color: #10b981; }
 .b-p { color: #2563eb; }
 .b-d { color: #ef4444; background: #fef2f2; padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+/* ====== RESPONSIVE (theo vùng nội dung, trừ sidebar ~300px) ====== */
+@container overview (max-width: 1300px) {
+  .hd { height: 44px; }
+  .hd-t { font-size: 14px; }
+  .kv { font-size: 20px; }
+  .kv .u { font-size: 10px; }
+  .kl, .kch, .tg { font-size: 9px; }
+  .ctt, .tct { font-size: 10px; }
+  .lg-t { font-size: 10px; }
+  .lg-t span { font-size: 9px; }
+  .dc .big { font-size: 20px; }
+  .dc-fund .big { font-size: 14px; }
+  .ki { width: 40px; height: 40px; }
+  .ki svg { width: 17px; height: 17px; }
+  .g3, .g3e { height: 195px; }
+  table.custom-tb th { font-size: 7px; }
+  table.custom-tb td { font-size: 9px; }
+}
+
+@container overview (max-width: 1100px) {
+  .kr { grid-template-columns: repeat(3, 1fr); }
+  .g3 { grid-template-columns: 1fr 1fr; height: auto; min-height: 180px; }
+  .g3e { grid-template-columns: 1fr 1fr; height: auto; min-height: 180px; }
+  .g3 .cd:last-child, .g3e .cd:last-child { grid-column: 1 / -1; }
+  .g2 { grid-template-columns: 1fr; }
+  .kv { font-size: 18px; }
+  .kc { padding: 10px 12px; gap: 10px; }
+  .fb-left { flex-wrap: wrap; gap: 8px; }
+}
+
+@container overview (max-width: 900px) {
+  .kr { grid-template-columns: repeat(2, 1fr); }
+  .g3, .g3e { grid-template-columns: 1fr; }
+  .g3 .cd:last-child, .g3e .cd:last-child { grid-column: auto; }
+  .g3 .cd, .g3e .cd { min-height: 170px; }
+  .kv { font-size: 17px; }
+  .fb { flex-direction: column; align-items: stretch; gap: 6px; }
+  .fb-right { text-align: right; padding-bottom: 0; }
+  .c-split { flex-direction: column; }
+  .pie-w { width: 100%; height: 130px; }
+  .leg-r { width: 100%; padding-left: 0; flex-direction: row; flex-wrap: wrap; gap: 10px 14px; }
+}
+
+@container overview (max-width: 700px) {
+  .kr { grid-template-columns: 1fr; }
+  .hd-u > div:first-child { display: none; }
+  .kv { font-size: 16px; }
+  .kl, .kch, .tg { font-size: 8px; }
+  .ctt, .tct { font-size: 9px; }
+  .g3 .cd, .g3e .cd { min-height: 160px; }
+  table.custom-tb { display: block; overflow-x: auto; white-space: nowrap; }
+  table.custom-tb td { font-size: 8px; }
+}
+
+/* Mobile full viewport */
+@media (max-width: 768px) {
+  .hd-t { font-size: 13px; }
+  .hd-r { gap: 8px; }
+  .ct { padding: 4px 8px 14px; }
+  .fs { min-width: 58px; }
+  .fcs { flex-wrap: wrap; height: auto; }
+  .pie-w { height: 120px; }
+}
