@@ -319,7 +319,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         const [projectsRes, provincesRes, contractorRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/duAnTong`),
+          axios.get(`${API_BASE_URL}/duAnTongList`),
           axios.get("https://provinces.open-api.vn/api/?depth=1"),
           axios.get(`${API_BASE_URL}/nhaThauList`),
         ]);
@@ -873,21 +873,11 @@ const Dashboard = () => {
               )}
             </div>
 
-            {/* Desktop Table */}
+            {/* Bản đồ — một instance duy nhất (tránh fetch KML trùng lặp) */}
             <div
-              className="hidden md:flex flex-col"
-              style={{ height: "calc(100vh - 100px)" }}
+              className="h-[min(800px,calc(100vh-100px))] md:h-[calc(100vh-100px)] overflow-hidden"
             >
-              <div className=" h-full overflow-y-auto">
-                  <MapComponent projects={filteredProjects} />
-              </div>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-            <div className="h-[800px] overflow-y-auto">
-                  <MapComponent projects={filteredProjects} />
-              </div>
+              <MapComponent projects={filteredProjects} />
             </div>
           </div>
         </div>

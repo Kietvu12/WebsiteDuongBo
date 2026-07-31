@@ -1,8 +1,20 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useNavigate } from "react-router-dom";
-import { FaRegCalendarAlt, FaRegBell, FaFilter } from "react-icons/fa";
+import {
+  FiSearch,
+  FiCalendar,
+  FiFilter,
+  FiPlus,
+  FiMapPin,
+  FiMoreVertical,
+  FiDownload,
+  FiSettings,
+  FiGrid,
+  FiList,
+} from "react-icons/fi";
+import "./DashBoard.css";
 import pin from "../../assets/img/pin.png";
 import attachment from "../../assets/img/attachment.png";
 import trash from "../../assets/img/file.png";
@@ -34,31 +46,37 @@ const useClickOutside = (ref, callback) => {
 
 const Dashboard = () => {
   const ProgressPieChart = ({ project }) => {
+    const hoanThanh = parseFloat(project?.thongKe?.phanTramHoanThanh || 0);
+    const cham = parseFloat(project?.thongKe?.phanTramChamTienDo || 0);
+    const dangLam = parseFloat(project?.thongKe?.phanTramKeHoach || 0);
     const data = [
-      { name: 'Hoàn thành', value: parseFloat(project?.thongKe?.phanTramHoanThanh || 0), color: '#16A34A' },
-      { name: 'Chậm tiến độ', value: parseFloat(project?.thongKe?.phanTramChamTienDo || 0), color: '#CA8A04' },
-      { name: 'Đang làm', value: parseFloat(project?.thongKe?.phanTramKeHoach || 0), color: '#2563EB' },
-    ];
+      { name: 'Hoàn thành', value: hoanThanh, color: '#52c41a' },
+      { name: 'Chậm tiến độ', value: cham, color: '#faad14' },
+      { name: 'Đang làm', value: dangLam, color: '#1890ff' },
+    ].filter((d) => d.value > 0);
+    const display = Math.round(hoanThanh || dangLam || 0);
 
     return (
-      <div className="w-full h-full">
+      <div className="home-progress-chart">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={data}
+              data={data.length ? data : [{ value: 1, color: '#f0f0f0' }]}
               cx="50%"
               cy="50%"
-              innerRadius={30}
-              outerRadius={45}
+              innerRadius={22}
+              outerRadius={34}
               paddingAngle={2}
               dataKey="value"
+              stroke="none"
             >
-              {data.map((entry, index) => (
+              {(data.length ? data : [{ color: '#f0f0f0' }]).map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
           </PieChart>
         </ResponsiveContainer>
+        <div className="home-progress-chart-center">{display}%</div>
       </div>
     );
   };
@@ -98,7 +116,7 @@ const Dashboard = () => {
   const triggerRef = useRef(null);
   const [expandedMenuId, setExpandedMenuId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const [itemsPerPage] = useState(50);
 
   useClickOutside(menuRef, () => {
     setShowMenu(false);
@@ -178,35 +196,75 @@ const Dashboard = () => {
   const statusesLabel = [
     {
       label: "Tổng số dự án",
+      tabLabel: "Tất cả",
       count: statusCounts.total,
       color: "text-red-600",
-      box: "bg-red-600",
+      box: "bg-red-500",
+      valueColor: "#ff4d4f",
+      iconBg: "#fff1f0",
     },
     {
       label: "Đang chuẩn bị",
+      tabLabel: "Đang chuẩn bị",
       count: statusCounts["Đang chuẩn bị"],
-      color: "text-red-600",
-      box: "bg-blue-600",
+      color: "text-blue-600",
+      box: "bg-blue-500",
+      valueColor: "#1890ff",
+      iconBg: "#e6f4ff",
     },
     {
       label: "Đang thi công",
+      tabLabel: "Đang thi công",
       count: statusCounts["Đang thi công"],
-      color: "text-red-600",
-      box: "bg-green-600",
+      color: "text-green-600",
+      box: "bg-green-500",
+      valueColor: "#52c41a",
+      iconBg: "#f6ffed",
     },
     {
       label: "Hoàn thành",
+      tabLabel: "Hoàn thành",
       count: statusCounts["Hoàn thành"],
-      color: "text-red-600",
-      box: "bg-yellow-500",
+      color: "text-orange-600",
+      box: "bg-orange-400",
+      valueColor: "#fa8c16",
+      iconBg: "#fff7e6",
     },
     {
       label: "Tạm dừng",
+      tabLabel: "Tạm dừng",
       count: statusCounts["Tạm dừng"],
-      color: "text-red-600",
+      color: "text-purple-600",
       box: "bg-purple-500",
-    }
+      valueColor: "#722ed1",
+      iconBg: "#f9f0ff",
+    },
   ];
+
+  const getStatusDotColor = (status) => {
+    switch (status) {
+      case "Đang chuẩn bị": return "#1890ff";
+      case "Đang thi công": return "#52c41a";
+      case "Hoàn thành": return "#fa8c16";
+      case "Tạm dừng": return "#722ed1";
+      default: return "#999";
+    }
+  };
+
+  const formatDisplayDate = (value) => {
+    if (!value) return "—";
+    try {
+      return new Date(value).toLocaleDateString("vi-VN");
+    } catch {
+      return "—";
+    }
+  };
+
+  const getMainContractor = (project) =>
+    project?.danhSachNhaThau?.[0]?.TenNhaThau || "—";
+
+  const pctOfTotal = (count) =>
+    statusCounts.total ? ((count / statusCounts.total) * 100).toFixed(2) : "0.00";
 
   const getStatusColor = (status) => {
     const foundStatus = statusesLabel.find((s) => s.label === status);
@@ -289,10 +347,11 @@ const Dashboard = () => {
 
     // Lọc theo tên dự án
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase().trim();
       result = result.filter(
         (project) =>
-          project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)
+          (project.TenDuAn && project.TenDuAn.toLowerCase().includes(term)) ||
+          String(project.DuAnID).includes(term)
       );
     }
 
@@ -329,9 +388,9 @@ const Dashboard = () => {
     if (completionLevel !== "all") {
       const minCompletion = parseFloat(completionLevel);
       result = result.filter((project) => {
-        const completion = parseFloat(project.phanTramHoanThanh || "0");
-        console.log(completion);
-
+        const completion = parseFloat(
+          project?.thongKe?.phanTramHoanThanh || project.phanTramHoanThanh || "0"
+        );
         return completion >= minCompletion;
       });
     }
@@ -386,7 +445,7 @@ const Dashboard = () => {
       try {
         setLoading(true);
         const [projectsRes, provincesRes, contractorRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/duAnTong`),
+          axios.get(`${API_BASE_URL}/duAnTongList`),
           axios.get("https://provinces.open-api.vn/api/?depth=1"),
           axios.get(`${API_BASE_URL}/nhaThauList`),
         ]);
@@ -571,794 +630,405 @@ const Dashboard = () => {
   const handleExportReport = () => {
     navigate("/bao-cao-tong");
   };
-  console.log("Dữ liệu dự án heheh:", filteredProjects);
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    const aPin = pinnedProjects.includes(a.DuAnID);
+    const bPin = pinnedProjects.includes(b.DuAnID);
+    if (aPin && !bPin) return -1;
+    if (!aPin && bPin) return 1;
+    return 0;
+  });
 
+  const paginatedProjects = sortedProjects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / itemsPerPage));
+
+  const dateRangeLabel =
+    fromDate && toDate
+      ? `${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}`
+      : "01/01/2020 - 31/12/2025";
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-200 pt-12 md:pt-0 text-base overflow-hidden">
-      <header className="bg-white px-6 py-1 shadow-sm flex justify-end items-center space-x-4 pt-3 md:pt-0 mb-3 md:mb-0">
-        <div className="flex items-center space-x-4 pt-0 md:pt-1">
-          <span className="text-gray-500">Thông báo</span>
-          <FaRegBell />
-          <span></span>
-          <div className="inline-block" ref={menuRef}>
-            <button className="bg-red-200 text-gray-800 w-6 h-6 rounded-full flex items-center justify-center"
-              onClick={() => setShowMenu(!showMenu)}
-            >
-              R
-            </button>
-            {showMenu && (
-              <div className="absolute mt-2 right-0 bg-white border shadow rounded w-40 z-10">
-                <button
-                  className="block w-full text-left px-4 py-2  text-red-600 hover:bg-gray-100"
-                  onClick={() => {
-                    logout();
-                    navigate('/login');
-                  }}
-                >
-                  Đăng xuất
-                </button>
-              </div>
+    <div className="home-page flex flex-col min-h-full pt-12 md:pt-0">
+      <div className="flex-1 p-4 md:p-5 flex flex-col gap-4 min-h-0">
+        {/* Toolbar lọc */}
+        <div className="home-toolbar flex flex-wrap items-center gap-3">
+          <div className="home-search-wrap">
+            <FiSearch className="home-search-icon" size={15} />
+            <input
+              type="text"
+              placeholder="Tìm dự án, mã dự án..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="home-search-input"
+            />
+            {showSuggestions && searchSuggestions.length > 0 && (
+              <ul className="home-suggestions">
+                {searchSuggestions.map((suggestion, index) => (
+                  <li key={index} onClick={() => selectSuggestion(suggestion)}>
+                    {suggestion}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
+
+          <div className="home-date-range">
+            <FiCalendar size={14} className="text-gray-400" />
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border-none outline-none bg-transparent text-xs w-[110px]"
+            />
+            <span className="text-gray-400">-</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border-none outline-none bg-transparent text-xs w-[110px]"
+            />
+            {!fromDate && !toDate && (
+              <span className="text-gray-400 text-xs hidden lg:inline">{dateRangeLabel}</span>
+            )}
+          </div>
+
+          <select
+            value={selectedProvince}
+            onChange={handleProvinceChange}
+            className="home-filter-select"
+          >
+            <option value="">Tất cả tỉnh</option>
+            {mergedProvinces.map((province, index) => (
+              <option key={index} value={province}>
+                {province}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="home-filter-select"
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="Đang chuẩn bị">Đang chuẩn bị</option>
+            <option value="Đang thi công">Đang thi công</option>
+            <option value="Hoàn thành">Hoàn thành</option>
+            <option value="Tạm dừng">Tạm dừng</option>
+          </select>
+
+          <select
+            value={contractor}
+            onChange={(e) => setContractor(e.target.value)}
+            className="home-filter-select"
+          >
+            <option value="all">Tất cả nhà thầu</option>
+            {contractorList.map((nhathau) => (
+              <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
+                {nhathau.TenNhaThau}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={completionLevel}
+            onChange={(e) => setCompletionLevel(e.target.value)}
+            className="home-filter-select"
+          >
+            <option value="all">Mọi tiến độ</option>
+            <option value="20">&gt;20%</option>
+            <option value="50">&gt;50%</option>
+            <option value="80">&gt;80%</option>
+            <option value="100">100%</option>
+          </select>
+
+          <button type="button" className="home-btn-outline" onClick={() => setShowFilters(!showFilters)}>
+            <FiFilter size={14} />
+            Bộ lọc nâng cao
+          </button>
+
+          <button type="button" className="home-btn-primary ml-auto" onClick={() => navigate("/add-new")}>
+            <FiPlus size={16} />
+            Thêm dự án
+          </button>
         </div>
-      </header>
 
-      {/* Mobile Filter Button - chỉ hiển thị trên mobile */}
-      <div className="md:hidden flex justify-between items-center px-4 mb-2">
-        <button
-          onClick={() => setShowMobileFilters(!showMobileFilters)}
-          className="flex items-center gap-2 px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200"
-        >
-          <FaFilter className="text-gray-600" />
-          <span>Bộ lọc</span>
-        </button>
-
-        <button
-          onClick={handleExportReport}
-          className="bg-green-700 text-white px-4 py-1 rounded font-bold"
-        >
-          XUẤT BÁO CÁO
-        </button>
-      </div>
-
-      {/* Mobile Filter Panel - chỉ hiển thị trên mobile */}
-      {showMobileFilters && (
-        <div className="md:hidden grid grid-cols-1 gap-4 mb-4 p-4 border rounded-lg bg-gray-50 mx-4">
-          {/* Các phần tử filter giống như bản desktop nhưng responsive cho mobile */}
-          <div>
-            <div>
-              <input
-                type="text"
-                placeholder="Tìm dự án"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="pl-3 pr-10 py-1 border rounded w-full"
-              />
-              {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <li
-                      key={index}
-                      onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 hover:bg-blue-50 cursor-pointer"
-                    >
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              )}
+        {/* KPI cards */}
+        <div className="home-stat-grid">
+          {statusesLabel.map((s) => (
+            <div
+              key={s.label}
+              className="home-stat-card cursor-pointer"
+              onClick={() => handleStatusClick(s.label)}
+            >
+              <div>
+                <div className="home-stat-label">{s.label}</div>
+                <div className="home-stat-value" style={{ color: s.valueColor }}>
+                  {s.count}
+                </div>
+                <div className="home-stat-pct">{pctOfTotal(s.count)}%</div>
+              </div>
+              <div className="home-stat-icon" style={{ background: s.iconBg, color: s.valueColor }}>
+                <span className={`inline-block w-3 h-3 rounded-sm ${s.box}`} />
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Table panel */}
+        <div className="home-table-panel flex flex-col flex-1 min-h-0">
+          <div className="home-tabs px-3 pt-1">
+            {statusesLabel.map((s) => {
+              const isActive = activeStatus === s.label;
+              return (
+                <button
+                  key={s.label}
+                  type="button"
+                  className={`home-tab ${isActive ? "home-tab--active" : ""}`}
+                  onClick={() => handleStatusClick(s.label)}
+                >
+                  <span className={`home-tab-dot ${s.box}`} />
+                  {s.tabLabel} ({s.count})
+                </button>
+              );
+            })}
           </div>
 
-          <div>
-            <div className="inline-flex items-center border border-gray-300 rounded px-3 py-0.5 text-gray-700 bg-white w-full">
-              <FaRegCalendarAlt className="w-4 h-4 text-gray-500 mr-2" />
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[120px]"
-              />
-              <span className="mx-1">-</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[120px]"
-              />
-            </div>
-          </div>
-          <div>
-            <select
-              value={selectedProvince}
-              onChange={handleProvinceChange}
-              className="px-3 py-1 border rounded w-full"
-            >
-              <option value="">Tất cả tỉnh</option>
-              {mergedProvinces.map((province, index) => (
-                <option key={index} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status */}
-          <div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="px-3 py-1 border rounded w-full"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
-              <option value="Đang thi công">Đang thi công</option>
-              <option value="Hoàn thành">Hoàn thành</option>
-              <option value="Tạm dừng">Tạm dừng</option>
-            </select>
-          </div>
-
-          {/* Contractor */}
-          <div>
-            <select
-              value={contractor}
-              onChange={(e) => setContractor(e.target.value)}
-              className="px-3 py-1 border rounded w-full"
-            >
-              <option value="all">Tất cả nhà thầu</option>
-              {contractorList.map((nhathau) => (
-                <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
-                  {nhathau.TenNhaThau}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Completion Level */}
-          <div>
-            <select
-              value={completionLevel}
-              onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-3 py-1 border rounded w-full"
-            >
-              <option value="all">Mọi tiến độ</option>
-              <option value="20">&gt;20%</option>
-              <option value="50">&gt;50%</option>
-              <option value="80">&gt;80%</option>
-              <option value="100">100%</option>
-            </select>
-          </div>
-
-          {/* Reset Button */}
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                resetFilters();
-                setShowMobileFilters(false);
-              }}
-              className="h-9 px-3 bg-gray-100 hover:bg-gray-200 rounded font-medium"
-            >
-              Xóa lọc
+          <div className="home-table-toolbar">
+            <button type="button" className="home-table-btn" onClick={handleExportReport}>
+              <FiDownload size={14} />
+              Xuất Excel
+            </button>
+            <button type="button" className="home-table-btn">
+              <FiSettings size={14} />
+              Cấu hình cột
+            </button>
+            <button type="button" className="home-table-btn">
+              <FiGrid size={14} />
+            </button>
+            <button type="button" className="home-table-btn">
+              <FiList size={14} />
             </button>
           </div>
-        </div>
-      )}
 
-      <div className="px-6 pb-2 pt-2">
-        <h2 className="font-bold">
-          Danh sách dự án đường bộ
-        </h2>
-      </div>
-
-      <div className="flex-1 px-4 pb-4 flex flex-col min-h-0">
-        <div className={`bg-white rounded-lg p-4 flex flex-col flex-1 ${showFilters ? 'min-h-screen' : 'min-h-0'}`}>
-          <div className="hidden md:flex flex-row flex-wrap items-center gap-2 md:gap-1.5 lg:gap-2 xl:gap-3 max-w-[1451px]:flex-col max-w-[1451px]:items-start">
-            {/* Ô tìm kiếm */}
-            <div className="w-full md:w-56 lg:w-64 xl:w-72 max-w-[1451px]:w-full relative">
-              <input
-                type="text"
-                placeholder="Tìm dự án"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                className="pl-3 pr-8 py-1.5 md:py-1 lg:py-1.5 border rounded w-full text-sm md:text-xs lg:text-sm"
-              />
-              {showSuggestions && searchSuggestions.length > 0 && (
-                <ul className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-auto">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <li
-                      key={index}
-                      onClick={() => selectSuggestion(suggestion)}
-                      className="px-2 py-1.5 md:py-1 lg:py-1.5 hover:bg-blue-50 cursor-pointer text-sm md:text-xs lg:text-sm"
-                    >
-                      {suggestion}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Khoảng thời gian */}
-            <div className="inline-flex items-center border border-gray-300 rounded px-2 py-1 md:px-1.5 md:py-0.5 lg:px-2 lg:py-1 text-gray-700 bg-white w-full md:w-56 lg:w-60 xl:w-64 max-w-[1451px]:w-full">
-              <FaRegCalendarAlt className="w-4 h-4 md:w-3 md:h-3 lg:w-4 lg:h-4 text-gray-500 mr-2" />
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
-              />
-              <span className="mx-1">-</span>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="appearance-none outline-none border-none bg-transparent w-[100px] md:w-[90px] lg:w-[110px] text-sm md:text-xs lg:text-sm"
-              />
-            </div>
-
-            {/* Các dropdown filter */}
-            <select
-              value={selectedProvince}
-              onChange={handleProvinceChange}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
-            >
-              <option value="">Tất cả tỉnh</option>
-              {mergedProvinces.map((province, index) => (
-                <option key={index} value={province}>
-                  {province}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="Đang chuẩn bị">Đang chuẩn bị</option>
-              <option value="Đang thi công">Đang thi công</option>
-              <option value="Hoàn thành">Hoàn thành</option>
-              <option value="Tạm dừng">Tạm dừng</option>
-            </select>
-
-            <select
-              value={contractor}
-              onChange={(e) => setContractor(e.target.value)}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
-            >
-              <option value="all">Tất cả nhà thầu</option>
-              {contractorList.map((nhathau) => (
-                <option key={nhathau.NhaThauID} value={nhathau.NhaThauID}>
-                  {nhathau.TenNhaThau}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={completionLevel}
-              onChange={(e) => setCompletionLevel(e.target.value)}
-              className="px-2 py-1.5 md:px-1.5 md:py-1 lg:px-2 lg:py-1.5 border rounded w-full md:w-40 lg:w-48 xl:w-56 max-w-[1451px]:w-full text-sm md:text-xs lg:text-sm"
-            >
-              <option value="all">Mọi tiến độ</option>
-              <option value="20">>20%</option>
-              <option value="50">>50%</option>
-              <option value="80">>80%</option>
-              <option value="100">100%</option>
-            </select>
-          </div>
-          {/* <div className="text-gray-500">Cập nhật lần cuối: 15:10</div> */}
-
-          {/* Status bar section - hidden on mobile */}
-          <div className="hidden md:flex flex-col flex-1 min-h-0 pt-3">
-            <div className="flex shadow overflow-hidden bg-white w-full mt-1">
-              {statuses.map((status) => (
-                <div
-                  key={status.label}
-                  onClick={() => handleStatusClick(status.label)}
-                  className={`relative flex-grow flex flex-col items-center justify-center px-6 py-2 cursor-pointer transition-colors duration-150
-                    ${status.label !== "Tổng số dự án"
-                      ? "before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-7 before:w-px before:bg-gray-300"
-                      : ""
-                    }
-                    ${activeStatus === status.label
-                      ? "bg-red-50 border-t-4 border-red-600 text-blue-600"
-                      : "bg-gray-100 text-gray-600"
-                    }
-                  `}
-                >
-                  <div className="mb-1 text-lg">{status.icon}</div>
-                  <div className=" font-bold">{status.label}</div>
-                  <div className=" text-gray-500">{status.count}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="h-[3px] bg-red-600 w-full mb-2 mt-4"></div>
-
-          <div className="p-2 font-sans">
-            {/* Status Bar - hidden on mobile */}
-            <div className="hidden md:flex flex-wrap items-center gap-3 border-b pb-2 mb-3">
-              {statusesLabel.map((s) => {
-                const isActive = selectedStatus === s.label;
-                return (
-                  <div
-                    key={s.label}
-                    onClick={() => handleStatusClick(s.label)}
-                    className={`cursor-pointer px-2 py-1  font-semibold border-b-[3px] transition-colors duration-150 ${isActive
-                      ? `${s.color} border-red-600`
-                      : "text-gray-600 border-transparent hover:text-red-600 hover:border-red-400"
-                      }`}
-                  >
-                    <div className="flex items-center gap-1">
-                      <div
-                        className={`w-[10px] h-[10px] rounded-sm ${s.box}`}
-                      ></div>
-                      <span>
-                        {s.label}
-                        {s.count !== null && ` (${s.count})`}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Mobile Select - visible only on mobile */}
-            <div className="md:hidden mb-3" ref={triggerRef}>
-              <div
-                className="w-full p-2 border rounded-md  flex items-center justify-between cursor-pointer bg-white"
-                onClick={() => setIsSelectOpen(!isSelectOpen)}
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`inline-block w-3 h-3 rounded-sm ${statusesLabel.find((s) => s.label === selectedStatus)?.box ||
-                      "bg-gray-200"
-                      }`}
-                  ></span>
-                  {selectedStatus || "Tất cả"}
-                </div>
-                <svg
-                  className={`w-4 h-4 transition-transform duration-200 ${isSelectOpen ? "transform rotate-180" : ""
-                    }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-
-              {isSelectOpen && (
-                <div className="z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto"
-                  style={{
-                    top: `calc(${triggerRef.current?.getBoundingClientRect().bottom}px + 8px)`
-                  }}
-                >
-                  <div
-                    className={`p-2 flex items-center gap-2 ${!selectedStatus ? "bg-blue-50" : "hover:bg-gray-100"
-                      }`}
-                    onClick={() => {
-                      setSelectedStatus("");
-                      setIsSelectOpen(false);
-                    }}
-                  ></div>
-                  {statusesLabel.map((s) => (
-                    <div
-                      key={s.label}
-                      className={`p-2 flex items-center gap-2 ${selectedStatus === s.label
-                        ? "bg-blue-50"
-                        : "hover:bg-gray-100"
-                        }`}
-                      onClick={() => {
-                        setSelectedStatus(s.label);
-                        setIsSelectOpen(false);
-                      }}
-                    >
-                      <span
-                        className={`inline-block w-3 h-3 rounded-sm ${s.box}`}
-                      ></span>
-                      {s.label} {s.count !== null && `(${s.count})`}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Desktop Table */}
-            <div
-              className="hidden md:flex flex-col"
-              style={{ height: "calc(100vh - 100px)" }}
-            >
-              <div className="overflow-y-auto">
-                <table className="w-full border border-gray-300">
-                  <thead className="bg-gray-100 text-gray-500 sticky top-0 z-10">
-                    <tr className="text-center">
-                      <th className="border text-gray-500 px-2 py-2 w-8">Chọn</th>
-                      <th className="border text-gray-500 px-2 py-2 w-20">Thao tác</th>
-                      <th className="border text-gray-500 px-2 py-2 w-24">Mã dự án</th>
-                      <th className="border text-gray-500 px-2 py-2 min-w-[100px]">Tên dự án</th>
-                      <th className="border text-gray-500 px-2 py-2 w-24">Dài tuyến</th>
-                      <th className="border text-gray-500 px-2 py-2 min-w-[50px]">Trạng thái</th>
-                      <th className="border text-gray-500 px-2 py-2 w-28">Gói thầu</th>
-                      <th className="border text-gray-500 px-2 py-2 w-80">Tiến độ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProjects.length > 0 ? (
-                      [...filteredProjects]
-                        .sort((a, b) => {
-                          const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                          const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                          if (aIsPinned && !bIsPinned) return -1;
-                          if (!aIsPinned && bIsPinned) return 1;
-                          return 0;
-                        })
-                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                        .map((project, index) => (
-                          <tr key={project.DuAnID} className="hover:bg-gray-50">
-                            <td className="border px-1 py-2 text-center">
-                              <input
-                                type="checkbox"
-                                className="accent-red-500 w-4 h-4"
-                              />
-                            </td>
-                            <td className="border px-1 py-2">
-                              <div className="flex justify-center items-center gap-1">
-                                <button
-                                  className={`p-1 hover:bg-gray-200 rounded-full transition-all ${pinnedProjects.includes(project.DuAnID) ? "bg-yellow-100" : ""
-                                    }`}
-                                  title="Ghim"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePinProject(project.DuAnID);
-                                  }}
-                                >
-                                  <img src={pin} alt="Ghim" className="w-4 h-4" />
-                                </button>
-                                <div className="relative">
-                                  <button
-                                    className="p-1 hover:bg-gray-200 rounded-full transition-all"
-                                    title="Menu"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleMenu(project.DuAnID);
-                                    }}
-                                  >
-                                    {expandedMenuId === project.DuAnID ? (
-                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    ) : (
-                                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                      </svg>
-                                    )}
-                                  </button>
-                                  {expandedMenuId === project.DuAnID && (
-                                    <div className="absolute ml-6 mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                                      <button
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <img src={attachment} alt="Tệp đính kèm" className="w-4 h-4 mr-2" />
-                                        <span>Tệp đính kèm</span>
-                                      </button>
-                                      <button
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteProject(project.DuAnID);
-                                        }}
-                                      >
-                                        <img src={trash} alt="Xoá" className="w-4 h-4 mr-2" />
-                                        <span>Xoá</span>
-                                      </button>
-                                      <button
-                                        className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleEdit(project.DuAnID, project.ParentID);
-                                        }}
-                                      >
-                                        <img src={edit} alt="Sửa" className="w-4 h-4 mr-2" />
-                                        <span>Sửa thông tin</span>
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="border px-2 py-2 text-blue-600 font-medium text-sm">
-                              <div>{project.DuAnID}</div>
-                              <div
-                                className="text-blue-400 text-xs cursor-pointer hover:underline"
-                                onClick={() => handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)}
-                              >
-                                Xem chi tiết
-                              </div>
-                            </td>
-                            <td className="border font-bold px-2 py-2 text-sm whitespace-normal break-words min-w-[180px] max-w-[280px]">
-                              {project.TenDuAn}
-                            </td>
-                            <td className="border px-2 py-2 text-sm text-center">
-                            <span className="font-bold">{project.TongChieuDai} </span>km
-                            </td>
-                            <td className="border px-2 py-2 text-center">
-                              <div className="flex justify-center">
-                                <span
-                                  className={`px-2 py-1 text-sm text-white rounded-full whitespace-nowrap ${getStatusColor(project.TrangThai)}`}
-                                >
-                                  {project.TrangThai}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="border px-2 py-2 text-center">
-                              <span
-                                className="px-2 py-1 text-xm text-gray-600 rounded-full"
-                              >
-                                <span className="font-bold">{project.soLuongGoiThau}</span> gói thầu
-                              </span>
-                            </td>
-                            <td className="border px-2 py-2 text-sm">
-                              <div className="flex items-start gap-4">
-                                <div className="w-24 h-24 flex-shrink-0">
-                                  <ProgressPieChart project={project} />
-                                </div>
-                                <div className="grid grid-rows-3 gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <img src={planIcon} width="14" height="14" alt="Kế hoạch" className="flex-shrink-0" />
-                                    <span
-                                      className="text-gray-600 cursor-pointer"
-                                      onClick={() => handleOpenPopup(project.DuAnID, 'danglam')}
-                                    >
-                                      Đang làm: <strong className="text-blue-600">{project?.thongKe?.phanTramKeHoach ?? '0'}%</strong>
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <img src={actualIcon} width="14" height="14" alt="Hoàn thành" className="flex-shrink-0" />
-                                    <span
-                                      className="text-gray-600 cursor-pointer"
-                                      onClick={() => handleOpenPopup(project.DuAnID, 'hoanthanh')}
-                                    >
-                                      Hoàn thành: <strong className="text-green-600">{project?.thongKe?.phanTramHoanThanh ?? '0'}%</strong>
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <img src={delayIcon} width="14" height="14" alt="Chậm tiến độ" className="flex-shrink-0" />
-                                    <span
-                                      className="text-gray-600 cursor-pointer"
-                                      onClick={() => handleOpenPopup(project.DuAnID, 'chamtienDo')}
-                                    >
-                                      Chậm tiến độ: <strong className="text-yellow-600">{project?.thongKe?.phanTramChamTienDo ?? '0'}%</strong>
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                              {popupData.status && popupData.duAnId === project.DuAnID && (
-                                <TienDoHangMucPopup
-                                  duAnId={popupData.duAnId}
-                                  status={popupData.status}
-                                  onClose={handleClosePopup}
-                                />
-                              )}
-
-                            </td>
-                          </tr>
-                        ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="7"
-                          className="text-center text-gray-500 py-4"
+          <div className="overflow-x-auto overflow-y-auto flex-1">
+            <table className="home-data-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>
+                    <input type="checkbox" className="accent-blue-500" readOnly />
+                  </th>
+                  <th>Mã dự án</th>
+                  <th>Tên dự án</th>
+                  <th>Dài tuyến</th>
+                  <th>Trạng thái</th>
+                  <th>Tiến độ tổng thể</th>
+                  <th>Nhà thầu chính</th>
+                  <th>Giá trị HĐ (Tỷ đồng)</th>
+                  <th>Khởi công</th>
+                  <th>Dự kiến HT</th>
+                  <th style={{ width: 48 }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={11} className="text-center py-8 text-gray-400">
+                      Đang tải dữ liệu...
+                    </td>
+                  </tr>
+                ) : paginatedProjects.length > 0 ? (
+                  paginatedProjects.map((project) => (
+                    <tr key={project.DuAnID}>
+                      <td>
+                        <input type="checkbox" className="accent-blue-500" />
+                      </td>
+                      <td>
+                        <div className="home-project-id">{project.DuAnID}</div>
+                        <div
+                          className="home-project-link"
+                          onClick={() =>
+                            handleDetail(
+                              project.DuAnID,
+                              project.TenDuAn,
+                              project.soLuongDuAnThanhPhan,
+                              project.soLuongGoiThau
+                            )
+                          }
                         >
-                          Không tìm thấy dự án nào phù hợp
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Phần phân trang */}
-                {filteredProjects.length > 0 && (
-                      <div className="bottom-0 bg-white border-t border-gray-200 z-10">
-                  <div className="flex justify-between items-center mt-4 px-4 py-2 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
-                      Hiển thị {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredProjects.length)} trong tổng số {filteredProjects.length} dự án
-                    </div>
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className={`px-3 py-1 rounded border ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                      >
-                        Trước
-                      </button>
-
-                      {Array.from({ length: Math.ceil(filteredProjects.length / itemsPerPage) }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded border ${currentPage === page ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredProjects.length / itemsPerPage)))}
-                        disabled={currentPage === Math.ceil(filteredProjects.length / itemsPerPage)}
-                        className={`px-3 py-1 rounded border ${currentPage === Math.ceil(filteredProjects.length / itemsPerPage) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
-                      >
-                        Sau
-                      </button>
-                    </div>
-                  </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-              {filteredProjects.length > 0 ? (
-                [...filteredProjects]
-                  .sort((a, b) => {
-                    const aIsPinned = pinnedProjects.includes(a.DuAnID);
-                    const bIsPinned = pinnedProjects.includes(b.DuAnID);
-                    if (aIsPinned && !bIsPinned) return -1;
-                    if (!aIsPinned && bIsPinned) return 1;
-                    return 0;
-                  })
-                  .map((project, index) => (
-                    <div
-                      key={project.DuAnID}
-                      className="bg-white rounded-lg shadow p-4 border border-gray-200"
-                      onClick={(e) => {
-                        // Chỉ chuyển trang nếu không click vào checkbox
-                        if (!e.target.closest('input[type="checkbox"]')) {
-                          handleDetail(project.DuAnID, project.TenDuAn, project.soLuongDuAnThanhPhan, project.soLuongGoiThau)
-                        }
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <div className="flex justify-between items-start mb-3">
+                          Xem chi tiết
+                        </div>
+                      </td>
+                      <td>
+                        <div className="home-project-name">{project.TenDuAn}</div>
+                        {project.TinhThanh && (
+                          <div className="home-project-location">
+                            <FiMapPin size={11} />
+                            {project.TinhThanh}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <strong>{project.TongChieuDai ?? "—"}</strong> km
+                      </td>
+                      <td>
                         <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            className="accent-red-500 mr-2"
-                            onClick={(e) => e.stopPropagation()}
+                          <span
+                            className="home-status-dot"
+                            style={{ background: getStatusDotColor(project.TrangThai) }}
                           />
-                          <div className="text-blue-600 font-medium">
-                            <div>{project.DuAnID}</div>
+                          <span className="home-status-text">{project.TrangThai}</span>
+                        </div>
+                        <div className="home-package-sub">
+                          <strong>{project.soLuongGoiThau ?? 0}</strong> gói thầu
+                        </div>
+                      </td>
+                      <td>
+                        <div className="home-progress-cell">
+                          <ProgressPieChart project={project} />
+                          <div className="home-progress-lines">
+                            <div>
+                              Đang làm:{" "}
+                              <strong className="text-blue-600">
+                                {project?.thongKe?.phanTramKeHoach ?? "0"}%
+                              </strong>
+                            </div>
+                            <div>
+                              Hoàn thành:{" "}
+                              <strong className="text-green-600">
+                                {project?.thongKe?.phanTramHoanThanh ?? "0"}%
+                              </strong>
+                            </div>
+                            <div>
+                              Chậm tiến độ:{" "}
+                              <strong className="text-orange-500">
+                                {project?.thongKe?.phanTramChamTienDo ?? "0"}%
+                              </strong>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex space-x-1">
-                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                            <img
-                              src={attachment}
-                              alt="Tệp đính kèm"
-                              className="w-5 h-5"
-                            />
-                          </button>
+                        {popupData.status && popupData.duAnId === project.DuAnID && (
+                          <TienDoHangMucPopup
+                            duAnId={popupData.duAnId}
+                            status={popupData.status}
+                            onClose={handleClosePopup}
+                          />
+                        )}
+                      </td>
+                      <td className="max-w-[140px] truncate" title={getMainContractor(project)}>
+                        {getMainContractor(project)}
+                      </td>
+                      <td>—</td>
+                      <td>{formatDisplayDate(project.NgayKhoiCong)}</td>
+                      <td>{formatDisplayDate(project.KeHoachHoanThanh)}</td>
+                      <td>
+                        <div className="relative">
                           <button
-                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                            title="Xoá"
+                            type="button"
+                            className="p-1.5 rounded hover:bg-gray-100"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteProject(project.DuAnID);
+                              toggleMenu(project.DuAnID);
                             }}
                           >
-                            <img
-                              src={trash}
-                              alt="Xoá"
-                              className="w-5 h-5"
-                            />
+                            <FiMoreVertical size={16} className="text-gray-500" />
                           </button>
-                          <button
-                            className="p-1.5 hover:bg-gray-200 rounded-full transition-all"
-                            title="Sửa thông tin"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(project.DuAnID, project.ParentID);
-                            }}
-                          >
-                            <img src={edit} alt="Ghim" className="w-5 h-5" />
-                          </button>
-
-                          <button className="p-1.5 hover:bg-gray-200 rounded-full transition-all">
-                            <img src={pin} alt="Ghim" className="w-5 h-5" />
-                          </button>
+                          {expandedMenuId === project.DuAnID && (
+                            <div className="home-action-menu">
+                              <button type="button" onClick={(e) => e.stopPropagation()}>
+                                <img src={attachment} alt="" className="w-4 h-4 mr-2 inline" />
+                                Tệp đính kèm
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEdit(project.DuAnID, project.ParentID);
+                                }}
+                              >
+                                <img src={edit} alt="" className="w-4 h-4 mr-2 inline" />
+                                Sửa thông tin
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePinProject(project.DuAnID);
+                                }}
+                              >
+                                <img src={pin} alt="" className="w-4 h-4 mr-2 inline" />
+                                {pinnedProjects.includes(project.DuAnID) ? "Bỏ ghim" : "Ghim"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteProject(project.DuAnID);
+                                }}
+                              >
+                                <img src={trash} alt="" className="w-4 h-4 mr-2 inline" />
+                                Xoá
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-
-                      <div className="mb-2">
-                        <div className="text-gray-600 font-medium">
-                          Tên dự án:
-                        </div>
-                        <div>{project.TenDuAn}</div>
-                      </div>
-
-                      <div className="mb-2">
-                        <div className="text-gray-600 font-medium">
-                          Dài tuyến:
-                        </div>
-                        <div>{project.TongChieuDai}</div>
-                      </div>
-
-                      <div className="mb-2">
-                        <div className="text-gray-600 font-medium">
-                          Trạng thái:
-                        </div>
-                        <span
-                          className={`px-2 py-[2px] text-white  rounded-full ${getStatusColor(
-                            project.TrangThai
-                          )}`}
-                        >
-                          {project.TrangThai}
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="text-gray-600 font-medium">
-                          Tiến độ:
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={planIcon}
-                            width="16"
-                            height="16"
-                            alt="Kế hoạch"
-                          />
-                          <span className="">
-                            Kế hoạch:{" "}
-                            <strong>{project.phanTramKeHoach || "0"}%</strong>
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={actualIcon}
-                            width="16"
-                            height="16"
-                            alt="Hoàn thành"
-                          />
-                          <span className="">
-                            Hoàn thành:{" "}
-                            <strong>{project.phanTramHoanThanh || "0"}%</strong>
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={delayIcon}
-                            width="16"
-                            height="16"
-                            alt="Chậm tiến độ"
-                          />
-                          <span className="">
-                            Chậm tiến độ:{" "}
-                            <strong>
-                              {project.phanTramChamTienDo || "0"}%
-                            </strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
                   ))
-              ) : (
-                <div className="text-center text-gray-500 py-4">
-                  Không tìm thấy dự án nào phù hợp
-                </div>
-              )}
-            </div>
+                ) : (
+                  <tr>
+                    <td colSpan={11} className="text-center py-8 text-gray-400">
+                      Không tìm thấy dự án nào phù hợp
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+
+          {filteredProjects.length > 0 && (
+            <div className="home-pagination">
+              <span>
+                Hiển thị {(currentPage - 1) * itemsPerPage + 1} -{" "}
+                {Math.min(currentPage * itemsPerPage, filteredProjects.length)} trong tổng số{" "}
+                {filteredProjects.length} dự án
+              </span>
+              <div className="flex items-center">
+                <button
+                  type="button"
+                  className="home-page-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                >
+                  Trước
+                </button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={`home-page-btn ${currentPage === page ? "home-page-btn--active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="home-page-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
       {showAddPopup && (
         <div className="popup" onClick={() => setShowAddPopup(false)}>
           <div

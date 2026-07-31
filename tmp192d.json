@@ -1,0 +1,77 @@
+{
+  "success": true,
+  "data": {
+    "duAnTong": {
+      "duAnId": 192,
+      "tenDuAn": "Dự án XDCT đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025",
+      "tongKhoiLuongKeHoach": 0,
+      "tongKhoiLuongThucHien": 0,
+      "phanTramHoanThanh": "0.00"
+    },
+    "duAnThanhPhan": [
+      {
+        "duAnId": 238,
+        "tenDuAn": "Dự án thành phần đoạn Vũng Áng - Bùng thuộc Dự án xây dựng công trình đường bộ cao tốc Bắc - Nam phía Đông giai đoạn 2021 - 2025",
+        "danhSachGoiThau": [
+          {
+            "goiThauId": 69,
+            "tenGoiThau": "Gói thầu XL01 (Km568+200 - Km600+700)",
+            "giaTriHopDong": null,
+            "kmBatDau": "568+200",
+            "kmKetThuc": "600+700",
+            "toaDoBatDau": {
+              "x": "105.892380",
+              "y": "18.342070"
+            },
+            "toaDoKetThuc": {
+              "x": "106.716040",
+              "y": "17.204520"
+            },
+            "ngayKhoiCong": "2023-02-22T00:00:00.000Z",
+            "ngayHoanThanh": "2025-12-08T00:00:00.000Z",
+            "trangThai": "Đang thi công",
+            "nhaThau": {
+              "nhaThauId": 21,
+              "tenNhaThau": "Công ty TNHH Tập đoàn Sơn Hải",
+              "maSoThue": "3100196175"
+            },
+            "danhSachLoaiHangMuc": [],
+            "tongKhoiLuongKeHoach": 0,
+            "tongKhoiLuongThucHien": 0,
+            "phanTramHoanThanh": "0.00"
+          },
+          {
+            "goiThauId": 70,
+            "tenGoiThau": "Gói thầu XL02 (Km600+700 - Km624+228,79)",
+            "giaTriHopDong": null,
+            "kmBatDau": "600+700",
+            "kmKetThuc": "624+228,79",
+            "toaDoBatDau": {
+              "x": "106.716040",
+              "y": "17.204520"
+            },
+            "toaDoKetThuc": {
+              "x": "107.356670",
+              "y": "16.507650"
+            },
+            "ngayKhoiCong": "2023-01-01T00:00:00.000Z",
+            "ngayHoanThanh": "2025-10-17T00:00:00.000Z",
+            "trangThai": "Đang thi công",
+            "nhaThau": {
+              "nhaThauId": 26,
+              "tenNhaThau": "Công ty CP Đầu tư và Xây dựng giao thông Phương Thành",
+              "maSoThue": null
+            },
+            "danhSachLoaiHangMuc": [],
+            "tongKhoiLuongKeHoach": 0,
+            "tongKhoiLuongThucHien": 0,
+            "phanTramHoanThanh": "0.00"
+          }
+        ],
+        "tongKhoiLuongKeHoach": 0,
+        "tongKhoiLuongThucHien": 0,
+        "phanTramHoanThanh": "0.00"
+      }
+    ]
+  }
+}

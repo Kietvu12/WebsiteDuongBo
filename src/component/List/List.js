@@ -1,11 +1,11 @@
 
 import axios from 'axios';
 import React, { useEffect, useState, useRef } from 'react';
-import { FaListOl, FaHashtag, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaBars, FaChevronDown, FaChevronUp, FaEdit, FaTrash } from 'react-icons/fa';
 import AddNewPackage from '../../page/AddNewPackage/AddNewPackage';
 import Portal from '../Portal';
 
-const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileListToggle }) => {
+const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileListToggle, embeddedInDetail = false }) => {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,9 +17,20 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
   const [showDelete, setShowDelete] = useState(false);
   const contextMenuRef = useRef(null);
 
-  const actionButtonStyle = "absolute top-1 right-1 bg-black bg-opacity-70 text-white p-1 rounded hover:bg-opacity-100 transition-all text-xs flex items-center justify-center h-5 w-7";
-
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+  const NAVY = '#0B2144';
+
+  const formatKmRange = (item) => {
+    const a = item.Km_BatDau;
+    const b = item.Km_KetThuc;
+    if (a == null || b == null) return null;
+    const sa = String(a).trim();
+    const sb = String(b).trim();
+    if (!sa || !sb) return null;
+    const seg = (s) => (/^km/i.test(s) ? s : `Km${s}`);
+    return `(${seg(sa)} - ${seg(sb)})`;
+  };
 
   const fetchPackages = async () => {
     try {
@@ -66,7 +77,8 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
     const selected = packages.find(p => p.GoiThau_ID === packageId);
     setSelectedProject(selected);
     if (onPackageSelect) {
-      onPackageSelect(packageId);
+      const idx = packages.findIndex((p) => p.GoiThau_ID === packageId);
+      onPackageSelect(packageId, idx >= 0 ? idx : 0);
     }
     if (window.innerWidth < 1050) {
       setIsDropdownOpen(false);
@@ -154,128 +166,169 @@ const List = ({ subProjectId, onPackageSelect, isMobileListExpanded, onMobileLis
   return (
     <div className="flex flex-col w-full h-full bg-white relative">
       {/* Desktop View */}
-      <div className="ssm:flex flex-1 p-2.5 h-full hidden">
-        <div className="flex flex-col h-full min-h-[300px] max-h-[840px] rounded shadow overflow-hidden w-full">
-          <div className="flex items-center bg-[#006591] text-white p-3 text-base md:text-xl font-bold flex-shrink-0">
-            <FaListOl className="mr-3 text-sm md:text-lg" />
-            DANH SÁCH GÓI THẦU
+      <div className={`flex-1 p-2.5 h-full min-h-0 ${embeddedInDetail ? 'flex' : 'hidden ssm:flex'}`}>
+        <div
+          className={`flex flex-col h-full min-h-[300px] rounded shadow overflow-hidden w-full ${
+            embeddedInDetail ? 'max-h-none' : 'max-h-[840px]'
+          }`}
+        >
+          <div
+            className="flex shrink-0 items-center gap-3 rounded-t-lg px-4 py-3.5 text-sm font-bold uppercase tracking-wide text-white md:text-base"
+            style={{ backgroundColor: NAVY }}
+          >
+            <FaBars className="shrink-0 text-lg opacity-95" aria-hidden />
+            <span>Tender package list</span>
           </div>
-<div className="p-2.5 overflow-y-auto flex-grow">
-  {packages.map((item, index) => (
-    <div 
-      key={item.GoiThau_ID}
-      className={`relative flex flex-col items-left gap-2 p-3 border-b border-gray-200 cursor-pointer transition-colors hover:bg-blue-50 ${
-        selectedProject?.GoiThau_ID === item.GoiThau_ID 
-          ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
-          : ''
-      }`}
-      onClick={() => handlePackageClick(item.GoiThau_ID)}
-      onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
-    >
-      <div className="absolute top-1 right-1 flex gap-1">
-        <button 
-          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEditPackage(item.GoiThau_ID);
-          }}
-          title="Sửa"
-          style={{ right: '1rem' }}
-        >
-          <span className='w-6 h-6'><FaEdit size={12}/></span>
-        </button>
-        <button 
-          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleConfirmDelete(item.GoiThau_ID);
-          }}
-          title="Xóa"
-        >
-          <FaTrash size={12} />
-        </button>
-      </div>
+          <div className="flex flex-grow flex-col gap-2 overflow-y-auto bg-white p-3">
+            {packages.map((item, index) => {
+              const selected = selectedProject?.GoiThau_ID === item.GoiThau_ID;
+              const km = formatKmRange(item);
+              return (
+                <div
+                  key={item.GoiThau_ID}
+                  className={`group relative cursor-pointer transition-all ${
+                    selected ? 'rounded-lg px-4 py-4 shadow-sm' : 'rounded-lg px-3 py-3 hover:bg-slate-50'
+                  }`}
+                  style={selected ? { backgroundColor: NAVY } : undefined}
+                  onClick={() => handlePackageClick(item.GoiThau_ID)}
+                  onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
+                >
+                  <div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      className={`rounded-md p-1.5 transition-colors ${
+                        selected
+                          ? 'text-sky-200 hover:bg-white/10 hover:text-white'
+                          : 'text-slate-500 hover:bg-slate-200'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditPackage(item.GoiThau_ID);
+                      }}
+                      title="Sửa"
+                    >
+                      <FaEdit size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-md p-1.5 transition-colors ${
+                        selected
+                          ? 'text-sky-200 hover:bg-white/10 hover:text-white'
+                          : 'text-slate-500 hover:bg-slate-200'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirmDelete(item.GoiThau_ID);
+                      }}
+                      title="Xóa"
+                    >
+                      <FaTrash size={12} />
+                    </button>
+                  </div>
 
-      <div className='flex flex-row min-w-[80px]'>
-        <div className="flex items-center text-[#006591] font-bold text-sm md:text-base">
-          <FaHashtag className="mr-2 text-xs md:text-sm" />
-        </div>
-        <div className="flex flex-col items-center text-[#006591] font-bold text-sm md:text-base">
-          GT - {index + 1}
-        </div>
-      </div>
-      <div className="font-bold text-gray-600 text-xs md:text-sm flex-1">
-        {item.TenGoiThau}
-      </div>
-    </div>
-  ))}
-</div>
+                  <div
+                    className={`text-sm font-bold md:text-base ${selected ? 'text-white' : ''}`}
+                    style={!selected ? { color: NAVY } : undefined}
+                  >
+                    # GT - {index + 1}
+                  </div>
+                  <div
+                    className={`mt-1 text-xs font-semibold leading-snug md:text-sm ${
+                      selected ? 'text-sky-200' : 'text-slate-500'
+                    }`}
+                  >
+                    {item.TenGoiThau}
+                  </div>
+                  {km && (
+                    <div
+                      className={`mt-0.5 text-xs leading-snug md:text-sm ${
+                        selected ? 'text-sky-200' : 'text-slate-500'
+                      }`}
+                    >
+                      {km}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Mobile/Dropdown View */}
-      <div className="ssm:hidden">
-        <button 
-          className="flex items-center justify-between w-full bg-[#006591] text-white p-3 text-base font-bold"
+      <div className={embeddedInDetail ? 'hidden' : 'ssm:hidden'}>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left text-base font-bold uppercase tracking-wide text-white"
+          style={{ backgroundColor: NAVY }}
           onClick={() => {
             setIsDropdownOpen(!isDropdownOpen);
             if (onMobileListToggle) onMobileListToggle(!isDropdownOpen);
           }}
         >
-          <div className="flex items-center">
-            <FaListOl className="mr-3" />
-            DANH SÁCH GÓI THẦU
+          <div className="flex items-center gap-3">
+            <FaBars className="text-lg" aria-hidden />
+            <span>Tender package list</span>
           </div>
           {isDropdownOpen ? <FaChevronUp /> : <FaChevronDown />}
         </button>
-        <div className={`absolute z-10 w-full bg-white shadow-lg max-h-60 overflow-y-auto transition-all duration-300 ${
-          isDropdownOpen ? 'block' : 'hidden'
-        }`}>
-          {packages.map((item, index) => (
-            <div 
-              key={item.GoiThau_ID}
-              className={`relative flex flex-col p-3 border-b border-gray-200 cursor-pointer hover:bg-blue-50 ${
-                selectedProject?.GoiThau_ID === item.GoiThau_ID 
-                  ? 'bg-blue-50 border-l-4 border-l-[#006591]' 
-                  : ''
-              }`}
-              onClick={() => handlePackageClick(item.GoiThau_ID)}
-              onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
-            >
-
-              <div className="absolute top-1 right-1 flex gap-1">
-                <button 
-                  className={`${actionButtonStyle} relative bg-blue-700`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditPackage(item.GoiThau_ID);
-                  }}
-                  title="Sửa"
-                  style={{ right: '1rem' }} // Đẩy nút sửa sang trái
+        <div
+          className={`absolute z-10 w-full max-h-60 overflow-y-auto bg-white shadow-lg transition-all duration-300 ${
+            isDropdownOpen ? 'block' : 'hidden'
+          }`}
+        >
+          {packages.map((item, index) => {
+            const selected = selectedProject?.GoiThau_ID === item.GoiThau_ID;
+            const km = formatKmRange(item);
+            return (
+              <div
+                key={item.GoiThau_ID}
+                className={`group relative cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                  selected ? 'px-3 py-3' : 'px-3 py-3 hover:bg-slate-50'
+                }`}
+                style={selected ? { backgroundColor: NAVY } : undefined}
+                onClick={() => handlePackageClick(item.GoiThau_ID)}
+                onContextMenu={(e) => handleContextMenu(e, item.GoiThau_ID)}
+              >
+                <div className="absolute right-2 top-2 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    className={`rounded p-1 ${selected ? 'text-sky-200 hover:bg-white/10' : 'text-slate-600 hover:bg-slate-200'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditPackage(item.GoiThau_ID);
+                    }}
+                    title="Sửa"
+                  >
+                    <FaEdit size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded p-1 ${selected ? 'text-sky-200 hover:bg-white/10' : 'text-slate-600 hover:bg-slate-200'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleConfirmDelete(item.GoiThau_ID);
+                    }}
+                    title="Xóa"
+                  >
+                    <FaTrash size={12} />
+                  </button>
+                </div>
+                <div
+                  className={`text-sm font-bold ${selected ? 'text-white' : ''}`}
+                  style={!selected ? { color: NAVY } : undefined}
                 >
-                  <FaEdit size={12} />
-                </button>
-                <button 
-                  className={`${actionButtonStyle} relative bd-red-700`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleConfirmDelete(item.GoiThau_ID);;
-                  }}
-                  title="Xóa"
-                >
-                  <FaTrash size={12} />
-                </button>
+                  # GT - {index + 1}
+                </div>
+                <div className={`mt-1 text-xs font-semibold ${selected ? 'text-sky-200' : 'text-slate-500'}`}>
+                  {item.TenGoiThau}
+                </div>
+                {km && (
+                  <div className={`mt-0.5 text-xs ${selected ? 'text-sky-200' : 'text-slate-500'}`}>{km}</div>
+                )}
               </div>
-
-              <div className="flex items-center text-[#006591] font-bold text-sm">
-                <FaHashtag className="mr-2" />
-                Gói thầu - {index + 1}
-              </div>
-              <div className="font-bold text-gray-800 text-xs mt-1">
-                {item.TenGoiThau}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

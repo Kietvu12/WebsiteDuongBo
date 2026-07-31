@@ -1,3 +1,168 @@
+.mapview-root {
+  position: relative;
+  background: #e2e8f0;
+}
+
+.mapview-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  position: relative;
+}
+
+.mapview-canvas--expanded {
+  height: calc(100vh - 44px);
+}
+
+.mapview-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mapview-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.mapview-toolbar-btn:hover {
+  background: #fff;
+  border-color: #2563eb;
+}
+
+.mapview-toolbar-btn.is-active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.mapview-legend {
+  position: absolute;
+  bottom: 36px;
+  left: 12px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  font-size: 12px;
+}
+
+.mapview-legend-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #0f172a;
+}
+
+.mapview-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: #334155;
+}
+
+.mapview-legend-item span {
+  width: 22px;
+  height: 4px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.mapview-route-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1000;
+  max-width: min(320px, 55vw);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+}
+
+.mapview-route-badge-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.mapview-route-badge-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.mapview-route-badge-km {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.mapview-loading,
+.mapview-error {
+  position: absolute;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.mapview-loading {
+  background: rgba(255, 255, 255, 0.55);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mapview-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #cbd5e1;
+  border-top-color: #2563eb;
+  animation: mapview-spin 0.8s linear infinite;
+}
+
+@keyframes mapview-spin {
+  to { transform: rotate(360deg); }
+}
+
+.mapview-error {
+  background: rgba(254, 242, 242, 0.88);
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 16px;
+  text-align: center;
+}
+
 .map-container {
   width: 100%;
   height: 100%;
@@ -33,6 +198,161 @@
   display: block;
   margin-bottom: 5px;
   font-size: 15px;
+}
+
+/* Popup tuyen nhieu mau — vien vang, nen trang */
+.route-segment-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid #c9a227;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.route-segment-popup .leaflet-popup-content {
+  margin: 0;
+  min-width: 240px;
+  max-width: min(320px, 92vw);
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.route-segment-popup .leaflet-popup-tip {
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+.route-popup-inner {
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #0f172a;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 240px;
+  max-width: min(320px, 92vw);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.route-popup-title {
+  font-weight: 800;
+  font-size: 15px;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+
+.route-popup-sub {
+  color: #334155;
+  font-weight: 600;
+  margin-bottom: 8px;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.route-popup-km {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.route-popup-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+.route-popup-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.route-popup-stats {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #475569;
+  margin-bottom: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.route-popup-stats strong {
+  color: #0f172a;
+  margin-right: 4px;
+}
+
+.route-popup-contractor {
+  font-size: 12px;
+  color: #64748b;
+  padding-top: 6px;
+  border-top: 1px solid #e2e8f0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.route-pin-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Tooltip hover tuyen — card trang, vien vang */
+.leaflet-tooltip.route-segment-tooltip {
+  padding: 0;
+  border: 2px solid #c9a227;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-sizing: border-box;
+  white-space: normal;
+  /* Leaflet co the tinh width rat hep; bat buoc min-width de khong thanh cot */
+  min-width: 240px !important;
+  max-width: min(320px, 92vw) !important;
+  width: auto !important;
+}
+
+.leaflet-tooltip.route-segment-tooltip::before {
+  border-top-color: #c9a227 !important;
+}
+
+.leaflet-tooltip.route-segment-tooltip.leaflet-tooltip-bottom::before {
+  border-bottom-color: #c9a227 !important;
+}
+
+.route-tooltip-inner {
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  box-sizing: border-box;
+  min-width: 240px;
+  max-width: min(320px, 92vw);
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.route-tooltip-progress {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #475569;
+  margin: 8px 0;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.route-tooltip-progress strong {
+  color: #0f172a;
+  margin-right: 4px;
 }
 
 .leaflet-marker-icon {

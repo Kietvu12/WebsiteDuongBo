@@ -1,509 +1,185 @@
+import React, { useState } from 'react';
+import { FaTimes, FaPaperPlane } from 'react-icons/fa';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { FaComment, FaTimes, FaDatabase, FaExpand, FaCompress } from 'react-icons/fa';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from "rehype-raw";
-import "./ChatbotButton.css";
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import aiLogo from '../../assets/img/ai.png'
+const HEADER_BG = '#0B2144';
+const ACCENT_ORANGE = '#F58201';
+const USER_BUBBLE = '#0B2144';
 
+const DiamondIcon = ({ className = 'w-3.5 h-3.5' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <polygon points="12,2 22,12 12,22 2,12" />
+  </svg>
+);
+
+const REPORT_TITLE =
+  'B\u00c1O C\u00c1O D\u1ef0 \u00c1N \u0110\u01b0\u1eddng B\u1ed9 CAO T\u1ed0C B\u1eafc - NAM PH\u00cdA \u0110\u00d4NG GIAI \u0110O\u1ea0N 2017 - 2020';
 
 const ChatbotButton = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 'initial-bot-message', type: 'bot', text: 'Xin chào! Tôi có thể giúp gì cho bạn?' },
-  ]);
-  const [mcpBlocks, setMcpBlocks] = useState([]);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [userInput, setUserInput] = useState('');
-  const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
-  const messagesEndRef = useRef(null);
-  const [selectedDuAnId, setSelectedDuAnId] = useState(null);
 
   const toggleChatbot = () => {
-    // Khi đóng chatbot, nếu modal đang mở, cũng đóng modal
-    if (isMcpModalOpen) {
-      setIsMcpModalOpen(false);
-    }
-    setIsOpen(prev => !prev);
+    setIsOpen((prev) => !prev);
+    if (isOpen) setIsMinimized(false);
   };
-
-  const toggleExpand = () => {
-    setIsExpanded(prev => !prev);
-  };
-
-  const scrollToBottom = () => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  // Chuẩn hoá Markdown cho ReactMarkdown
-  const normalizeMarkdown = (text) => {
-    if (typeof text !== 'string') return '';
-    return text;
-  };
-
-  const handleSend = async () => {
-    if (!userInput.trim()) return;
-
-    // Xóa sạch mcpBlocks cũ khi gửi prompt mới
-    setMcpBlocks([]);
-    // Nếu modal đang mở, đóng nó (dù chat vẫn ở trạng thái mở)
-    if (isMcpModalOpen) setIsMcpModalOpen(false);
-
-    const userMessage = { id: Date.now() + '-user', type: 'user', text: userInput };
-    setMessages(prev => [...prev, userMessage]);
-    setUserInput('');
-
-    const botId = Date.now() + '-bot';
-    const botPlaceholder = { id: botId, type: 'bot', text: '' };
-    setMessages(prev => [...prev, botPlaceholder]);
-    scrollToBottom();
-
-    let finalResponseReceived = false;
-
-    try {
-      const response = await fetch('http://210.245.52.119/api_ai_dadb_v2/api/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userInput , conversation_id: "tuan8"}),
-      });
-      if (!response.ok || !response.body) {
-        throw new Error('Lỗi kết nối tới server hoặc không có body');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8'); 
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          let parsed;
-          try { parsed = JSON.parse(line); }
-          catch { continue; }
-
-          if (finalResponseReceived) continue;
-
-          switch (parsed.type) {
-            case 'text_delta':
-              if (typeof parsed.content === 'string') {
-                setMessages(prev =>
-                  prev.map(msg =>
-                    msg.id === botId
-                      ? { ...msg, text: msg.text + parsed.content }
-                      : msg
-                  )
-                );
-              }
-              break;
-            case 'final_agent_response':
-              if (parsed.content && typeof parsed.content.natural_language === 'string') {
-                // Cập nhật phản hồi từ bot
-                setMessages(prev =>
-                  prev.map(msg =>
-                    msg.id === botId
-                      ? { ...msg, text: parsed.content.natural_language }
-                      : msg
-                  )
-                );
-                finalResponseReceived = true;
-              }
-
-              const arrMcp = parsed?.content?.mcp_data ?? parsed?.mcp_data ?? [];
-
-              if (Array.isArray(arrMcp) && arrMcp.length > 0) {
-                const newBlocks = [];
-
-                for (let idx = 0; idx < arrMcp.length; idx++) {
-                  try {
-                    const rawOutput = arrMcp[idx]?.output;
-                    if (!rawOutput) continue;
-                    const parsedOutput = typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput;
-
-                    if (parsedOutput.type === 'text' && typeof parsedOutput.text === 'string') {
-                      const parsedData = JSON.parse(parsedOutput.text);
-                      newBlocks.push({
-                        id: `final-mcp-${Date.now()}-${idx}`,
-                        title: `MCP Data ${idx + 1}`,
-                        data: parsedData,
-                      });
-                    }
-                  } catch (e) {
-                    console.warn('Lỗi khi parse MCP block:', e);
-                  }
-                }
-
-                if (newBlocks.length > 0) {
-                  setMcpBlocks(prev => [...prev, ...newBlocks]);
-                }
-              } else {
-                console.log('❌ Không có mcp_data hoặc không phải array:', arrMcp);
-              }
-
-              break;
-
-            case 'error':
-              const errMsg = parsed.message || 'Có lỗi từ server';
-              setMessages(prev => [
-                ...prev.filter(msg => msg.id !== botId),
-                { id: Date.now() + '-error', type: 'bot', text: 'Lỗi: ' + errMsg },
-              ]);
-              finalResponseReceived = true;
-              break;
-
-            default:
-              break;
-          }
-        }
-
-        buffer = lines[lines.length - 1];
-        scrollToBottom();
-      }
-
-      // Xử lý buffer còn lại (nếu có)
-      if (buffer.trim()) {
-        try {
-          const parsed = JSON.parse(buffer.trim());
-          if (
-            parsed.type === 'final_agent_response' &&
-            parsed.content &&
-            typeof parsed.content.natural_language === 'string'
-          ) {
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === botId
-                  ? { ...msg, text: parsed.content.natural_language }
-                  : msg
-              )
-            );
-            const arrMcp = parsed?.content?.mcp_data ?? parsed?.mcp_data ?? [];
-
-            if (Array.isArray(arrMcp) && arrMcp.length > 0) {
-              const newBlocks = [];
-
-              for (let idx = 0; idx < arrMcp.length; idx++) {
-                try {
-                  const rawOutput = arrMcp[idx]?.output;
-                  if (!rawOutput) continue;
-                  const parsedOutput = typeof rawOutput === 'string' ? JSON.parse(rawOutput) : rawOutput;
-
-                  if (parsedOutput.type === 'text' && typeof parsedOutput.text === 'string') {
-                    const parsedData = JSON.parse(parsedOutput.text);
-                    newBlocks.push({
-                      id: `final-mcp-${Date.now()}-${idx}`,
-                      title: `MCP Data ${idx + 1}`,
-                      data: parsedData,
-                    });
-                  }
-                } catch (e) {
-                  console.warn('Lỗi khi parse MCP block:', e);
-                }
-              }
-
-              if (newBlocks.length > 0) {
-                setMcpBlocks(prev => [...prev, ...newBlocks]);
-              }
-            } else {
-              console.log('❌ Không có mcp_data hoặc không phải array:', arrMcp);
-            }
-
-            finalResponseReceived = true;
-          }
-        } catch {
-          // Bỏ qua lỗi parse cuối
-        }
-        scrollToBottom();
-      }
-    } catch (error) {
-      console.error('Lỗi khi gửi tin nhắn:', error);
-      setMessages(prev => [
-        ...prev.filter(msg => msg.id !== botId),
-        {
-          id: Date.now() + '-error',
-          type: 'bot',
-          text: 'Đã xảy ra lỗi khi gọi API: ' + error.message,
-        },
-      ]);
-      scrollToBottom();
-    }
-  };
-
-  const navigate = useNavigate();
-
-  const handleShowData = () => {
-    console.log("Button clicked, mcpBlocks:", mcpBlocks);
-    
-    if (mcpBlocks.length === 0) {
-      alert("Chưa có dữ liệu để hiển thị");
-      return;
-    }
-
-    try {
-      // Tạo object để phân loại dự án
-      const projects = {
-        main: [], // Các dự án chính (ParentID == null)
-        sub: {}   // Các dự án phụ, theo dạng { parentId: [childIds] }
-      };
-      
-      // Duyệt qua tất cả các block trong mcpBlocks
-      mcpBlocks.forEach((block, blockIndex) => {
-        console.log(`Đang xử lý block ${blockIndex}:`, block);
-        
-        if (block && block.data) {
-          const data = block.data;
-          
-          // Trường hợp 1: data là mảng các đối tượng
-          if (Array.isArray(data)) {
-            data.forEach(item => {
-              if (item.DuAnID) {
-                // Kiểm tra xem là dự án chính hay phụ
-                if (item.ParentID == null || item.ParentID === undefined) {
-                  // Dự án chính
-                  projects.main.push(item.DuAnID);
-                } else {
-                  // Dự án phụ
-                  if (!projects.sub[item.ParentID]) {
-                    projects.sub[item.ParentID] = [];
-                  }
-                  projects.sub[item.ParentID].push(item.DuAnID);
-                }
-              }
-            });
-          } 
-          // Trường hợp 2: data là đối tượng có chứa DuAnID
-          else if (data.DuAnID) {
-            if (data.ParentID == null || data.ParentID === undefined) {
-              // Dự án chính
-              projects.main.push(data.DuAnID);
-            } else {
-              // Dự án phụ
-              if (!projects.sub[data.ParentID]) {
-                projects.sub[data.ParentID] = [];
-              }
-              projects.sub[data.ParentID].push(data.DuAnID);
-            }
-          }
-        }
-      });
-      
-      
-      // Xử lý điều hướng dựa trên phân loại
-      
-      // Trường hợp 1: Chỉ có dự án chính
-      if (projects.main.length > 0 && Object.keys(projects.sub).length === 0) {
-        const queryString = projects.main.join(',');
-        navigate(`/home?DuAnIDs=${queryString}`);
-      }
-      // Trường hợp 2: Chỉ có dự án phụ thuộc vào 1 dự án cha
-      else if (projects.main.length === 0 && Object.keys(projects.sub).length === 1) {
-        const parentId = Object.keys(projects.sub)[0];
-        const childIds = projects.sub[parentId].join(',');
-        navigate(`/side-project/${parentId}?DuAnConIDs=${childIds}`);
-      }
-      // Trường hợp 3: Có cả dự án chính và phụ hoặc nhiều dự án phụ khác nhau
-      else if (projects.main.length > 0 || Object.keys(projects.sub).length > 0) {
-        // Ưu tiên dự án chính
-        if (projects.main.length > 0) {
-          const queryString = projects.main.join(',');
-          navigate(`/home?DuAnIDs=${queryString}`);
-        } 
-        // Nếu không có dự án chính, lấy dự án phụ đầu tiên
-        else {
-          const parentId = Object.keys(projects.sub)[0];
-          const childIds = projects.sub[parentId].join(',');
-          navigate(`/side-project/${parentId}?DuAnConIDs=${childIds}`);
-        }
-      } else {
-        alert("Không tìm thấy ID dự án nào trong dữ liệu");
-      }
-    } catch (error) {
-      console.error("Lỗi xử lý dữ liệu:", error);
-      alert("Đã xảy ra lỗi khi xử lý dữ liệu");
-    }
-  };
-  
-  // Đóng modal
-  const handleCloseModal = () => {
-    setIsMcpModalOpen(false);
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    const id = sessionStorage.getItem('selectedDuAnId');
-    if (id) setSelectedDuAnId(Number(id));
-  }, []);
 
   return (
-<>
-  <div
-    className={`fixed bottom-5 right-5 w-14 h-14 rounded-full flex items-center justify-center cursor-pointer shadow-md z-50 transition-all duration-300 ${
-      isOpen ? 'bg-red-500' : 'bg-blue-600'
-    }`}
-    onClick={toggleChatbot}
-    aria-label={isOpen ? 'Đóng chatbot' : 'Mở chatbot'}
-    role="button"
-    tabIndex={0}
-    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleChatbot()}
-  >
-    {isOpen ? (
-      <FaTimes className="text-white text-xl" />
-    ) : (
-      <img src={aiLogo} alt="AI Logo" className="w-10 h-10 object-contain" />
-    )}
-  </div>
+    <>
+      <button
+        type="button"
+        className={`fixed bottom-5 right-5 z-[10050] flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-colors ${
+          isOpen ? 'bg-red-500 hover:bg-red-600' : 'bg-[#0B2144] hover:bg-[#152a4a]'
+        }`}
+        onClick={toggleChatbot}
+        aria-label={isOpen ? 'Đóng chatbot' : 'Mở chatbot'}
+      >
+        {isOpen ? <FaTimes className="text-xl text-white" /> : <DiamondIcon className="h-7 w-7 text-white" />}
+      </button>
 
-  {/* Chatbot panel */}
-  {isOpen && (
-    <div className={`fixed bg-white rounded-lg shadow-xl flex flex-col z-50 overflow-hidden transition-all duration-300 ${
-      isExpanded 
-        ? 'inset-0 rounded-none' 
-        : 'bottom-20 right-5 w-80 h-[70vh] md:w-96 sm:right-2 sm:bottom-16 sm:w-[calc(100%-16px)]'
-    }`}>
-      {/* Header */}
-      <div className={`bg-blue-600 text-white p-3 text-center relative flex items-center justify-between ${
-        isExpanded ? 'p-4' : 'p-3'
-      }`}>
-        <div className="flex items-center space-x-3">
-          <h3 className={`font-medium ${isExpanded ? 'text-xl' : 'text-lg'}`}>Trợ lý ảo</h3>
-          {isExpanded && (
-            <span className="bg-blue-500 px-2 py-1 rounded-full text-xs">
-              Chế độ toàn màn hình
-            </span>
+      {isOpen && (
+        <div
+          className="fixed bottom-[5.25rem] right-5 z-[10050] flex w-[min(440px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/10 sm:right-5"
+          style={{ height: isMinimized ? 'auto' : 'min(800px, 88vh)' }}
+        >
+          <div
+            className="flex shrink-0 items-center justify-between gap-2 px-3 py-3 text-white"
+            style={{ backgroundColor: HEADER_BG }}
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              <DiamondIcon className="h-4 w-4 shrink-0 text-white" />
+              <h2 className="truncate text-sm font-bold sm:text-base">Project Assistant Chatbot</h2>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-white hover:bg-white/10"
+                onClick={() => setIsMinimized((m) => !m)}
+                aria-label={isMinimized ? 'Mở rộng' : 'Thu nhỏ'}
+                title={isMinimized ? 'Mở rộng' : 'Thu nhỏ'}
+              >
+                <span className="block h-0.5 w-4 rounded-full bg-white" />
+              </button>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-white hover:bg-white/10"
+                onClick={toggleChatbot}
+                aria-label="Đóng"
+              >
+                <FaTimes className="text-lg" />
+              </button>
+            </div>
+          </div>
+
+          {!isMinimized && (
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto bg-[#f4f6f9] px-3 py-4">
+                <div className="mb-6 flex flex-col items-end">
+                  <div
+                    className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold text-white"
+                    style={{ backgroundColor: HEADER_BG }}
+                  >
+                    R
+                  </div>
+                  <div
+                    className="max-w-[92%] rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed text-white shadow-sm"
+                    style={{ backgroundColor: USER_BUBBLE }}
+                  >
+                    Request: Generate a detailed progress report for the Vung Ang - Dong Phu sub-project and all
+                    ongoing tender packages.
+                  </div>
+                </div>
+
+                <div className="mb-6 flex gap-2">
+                  <div
+                    className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+                    style={{ backgroundColor: ACCENT_ORANGE }}
+                  >
+                    <DiamondIcon className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="max-w-[calc(100%-3rem)] rounded-2xl rounded-tl-sm border border-gray-200 bg-[#e8edf3] px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-sm">
+                    <p className="mb-2 italic text-gray-500">searching project database...</p>
+                    <p>
+                      Analysis for GT-1: 95% Land Acquisition completed. Construction 80% on track under CP 479,
+                      which is exceeding performance benchmarks. Verifying final contractor local subcontractor data for
+                      GT-2 with main contractor Son Hai Group. Five minor land acquisition disputes identified near
+                      Km610. Based on these factors, the overall sub-project progress is 1%. Data for GT-2 is still
+                      pending initialization.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-2 flex gap-2">
+                  <div
+                    className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+                    style={{ backgroundColor: ACCENT_ORANGE }}
+                  >
+                    <DiamondIcon className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="max-w-[calc(100%-3rem)] rounded-2xl rounded-tl-sm border border-gray-200 bg-[#e8edf3] px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-sm">
+                    <p className="mb-4">
+                      A comprehensive detailed progress report (PDF) has been successfully generated and is now
+                      available for download. I have included a preview of the first page below.
+                    </p>
+                    <div className="rounded-lg border border-sky-200/80 bg-white p-3 shadow-sm">
+                      <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                        Detailed report preview (page 1)
+                      </p>
+                      <div className="mb-4 text-center">
+                        <p className="mb-4 text-xs font-bold leading-snug sm:text-sm" style={{ color: HEADER_BG }}>
+                          {REPORT_TITLE}
+                        </p>
+                        <div className="text-left text-xs text-gray-800 sm:text-sm">
+                          <p className="mb-2 font-bold">1. Thông tin chung dự án</p>
+                          <ul className="list-disc space-y-1 pl-5 text-gray-700">
+                            <li>Tên dự án: Đường bộ cao tốc Bắc - Nam phía Đông</li>
+                            <li>Tổng chiều dài tuyến: 729 km</li>
+                            <li>Tổng mức đầu tư: 128.000 tỷ VNĐ</li>
+                            <li>Chủ đầu tư: Bộ GTVT</li>
+                            <li>Thời gian khởi công - hoàn thành: 2017 - 2020</li>
+                          </ul>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-95"
+                        style={{ backgroundColor: ACCENT_ORANGE }}
+                      >
+                        <span aria-hidden>↓</span> Download Report (PDF)
+                      </button>
+                      <p className="mt-2 text-center text-[11px] text-gray-500">
+                        File size: 1.2 MB. Format: PDF. Expires: 24h
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 border-t border-gray-200 bg-white p-3">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ask about any project or package..."
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:border-[#0B2144] focus:outline-none focus:ring-2 focus:ring-[#0B2144]/20"
+                  />
+                  <button
+                    type="button"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-white shadow-sm transition hover:opacity-90"
+                    style={{ backgroundColor: HEADER_BG }}
+                    aria-label="Gửi"
+                    onClick={() => setUserInput('')}
+                  >
+                    <FaPaperPlane className="text-sm" />
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-blue-500 text-white rounded-full hover:bg-blue-400 transition-colors"
-            title={isExpanded ? 'Thu nhỏ' : 'Phóng to'}
-            aria-label={isExpanded ? 'Thu nhỏ' : 'Phóng to'}
-          >
-            {isExpanded ? <FaCompress className="text-sm" /> : <FaExpand className="text-sm" />}
-          </button>
-          <button
-            onClick={toggleChatbot}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-red-500 text-white rounded-full hover:bg-red-400 transition-colors"
-            aria-label="Đóng chatbot"
-          >
-            <FaTimes className="text-sm" />
-          </button>
-        </div>
-      </div>
-
-      {/* Messages area */}
-      <div className={`flex-1 overflow-y-auto bg-gray-50 ${
-        isExpanded 
-          ? 'p-6 w-full' 
-          : 'p-3'
-      }`}>
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`mb-2 p-3 rounded-lg max-w-[85%] break-words ${
-              msg.type === 'bot'
-                ? 'bg-gray-200 mr-auto rounded-bl-none'
-                : 'bg-blue-600 text-white ml-auto rounded-br-none'
-            }`}
-          >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeRaw]}
-              components={{
-                p: ({ children }) => (
-                  <p className="whitespace-pre-wrap mb-0">{children}</p>
-                ),
-                strong: ({ children }) => (
-                  <strong className="font-semibold">{children}</strong>
-                ),
-                li: ({ children }) => (
-                  <li className="ml-4 list-disc">{children}</li>
-                ),
-              }}
-            >
-              {normalizeMarkdown(msg.text)}
-            </ReactMarkdown>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input area */}
-      <div className={`bg-white border-t border-gray-200 ${
-        isExpanded 
-          ? 'p-4 w-full' 
-          : 'p-2'
-      }`}>
-        <div className="flex gap-2 items-stretch">
-          <input
-            type="text"
-            placeholder="Nhập câu hỏi của bạn..."
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            className={`flex-1 min-w-0 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              isExpanded ? 'px-6 py-3 text-base' : 'px-3 py-1.5 text-sm'
-            }`}
-          />
-          <button
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-            onClick={handleShowData}
-            title={mcpBlocks.length > 0 ? 'Hiển thị dữ liệu MCP' : 'Chưa có dữ liệu MCP'}
-            aria-label="Hiển thị dữ liệu"
-          >
-            <FaDatabase />
-          </button>
-          <button
-            onClick={handleSend}
-            className={`flex-shrink-0 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors whitespace-nowrap ${
-              isExpanded ? 'px-6 py-3 text-base' : 'px-4 py-1.5 text-sm'
-            }`}
-          >
-            Gửi
-          </button>
-        </div>
-      </div>
-    </div>
-  )}
-
-  {/* MCP Modal */}
-  {isMcpModalOpen && (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-      onClick={handleCloseModal}
-    >
-      <div
-        className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-auto mx-4"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <button
-            onClick={handleCloseModal}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label="Đóng"
-          >
-            <FaTimes />
-          </button>
-          <span className="font-semibold">Thông tin MCP Data</span>
-        </div>
-        {/* Modal content would go here */}
-      </div>
-    </div>
-  )}
-</>
+      )}
+    </>
   );
 };
 

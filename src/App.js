@@ -14,6 +14,7 @@ import ProjectProgress from './page/ProjectProgress/ProjectProgress';
 import ChatbotButton from './component/ChatbotButton/ChatbotButton';
 import Approvals from './page/Approvals/Approvals';
 import MapBoard from './page/MapBoard/MapBoard';
+import Overview from './page/Overview/Overview';
 import AddNewProject from './page/AddNewProject/AddNewProject';
 import AddNewSubProject from './page/AddNewSubProject/AddNewSubProject';
 import AddNewPackage from './page/AddNewPackage/AddNewPackage';
@@ -44,14 +45,30 @@ const LayoutWithSidebar = ({ children }) => {
         <Sidebar />
       </div>
 
-      {/* Content scrollable */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto'
-      }}>
-        <div style={{ minHeight: '100%' }} className=''>
+      {/* Content fills viewport height so child pages can use flex-1 without bottom gap */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
           {children}
-          <div className="fixed bottom-6 right-6 z-40">
+        </div>
+        <div className="pointer-events-none fixed bottom-6 right-6 z-[10050]">
+          <div className="pointer-events-auto">
             <ChatbotButton />
           </div>
         </div>
@@ -206,6 +223,13 @@ function App() {
       <Router basename="/dadb">
         <Routes>
           <Route path='/' element={<Login />} />
+          <Route path='/overview' element={
+            <ProtectedRoute>
+              <LayoutWithSidebar>
+                <Overview />
+              </LayoutWithSidebar>
+            </ProtectedRoute>
+          } />
           <Route path='/home' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
@@ -218,9 +242,7 @@ function App() {
           <Route path='/map-views' element={
             <ProtectedRoute>
               <LayoutWithSidebar>
-                <ResponsiveZoom>
                 <MapBoard />
-                </ResponsiveZoom>
               </LayoutWithSidebar>
             </ProtectedRoute>
           } />

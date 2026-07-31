@@ -12,7 +12,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useProject } from '../../contexts/ProjectContext';
 import { useParams } from 'react-router-dom';
 import avatarIcon from '../../assets/img/user-icon.png'
-import bg from '../../assets/img/background_sidebar.png'
+import { FiLayout } from 'react-icons/fi';
+import bg from '../../assets/img/background_sidebar.png';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ const Sidebar = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1024);
 
   const isDashboard = ['/home', '/'].includes(location.pathname);
+  const isOverview = location.pathname === '/overview';
 
   useEffect(() => {
     const handleResize = () => {
@@ -71,6 +73,11 @@ const Sidebar = () => {
   
   const handleSimpleNavigation = (path) => {
     navigate(path);
+    setSidebarOpen(false);
+  };
+
+  const handleOverview = () => {
+    navigate('/overview');
     setSidebarOpen(false);
   };
 
@@ -140,12 +147,6 @@ const Sidebar = () => {
 
           {/* Logo chính giữa */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">
-            <img
-              src={logoSidebar}
-              alt="Logo Bộ Xây Dựng"
-              className="h-10 w-auto"
-              draggable={false}
-            />
           </div>
         </header>
       )}
@@ -175,11 +176,6 @@ const Sidebar = () => {
             style={{ backgroundImage: `url(${backgroundSidebar})` }}
           >
             <div className="flex flex-col items-center relative z-10">
-              <img
-                src={logoSidebar}
-                alt="Logo Bộ Xây Dựng"
-                className="w-4/5 max-w-[180px] mb-4"
-              />
               <div className="w-[250px] flex justify-center items-center rounded-full">
                 <input
                   type="text"
@@ -199,6 +195,21 @@ const Sidebar = () => {
 
           {/* Các phần menu */}
           <div className="flex flex-col flex-grow overflow-auto mt-2 md:mt-0">
+            {/* Tổng quan */}
+            <div className="py-1">
+              <div
+                className={`flex items-center px-5 py-2.5 cursor-pointer font-semibold text-lg transition
+                  ${isOverview ? 'bg-blue-50 text-blue-700 border-r-4 border-blue-600' : 'text-gray-700 hover:bg-gray-200'}
+                  ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
+                onClick={() => {
+                  if (user?.PhanQuyenID !== 9) handleOverview();
+                }}
+              >
+                <FiLayout className="mr-2 shrink-0" size={20} />
+                <span>Tổng quan</span>
+              </div>
+            </div>
+
             {/* Project menu */}
             <div className="py-1">
               <div
@@ -233,6 +244,7 @@ const Sidebar = () => {
               >
                 <div
                   className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                    ${location.pathname === '/home' ? 'bg-gray-200 text-gray-900 font-medium' : ''}
                     ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
                   onClick={() => {
                     if (user?.PhanQuyenID !== 9) handleDashboard();
@@ -242,6 +254,7 @@ const Sidebar = () => {
                 </div>
                 <div
                   className={`pl-12 py-2 cursor-pointer hover:bg-gray-200 hover:text-gray-900
+                    ${location.pathname === '/map-views' ? 'bg-gray-200 text-gray-900 font-medium' : ''}
                     ${user?.PhanQuyenID === 9 ? 'cursor-not-allowed opacity-50' : ''}`}
                   onClick={() => {
                     if (user?.PhanQuyenID !== 9) handleMapboard();

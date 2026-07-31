@@ -59,6 +59,7 @@ app.use(express.json());
 
 // Serve static files từ thư mục uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/Uploads', express.static(path.join(__dirname, 'Uploads')));
 
 // 1. Cấu hình CORS chi tiết
 app.use(cors({
@@ -812,10 +813,48 @@ app.get('/duAnTongList', async (req, res) => {
         };
       }));
 
+      const danhSachDuAnThanhPhan = await Promise.all(
+        duAnThanhPhan.map(async (subProject) => {
+          const [goiThauList] = await pool.query(
+            `SELECT 
+              GoiThau_ID,
+              TenGoiThau,
+              GiaTriHĐ,
+              Km_BatDau,
+              Km_KetThuc,
+              ToaDo_BatDau_X,
+              ToaDo_BatDau_Y,
+              ToaDo_KetThuc_X,
+              ToaDo_KetThuc_Y,
+              NgayKhoiCong,
+              NgayHoanThanh,
+              TrangThai,
+              PhanTramHoanThanh,
+              PhanTramDangLam,
+              PhanTramChamTienDo,
+              PhanTramKeHoach,
+              PathData
+             FROM goithau
+             WHERE DuAn_ID = ?
+             ORDER BY GoiThau_ID ASC`,
+            [subProject.DuAnID]
+          );
+
+          return {
+            ...subProject,
+            danhSachGoiThau: goiThauList,
+            goiThau: goiThauList
+          };
+        })
+      );
+
       return {
         ...duAnTong,
         soLuongDuAnThanhPhan: duAnThanhPhan.length,
+        danhSachDuAnThanhPhan,
+        duAnThanhPhan: danhSachDuAnThanhPhan,
         danhSachGoiThauTrucTiep: goiThauTrucTiepWithDetails,
+        goiThauTrucTiep: goiThauTrucTiepWithDetails,
         soLuongGoiThau: goiThauCount[0].count,
         danhSachNhaThau: contractors,
         kmlPaths, // Danh sách đường dẫn KML
